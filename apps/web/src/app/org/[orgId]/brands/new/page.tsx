@@ -47,7 +47,7 @@ async function GatedForm({
   return (
     <BrandForm
       submitLabel="Create brand"
-      onSubmit={(formData) => createBrand(orgId, formData)}
+      onSubmit={createBrand.bind(null, orgId)}
     />
   );
 }

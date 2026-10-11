@@ -55,12 +55,12 @@ async function GatedForm({
       <BrandForm
         brand={brand}
         submitLabel="Save changes"
-        onSubmit={(formData) => updateBrand(orgId, brandId, formData)}
+        onSubmit={updateBrand.bind(null, orgId, brandId)}
       />
 
       <div className="border-t border-border pt-4">
         <ArchiveBrandButton
-          onArchive={() => archiveBrand(orgId, brandId)}
+          onArchive={archiveBrand.bind(null, orgId, brandId)}
           orgId={orgId}
         />
       </div>
