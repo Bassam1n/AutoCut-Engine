@@ -300,6 +300,36 @@ once each is resolved.
     the same anti-pattern. Fixed both to load via `useEffect` with a
     `cancelled` guard against the unmount/stale-response race.
 
+27. **Built the Storyboard table** (spec §5.5) — reused `splitScene`/
+    `mergeSceneIntoPrevious` from Scene plan directly (already generic
+    enough), added `toggleProductInFrame`/`updateSceneVisual` for the
+    remaining inline-editable fields, and a scene progress rail
+    (colour by whether a scene has a visual yet, click to jump — no
+    real stage/asset tracking exists yet since Scene images is a later
+    milestone, so this is a simple proxy, not the full "colour by
+    stage" spec eventually wants once assets exist).
+    "Drag an image onto another scene to move it" is explicitly
+    image-asset-dependent and out of scope until Scene images ships.
+    **Edit by chat**: new `patch_storyboard` task returns a
+    discriminated-union patch (edit/add/delete operations, zod-
+    validated), applied server-side in `storyboard-actions.ts`. A real
+    ordering bug was caught before shipping: operations resolved
+    against a single map keyed by the *original* idx snapshot shown to
+    Claude (edits/deletes always valid against this, since editing or
+    deleting an original row doesn't change which original row another
+    operation meant), but adds re-resolve their anchor scene's
+    *current* idx at apply-time, since an earlier delete in the same
+    patch may have already shifted it — deletes and adds are applied
+    by database id, not by idx, specifically so this holds. Verified
+    directly against a local Postgres instance: deleted idx 1 from a
+    4-scene board, confirmed idx 3 correctly renumbered to idx 2, and
+    confirmed the edit path's id-based lookup would still find the
+    right row by id regardless of the renumbering. Not handled: a
+    single patch with several `add` operations whose anchors
+    interact with each other in complex ways — acceptable for now,
+    since real chat instructions are overwhelmingly one or two
+    operations at a time, not a batch of many adds.
+
 ## Consequences
 
 Nothing in M1–M8 is blocked by any of these — schema, auth, provider

@@ -6,6 +6,7 @@ import { ScriptsStep } from "./scripts-step";
 import { BriefStep } from "./brief-step";
 import { ScenePlanStep } from "./scene-plan-step";
 import { ConceptCastStep } from "./concept-cast-step";
+import { StoryboardStep } from "./storyboard-step";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 import type { Scene } from "../scenes-data";
@@ -100,7 +101,16 @@ export function StudioCanvas({
             onContinue={() => setStep("storyboard")}
           />
         )}
-        {step === "storyboard" && <ComingSoonStep label="Storyboard" onContinue={() => setStep("review")} />}
+        {step === "storyboard" && (
+          <StoryboardStep
+            orgId={orgId}
+            brandId={brandId}
+            productId={productId}
+            ad={ad}
+            scenes={scenes}
+            onContinue={() => setStep("review")}
+          />
+        )}
         {step === "review" && <ComingSoonStep label="Review" />}
       </div>
     </div>

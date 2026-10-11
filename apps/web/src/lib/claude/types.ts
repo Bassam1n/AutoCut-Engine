@@ -34,6 +34,11 @@ export const PINNED_MODEL_PER_TASK = {
   // concretizing abstract copy) is a real creative-reasoning task,
   // not mechanical extraction — pinned to Opus like concepts/scripts.
   generate_scene_visuals: "claude-opus-5-5",
+  // Turning a plain-language edit instruction into a precise,
+  // narrowly-scoped patch is closer to structured extraction than
+  // open creative writing — Sonnet is the right pin, and keeps chat
+  // edits fast and cheap for something the editor may do repeatedly.
+  patch_storyboard: "claude-sonnet-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

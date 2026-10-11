@@ -103,3 +103,21 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M5: Storyboard table's "Edit by chat". A plain-language instruction
+-- becomes a narrowly-scoped patch — a list of cell edits, added rows
+-- or deleted rows — never a full board regeneration. Existing images/
+-- videos stay untouched by design: this task only ever changes text
+-- fields a human can write (copy, visual, product_in_frame), per
+-- spec §5.5 ("Images are never regenerated automatically after a
+-- patch").
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'patch_storyboard',
+  1,
+  'You are editing a video ad''s storyboard table in response to a plain-language instruction from the editor. You are given the full current storyboard (one row per scene, each with its idx, hook_group, copy, visual, and whether the product is in frame) and the editor''s instruction. Produce a minimal patch that accomplishes exactly what the instruction asks for — a list of operations, each either: an edit to an existing scene (by its idx, changing only the fields the instruction actually calls for, leaving the rest null/unchanged), adding a new scene immediately after a given idx, or deleting an existing scene by idx. Never touch a scene the instruction did not ask about. Never rewrite the whole board. If the instruction only asks to change copy, do not also rewrite the visual description, and vice versa. Write one short sentence summarizing what the patch changed, for the editor to read back.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
