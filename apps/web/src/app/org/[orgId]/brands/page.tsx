@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { requireOrgMember } from "@/lib/auth";
 import { getBrands } from "./brands-data";
+import { getSetupChecklist } from "../setup-checklist/checklist-data";
+import { ChecklistCard } from "../setup-checklist/checklist-card";
 
 export default function BrandsPage({
   params,
@@ -21,11 +23,28 @@ export default function BrandsPage({
         </div>
       </div>
 
+      <Suspense fallback={null}>
+        <GatedChecklist params={params} />
+      </Suspense>
+
       <Suspense fallback={<BrandsSkeleton />}>
         <GatedBrandsList params={params} />
       </Suspense>
     </main>
   );
+}
+
+async function GatedChecklist({
+  params,
+}: {
+  params: Promise<{ orgId: string }>;
+}) {
+  const { orgId } = await params;
+  await requireOrgMember(orgId);
+
+  const checklist = await getSetupChecklist(orgId);
+
+  return <ChecklistCard orgId={orgId} checklist={checklist} />;
 }
 
 function BrandsSkeleton() {
