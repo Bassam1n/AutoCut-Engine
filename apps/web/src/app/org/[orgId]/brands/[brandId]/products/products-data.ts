@@ -39,6 +39,20 @@ export async function getProducts(orgId: string, brandId: string): Promise<Produ
   return data ?? [];
 }
 
+/** Every active product across every brand in the org, for the sidebar's Products page. */
+export async function getAllOrgProducts(orgId: string): Promise<Product[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("active", true)
+    .order("name");
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function getProduct(
   orgId: string,
   brandId: string,

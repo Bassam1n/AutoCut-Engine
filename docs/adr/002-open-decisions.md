@@ -235,6 +235,55 @@ once each is resolved.
     Trench's list, Nano Banana Pro and Sora 2, Kling 2.5, weren't added
     since this pass only tested/confirmed kie.ai endpoints).
 
+23. **The $0.00 cost bug was price_table, not spend recording.**
+    Image generation on any kie.ai model recorded a real spend_events
+    row every time, but always at $0.0000 — price_table had no row for
+    any kie model, and `generateReferenceImage()`'s lookup defaulted
+    silently to `usd_est: 0` rather than failing loudly. Fixed by
+    seeding real kie.ai per-model prices the user pasted directly from
+    kie.ai's own pricing page (both image and video tables) —
+    `seed_price_table.sql` now has rows for every image model in the
+    registry (at that model's cheapest/default resolution tier) and
+    every video model (at 720p, no native audio — each billed by
+    whatever unit kie.ai actually bills by: per_image, per_second, or
+    per_video). `z-image` has no confirmed price yet — it didn't appear
+    by that name in the pasted pricing table, so no number was
+    invented for it.
+24. **The processing-animation visibility bug was a contrast bug, not a
+    missing animation.** `LoadingIndicator`'s dots used `bg-accent` +
+    `text-foreground-muted`, both low-contrast against an accent-colored
+    button background — the animation was technically running but
+    unreadable, which is why the user saw static "Regenerating..." text
+    instead. Fixed to inherit `currentColor` from whatever container
+    renders it. Per the user's request that this be global rather than
+    patched case by case, added `components/async-button.tsx` — a
+    `<button>` wrapper that takes `isPending`/`pendingLabel` and renders
+    `LoadingIndicator` automatically, rather than every button
+    hand-writing the `isPending ? <LoadingIndicator /> : label` ternary
+    (which is how the contrast bug happened in the first place — nothing
+    forced every call site to get the styling right). Rolled out to
+    every button in `concept-cast-step.tsx` (the file the user's report
+    came from); the other ~12 files using the old hand-written pattern
+    still work correctly (just not yet migrated to the wrapper) and are
+    a follow-up, not a regression.
+25. **Added org-wide sidebar navigation** (Products, Create ad, Creative
+    history) — until now every path to creating or finding a product/ad
+    required navigating brand -> product -> ads by hand, with no
+    shortcut and no cross-brand view. Products page
+    (`/org/{orgId}/products`) lists every product grouped by brand, with
+    an "add product" popup that picks a brand first, then reuses the
+    existing per-brand new-product form (`/brands/{brandId}/products/
+    new`) rather than building a second one. Creative history
+    (`/org/{orgId}/creative-history`) lists every ad across every brand/
+    product via a new `getAllOrgAds()` query (a real PostgREST embedded
+    join against brands/products for display names, confirmed live
+    against a local instance — `select=*,brands!inner(name),
+    products!inner(name)`). "Create ad" is a sidebar button (not a page)
+    that pops a brand -> product picker, then redirects straight to the
+    existing new-ad style-picker page (`/ads/new`) — reuses the ad
+    creation pipeline exactly as it already exists rather than building
+    a parallel one.
+
 ## Consequences
 
 Nothing in M1–M8 is blocked by any of these — schema, auth, provider

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions";
+import { CreateAdButton } from "./create-ad-button";
 import type { SidebarInfo } from "./sidebar-data";
 
 export function Sidebar({
@@ -16,6 +17,8 @@ export function Sidebar({
 
   const links = [
     { href: `/org/${orgId}/brands`, label: "Brands" },
+    { href: `/org/${orgId}/products`, label: "Products" },
+    { href: `/org/${orgId}/creative-history`, label: "Creative history" },
     { href: `/org/${orgId}/styles`, label: "Styles" },
     ...(info.isAdmin
       ? [
@@ -39,6 +42,10 @@ export function Sidebar({
       <p className="truncate px-5 pb-3 text-xs font-medium uppercase tracking-wide text-foreground-muted">
         {info.orgName}
       </p>
+
+      <div className="px-3 pb-2">
+        <CreateAdButton orgId={orgId} />
+      </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
         {links.map((link) => {

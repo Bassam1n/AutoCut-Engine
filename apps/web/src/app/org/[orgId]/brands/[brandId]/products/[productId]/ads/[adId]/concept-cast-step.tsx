@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/modal";
-import { LoadingIndicator } from "@/components/loading-indicator";
+import { AsyncButton } from "@/components/async-button";
 import { ModelPicker } from "@/components/model-picker";
 import {
   generateConcepts,
@@ -101,14 +101,14 @@ export function ConceptCastStep({
             like, then extract and approve the cast.
           </p>
         </div>
-        <button
-          type="button"
+        <AsyncButton
           onClick={onGenerateConcepts}
-          disabled={isGenerating}
-          className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          isPending={isGenerating}
+          pendingLabel="Generating concepts..."
+          className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
         >
-          {isGenerating ? <LoadingIndicator label="Generating concepts..." /> : hasConcepts ? "Regenerate concepts" : "Generate concepts"}
-        </button>
+          {hasConcepts ? "Regenerate concepts" : "Generate concepts"}
+        </AsyncButton>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
@@ -134,14 +134,14 @@ export function ConceptCastStep({
         <div className="flex flex-col gap-4 border-t border-border pt-4">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-sm font-semibold">Cast</h3>
-            <button
-              type="button"
+            <AsyncButton
               onClick={onExtractCast}
-              disabled={isExtracting}
-              className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+              isPending={isExtracting}
+              pendingLabel="Extracting cast..."
+              className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
             >
-              {isExtracting ? <LoadingIndicator label="Extracting cast..." /> : castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
-            </button>
+              {castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
+            </AsyncButton>
           </div>
 
           {imageModelOptions.length > 0 && (
@@ -183,14 +183,14 @@ export function ConceptCastStep({
       )}
 
       {allCastApproved && (
-        <button
-          type="button"
+        <AsyncButton
           onClick={onGenerateStoryboard}
-          disabled={isStoryboarding}
-          className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          isPending={isStoryboarding}
+          pendingLabel="Generating storyboard..."
+          className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
         >
-          {isStoryboarding ? <LoadingIndicator label="Generating storyboard..." /> : "Generate storyboard →"}
-        </button>
+          Generate storyboard →
+        </AsyncButton>
       )}
     </div>
   );
@@ -399,20 +399,15 @@ function CastMemberCard({
         >
           Regenerate
         </button>
-        <button
-          type="button"
+        <AsyncButton
           onClick={onGenerateSheet}
+          isPending={sheetStatus === "generating"}
           disabled={isPending}
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+          pendingLabel="Generating sheet..."
+          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40"
         >
-          {sheetStatus === "generating" ? (
-            <LoadingIndicator label="Generating sheet..." />
-          ) : sheetUrl ? (
-            "Regenerate sheet"
-          ) : (
-            "Character sheet"
-          )}
-        </button>
+          {sheetUrl ? "Regenerate sheet" : "Character sheet"}
+        </AsyncButton>
       </div>
       {sheetUrl && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -552,14 +547,15 @@ function RegenerateModal({
           disabled={isPending || isUploading}
           className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
         />
-        <button
-          type="button"
+        <AsyncButton
           onClick={onRegenerateWithFeedback}
-          disabled={isPending || isUploading}
-          className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          isPending={isPending}
+          disabled={isUploading}
+          pendingLabel="Regenerating..."
+          className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
         >
-          {isPending ? <LoadingIndicator label="Regenerating..." /> : "Regenerate"}
-        </button>
+          Regenerate
+        </AsyncButton>
       </div>
 
       <div className="flex flex-col gap-1.5 border-t border-border pt-3">
