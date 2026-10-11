@@ -43,6 +43,20 @@ export const PINNED_MODEL_PER_TASK = {
   // (and filtering out ones already answered) is closer to
   // extraction/classification than creative writing — Sonnet.
   generate_dial_in_questions: "claude-sonnet-5-5",
+  // Turning a scene's Visual plus brand/product context, style
+  // masterprompt and active rules into the single final image prompt
+  // is editorial/creative judgment — deciding how to phrase and
+  // emphasize a prompt so the image model actually produces the right
+  // shot — much closer to generate_scene_visuals' Visual Director
+  // judgment than to mechanical extraction, so it gets the same Opus
+  // pin. (Skipped entirely when scenes.image_prompt_override is set —
+  // see write-image-prompt.ts.)
+  write_image_prompt: "claude-opus-5-5",
+  // Reading a product's reference photos and naming its category,
+  // materials, colors and visual features is structural extraction
+  // from images, not open creative judgment — same shape as
+  // extract_cast, just with vision input instead of text. Sonnet.
+  generate_product_spec: "claude-sonnet-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;
@@ -55,6 +69,8 @@ export type LlmCallParams<Schema extends z.ZodTypeAny> = {
   orgId: string;
   /** Overrides the task's pinned model — only for testing against a cheaper model; production code should rely on the pin. */
   modelOverride?: string;
+  /** Publicly-fetchable image URLs (e.g. Supabase Storage public URLs) attached as vision content blocks alongside the text input — for tasks that need to look at images (e.g. product-spec generation from product photos). */
+  imageUrls?: string[];
 };
 
 export type LlmCallResult<T> = {

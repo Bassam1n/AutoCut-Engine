@@ -23,7 +23,7 @@ import type { LlmCallParams, LlmCallResult } from "./types";
 export async function llmCall<Schema extends z.ZodTypeAny>(
   params: LlmCallParams<Schema>
 ): Promise<LlmCallResult<z.infer<Schema>>> {
-  const { task, schema, input, orgId } = params;
+  const { task, schema, input, orgId, imageUrls } = params;
   const model = params.modelOverride ?? PINNED_MODEL_PER_TASK[task];
 
   const supabase = createServiceClient();
@@ -48,10 +48,25 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
   let lastValidationError: string | null = null;
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    const messageContent =
+    const text =
       attempt === 0
         ? userMessage
         : `${userMessage}\n\nYour previous answer failed schema validation with this error — fix it and answer again, returning only the corrected structured output:\n${lastValidationError}`;
+
+    // Image blocks come first so the text (which may reference "the
+    // images above") reads naturally after them — this is Anthropic's
+    // own recommended ordering for vision requests.
+    const messageContent: string | Anthropic.MessageParam["content"] = imageUrls?.length
+      ? [
+          ...imageUrls.map(
+            (url): Anthropic.ImageBlockParam => ({
+              type: "image",
+              source: { type: "url", url },
+            })
+          ),
+          { type: "text", text },
+        ]
+      : text;
 
     // messages.parse() can fail in two different ways that need
     // different handling: a plain Anthropic API failure (network,

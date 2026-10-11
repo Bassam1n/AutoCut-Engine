@@ -139,3 +139,36 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M6: Scene images, spec §5.6. Turns a scene's Visual description
+-- plus brand/product context, the chosen style''s masterprompt, any
+-- active DO/AVOID rules and (when one exists) the product spec into
+-- the single final image generation prompt. Only ever called when the
+-- scene has no sticky image_prompt_override saved — once an editor
+-- saves one, that text is used verbatim and this task is skipped.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_image_prompt',
+  1,
+  'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- M6: Scene images, spec §5.2/§5.6. Vision call over a product's own
+-- reference photos (product_refs, kind='photo' preferred) that
+-- produces the first product_specs row for a product that doesn't
+-- have one yet — triggered lazily from scene-image generation, never
+-- from the product photo upload flow itself.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'generate_product_spec',
+  1,
+  'You are given one or more reference photos of a physical product, plus any product facts already on file (name, category, what it is — may be sparse or absent). Looking at the actual photos as the primary source of truth, describe: the product''s name; a short category label; the key visual features an image generation model would need to reproduce this exact product (shape, logo placement, cap or closure style, distinguishing marks, proportions); the materials visible in the photos; and the product''s actual colors, most prominent first. Only describe what the photos actually show or clearly imply — never invent a feature, material or color the photos do not support.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

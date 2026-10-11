@@ -25,12 +25,14 @@ export function StoryboardStep({
   productId,
   ad,
   scenes,
+  onContinue,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   ad: Ad;
   scenes: Scene[];
+  onContinue: () => void;
 }) {
   const [activeSceneId, setActiveSceneId] = useState<string | null>(scenes[0]?.id ?? null);
 
@@ -72,10 +74,13 @@ export function StoryboardStep({
             ))}
           </div>
 
-          <p className="text-sm text-foreground-muted">
-            This is the last Studio step for now — scene image and video
-            generation come next, once that part of the pipeline is built.
-          </p>
+          <button
+            type="button"
+            onClick={onContinue}
+            className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          >
+            Continue to scene images →
+          </button>
         </>
       )}
     </div>

@@ -8,11 +8,13 @@ import { ScenePlanStep } from "./scene-plan-step";
 import { ConceptCastStep } from "./concept-cast-step";
 import { StoryboardStep } from "./storyboard-step";
 import { DialInStep } from "./dial-in-step";
+import { SceneImagesStep } from "./scene-images-step";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 import type { Scene } from "../scenes-data";
 import type { Concept, CastMember } from "../concepts-data";
 import type { ModelOption } from "@/lib/providers/models-data";
+import type { SceneImageAsset } from "../scene-images-data";
 
 export function StudioCanvas({
   orgId,
@@ -27,6 +29,8 @@ export function StudioCanvas({
   imageModelOptions,
   providersWithKeys,
   costBreakdown,
+  sceneImagesBySceneId,
+  sceneImageUrls,
 }: {
   orgId: string;
   brandId: string;
@@ -41,6 +45,8 @@ export function StudioCanvas({
   providersWithKeys: string[];
   /** Server-rendered <CostBreakdown /> slot — composed in from page.tsx since it's an async Server Component and can't be imported directly into this Client Component. */
   costBreakdown: React.ReactNode;
+  sceneImagesBySceneId: Record<string, SceneImageAsset[]>;
+  sceneImageUrls: Record<string, string>;
 }) {
   const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts, scenes));
   const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
@@ -117,6 +123,20 @@ export function StudioCanvas({
             productId={productId}
             ad={ad}
             scenes={scenes}
+            onContinue={() => setStep("scene_images")}
+          />
+        )}
+        {step === "scene_images" && (
+          <SceneImagesStep
+            orgId={orgId}
+            brandId={brandId}
+            productId={productId}
+            ad={ad}
+            scenes={scenes}
+            imagesBySceneId={sceneImagesBySceneId}
+            imageUrls={sceneImageUrls}
+            imageModelOptions={imageModelOptions}
+            providersWithKeys={new Set(providersWithKeys)}
           />
         )}
       </div>
@@ -145,6 +165,8 @@ function previousStepFor(step: StudioStep): StudioStep | undefined {
       return "plan";
     case "storyboard":
       return "concept";
+    case "scene_images":
+      return "storyboard";
   }
 }
 

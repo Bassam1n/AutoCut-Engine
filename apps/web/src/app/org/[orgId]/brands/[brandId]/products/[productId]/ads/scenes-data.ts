@@ -17,6 +17,8 @@ export type Scene = {
   notes: SceneNote | Record<string, never>;
   speaker: string | null;
   status: string;
+  /** Spec §5.6 "sticky prompt override" — set once the editor saves an exact final prompt; sticks across regenerations until explicitly reset (null). */
+  image_prompt_override: string | null;
   created_at: string;
   updated_at: string;
 };
