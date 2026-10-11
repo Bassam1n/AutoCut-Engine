@@ -39,6 +39,10 @@ export const PINNED_MODEL_PER_TASK = {
   // open creative writing — Sonnet is the right pin, and keeps chat
   // edits fast and cheap for something the editor may do repeatedly.
   patch_storyboard: "claude-sonnet-5-5",
+  // Deciding which short clarifying questions are still worth asking
+  // (and filtering out ones already answered) is closer to
+  // extraction/classification than creative writing — Sonnet.
+  generate_dial_in_questions: "claude-sonnet-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

@@ -7,6 +7,7 @@ import { BriefStep } from "./brief-step";
 import { ScenePlanStep } from "./scene-plan-step";
 import { ConceptCastStep } from "./concept-cast-step";
 import { StoryboardStep } from "./storyboard-step";
+import { DialInStep } from "./dial-in-step";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 import type { Scene } from "../scenes-data";
@@ -76,7 +77,15 @@ export function StudioCanvas({
             onContinue={() => setStep("dial_in")}
           />
         )}
-        {step === "dial_in" && <ComingSoonStep label="Dial it in" onContinue={() => setStep("plan")} />}
+        {step === "dial_in" && (
+          <DialInStep
+            orgId={orgId}
+            brandId={brandId}
+            productId={productId}
+            ad={ad}
+            onContinue={() => setStep("plan")}
+          />
+        )}
         {step === "plan" && (
           <ScenePlanStep
             orgId={orgId}
@@ -108,10 +117,8 @@ export function StudioCanvas({
             productId={productId}
             ad={ad}
             scenes={scenes}
-            onContinue={() => setStep("review")}
           />
         )}
-        {step === "review" && <ComingSoonStep label="Review" />}
       </div>
     </div>
   );
@@ -138,8 +145,6 @@ function previousStepFor(step: StudioStep): StudioStep | undefined {
       return "plan";
     case "storyboard":
       return "concept";
-    case "review":
-      return "storyboard";
   }
 }
 
@@ -150,26 +155,4 @@ function initialStep(ad: Ad, scripts: AdScriptRow[], scenes: Scene[]): StudioSte
   const hasManualBrief = Boolean(ad.brief.hooks?.length || ad.brief.body || ad.brief.idea);
   if (hasSelectedScript || hasManualBrief) return "plan";
   return "scripts";
-}
-
-function ComingSoonStep({ label, onContinue }: { label: string; onContinue?: () => void }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
-      <p className="text-sm font-medium text-foreground-muted">{label}</p>
-      <p className="max-w-sm text-xs text-foreground-muted">
-        This step isn&apos;t built yet — the Studio flow shell is in place so
-        the whole path through an ad is navigable, with each step filled in
-        next.
-      </p>
-      {onContinue && (
-        <button
-          type="button"
-          onClick={onContinue}
-          className="mt-2 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
-        >
-          Skip for now →
-        </button>
-      )}
-    </div>
-  );
 }

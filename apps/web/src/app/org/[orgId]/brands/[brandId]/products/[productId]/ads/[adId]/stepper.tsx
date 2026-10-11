@@ -8,20 +8,24 @@ export type StudioStep =
   | "dial_in"
   | "plan"
   | "concept"
-  | "storyboard"
-  | "review";
+  | "storyboard";
 
 // "brief" is deliberately not in this list — it's the manual fallback
 // used only when the editor rejects all 3 generated scripts, not a
 // numbered step in the main stepper (spec decision: scripts-first,
 // per the user's correction to the original brief-first M5 shell).
+//
+// No "Review" step — the spec never names one; it was this build's
+// own placeholder from when the stepper shell was first scaffolded.
+// The spec goes straight from the storyboard table into Scene images/
+// videos (M6/M7), which aren't built yet, so Storyboard is the real
+// last step for now.
 const STEPS: { id: Exclude<StudioStep, "brief">; label: string }[] = [
   { id: "scripts", label: "Scripts" },
-  { id: "dial_in", label: "Dial it in" },
+  { id: "dial_in", label: "Fine-tune the brief" },
   { id: "plan", label: "Scene plan" },
   { id: "concept", label: "Concept & cast" },
   { id: "storyboard", label: "Storyboard" },
-  { id: "review", label: "Review" },
 ];
 
 export function Stepper({

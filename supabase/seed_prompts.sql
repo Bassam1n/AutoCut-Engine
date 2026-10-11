@@ -121,3 +121,21 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M5: Dial it in (optional), spec §5.4 step 2. One call returns the
+-- full, already-filtered question plan — viewer questions first,
+-- then ad questions — rather than true multi-turn generation, since
+-- chip suggestions don''t need to adapt to prior answers for a short,
+-- skippable, optional step. "Answers already in the brief or a saved
+-- customer are not asked again" is enforced by giving the model what
+-- is already known and instructing it to skip those topics entirely.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'generate_dial_in_questions',
+  1,
+  'You are preparing a short clarifying-questions flow for someone setting up a video ad. You are given what is already known: the ad''s brief (hooks, body, CTA, free-text idea) and any saved customer profile for this brand. Generate up to 10 short questions split into two topics, viewer questions before ad questions. Viewer questions cover: who the viewer is, their age range, the problem or pain they have (in their own words), and their desired outcome. Ad questions cover: who is on screen, the world/setting, the visual look, the ad''s goal, the mechanism of how the product works, and whether anyone speaks on camera. Skip entirely any topic the given brief or customer profile already answers — do not ask about something already known. For each question, write 2 to 5 short tap-to-answer chip suggestions (a "you decide" option always exists separately in the UI, never include it as a chip yourself). Keep every question and chip short enough to read at a glance.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

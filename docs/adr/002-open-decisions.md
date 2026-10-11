@@ -330,6 +330,30 @@ once each is resolved.
     since real chat instructions are overwhelmingly one or two
     operations at a time, not a batch of many adds.
 
+28. ~~**"Review" step.**~~ **Resolved.** The spec never names a distinct
+    "Review" step — it goes straight from the storyboard table into
+    Scene images/videos (M6/M7). "Review" was this build's own
+    placeholder label from when the stepper shell was first scaffolded,
+    not a real spec requirement. Removed from the stepper entirely;
+    Storyboard is the real last step until M6/M7 give it something to
+    review. `StudioStep` no longer has a `"review"` variant.
+29. **Built "Dial it in"** (spec §5.4 step 2), renamed to "Fine-tune the
+    brief" per explicit request — Trench uses "Dial it in" as its own
+    label, so a fresh name was picked rather than copying it (same
+    "reference only, write fresh" discipline already applied to style
+    masterprompts, extended to UI copy this time). One Claude call
+    (`generate_dial_in_questions`) returns the full, already-filtered
+    question plan up front — viewer questions then ad questions, chip
+    suggestions included — rather than true multi-turn generation,
+    since chips don't need to adapt to prior answers for a short,
+    skippable, optional step. Viewer-topic answers save as a real
+    customer profile (spec: "ends with a customer card"); ad-topic
+    answers (world, look, speaks on camera, etc.) have no dedicated
+    schema field, so they fold into `ads.brief.idea` as readable free
+    text instead of a speculative schema addition nothing downstream
+    reads yet — confirmed this append preserves the rest of the brief
+    object correctly via a direct Postgres test before shipping.
+
 ## Consequences
 
 Nothing in M1–M8 is blocked by any of these — schema, auth, provider
