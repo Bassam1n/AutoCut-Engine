@@ -148,10 +148,24 @@ export class FalAdapter implements ProviderAdapter {
     }
 
     if (!res.ok) {
+      const bodyText = await res.text().catch(() => undefined);
+
+      // Content-policy rejections are confirmed from fal.ai's own
+      // errors docs: HTTP 422 with a `detail` array of objects, each
+      // carrying `type: "content_policy_violation"`. Checked before
+      // falling back to the generic HTTP-status mapping, since 422
+      // alone is shared with other validation failures.
+      if (res.status === 422 && bodyText) {
+        const contentBlockMessage = extractFalContentPolicyMessage(bodyText);
+        if (contentBlockMessage) {
+          throw new ProviderAdapterError(contentBlockMessage, "CONTENT_BLOCK", bodyText);
+        }
+      }
+
       throw new ProviderAdapterError(
         `fal.ai returned HTTP ${res.status}`,
         mapFalHttpStatus(res.status),
-        await res.text().catch(() => undefined)
+        bodyText
       );
     }
 
@@ -215,4 +229,28 @@ function mapFalHttpStatus(httpStatus: number): ProviderErrorCode {
   if (httpStatus === 429) return "RATE_LIMIT";
   if (httpStatus >= 500) return "PROVIDER_ERROR";
   return "PROVIDER_ERROR";
+}
+
+type FalValidationErrorDetail = {
+  type?: string;
+  msg?: string;
+};
+
+/**
+ * Looks for `detail: [{ type: "content_policy_violation", msg }]` in a
+ * fal.ai 422 response body, per fal.ai's own documented error schema.
+ * Returns the human-readable msg if found, or null if this 422 wasn't
+ * a content-policy rejection (some other validation failure, which
+ * stays a generic PROVIDER_ERROR rather than being misread as one).
+ */
+function extractFalContentPolicyMessage(bodyText: string): string | null {
+  let parsed: { detail?: FalValidationErrorDetail[] };
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch {
+    return null;
+  }
+
+  const violation = parsed.detail?.find((d) => d.type === "content_policy_violation");
+  return violation?.msg ?? null;
 }

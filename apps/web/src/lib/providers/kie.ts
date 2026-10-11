@@ -200,6 +200,15 @@ function mapKieErrorCode(code: number): import("./types").ProviderErrorCode {
   // -limit code is listed anywhere fetched for this adapter, so an
   // unrecognized code (429 included) falls through to PROVIDER_ERROR
   // rather than assuming it means rate limiting.
+  //
+  // 422 is confirmed to exist but its exact meaning (content policy vs.
+  // a generic validation failure) is NOT documented anywhere fetched
+  // for this adapter. Deliberately left as PROVIDER_ERROR rather than
+  // CONTENT_BLOCK: if 422 turns out to mean something other than a
+  // content-filter rejection, mapping it to CONTENT_BLOCK would make
+  // submitWithContentBlockReword() burn a reword attempt (and the
+  // user's trust) on an error a prompt rewrite can never fix. Revisit
+  // once a live 422 response has actually been captured and inspected.
   switch (code) {
     case 401:
       return "KEY_INVALID";

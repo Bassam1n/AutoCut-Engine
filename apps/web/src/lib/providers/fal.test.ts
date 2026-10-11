@@ -6,6 +6,7 @@ import statusCompleted from "./__fixtures__/fal-status-completed.json";
 import statusCompletedFailed from "./__fixtures__/fal-status-completed-failed.json";
 import resultImage from "./__fixtures__/fal-result-image.json";
 import cancelAccepted from "./__fixtures__/fal-cancel-accepted.json";
+import errorContentPolicy from "./__fixtures__/fal-error-content-policy.json";
 
 function mockFetchSequence(
   responses: { body: unknown; ok?: boolean; status?: number }[]
@@ -142,5 +143,34 @@ describe("FalAdapter", () => {
   it("poll() throws on a malformed external task id missing the :: separator", async () => {
     const adapter = new FalAdapter("test-key");
     await expect(adapter.poll("not-a-valid-id")).rejects.toThrow(/malformed/i);
+  });
+
+  it("submit() maps a 422 content_policy_violation response to CONTENT_BLOCK", async () => {
+    global.fetch = mockFetchSequence([
+      { body: errorContentPolicy, ok: false, status: 422 },
+    ]);
+    const adapter = new FalAdapter("test-key");
+
+    await expect(
+      adapter.submit({ kind: "image", model: "fal-ai/flux/dev", prompt: "x" })
+    ).rejects.toMatchObject({
+      code: "CONTENT_BLOCK",
+      message: "The content could not be processed because it contained material flagged by a content checker.",
+    });
+  });
+
+  it("submit() maps a 422 WITHOUT content_policy_violation to PROVIDER_ERROR, not CONTENT_BLOCK", async () => {
+    global.fetch = mockFetchSequence([
+      {
+        body: { detail: [{ type: "missing", msg: "field required", loc: ["body", "model"] }] },
+        ok: false,
+        status: 422,
+      },
+    ]);
+    const adapter = new FalAdapter("test-key");
+
+    await expect(
+      adapter.submit({ kind: "image", model: "fal-ai/flux/dev", prompt: "x" })
+    ).rejects.toMatchObject({ code: "PROVIDER_ERROR" });
   });
 });
