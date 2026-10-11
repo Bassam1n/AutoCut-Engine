@@ -1,31 +1,42 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { FalAdapter } from "./fal";
-import { ProviderAdapterError } from "./types";
+import { KieAdapter } from "./kie";
+import { ProviderAdapterError, type ProviderAdapter } from "./types";
 
 export type GenerateReferenceImageResult =
   | { ok: true; assetId: string; signedUrl: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  | { ok: false; error: string; code: "KEY_MISSING"; provider: string };
 
 /**
  * Synchronous inline submit-then-poll for a single reference image.
  * No background job runner exists yet (that's M9) — per a decision
  * made when scoping Concept & cast, generation happens inline inside
- * the triggering server action's request, polling fal.ai in a loop
- * with backoff until the image is ready or a cap is hit. This is
- * swappable for a real async job runner later without changing the
- * caller's contract (still just "give me an asset id back").
+ * the triggering server action's request, polling the chosen
+ * provider in a loop with a fixed delay until the image is ready or
+ * a cap is hit. This is swappable for a real async job runner later
+ * without changing the caller's contract (still just "give me an
+ * asset id back").
  *
- * The resulting image is downloaded from fal.ai's own CDN and
+ * Provider/model is caller-chosen (the model picker) rather than
+ * hardcoded to fal/flux-dev, per the user's request — kie.ai covers
+ * most image models an org might want, fal.ai covers the rest, and
+ * which one has a usable key varies per org.
+ *
+ * The resulting image is downloaded from the provider's own CDN and
  * re-uploaded into our `renders` Storage bucket rather than kept as
- * a fal.ai URL, so it stays accessible under our own access control
- * and isn't dependent on fal.ai's URL lifetime.
+ * a provider URL, so it stays accessible under our own access control
+ * and isn't dependent on that provider's URL lifetime.
  */
 export async function generateReferenceImage(params: {
   orgId: string;
   brandId: string;
   prompt: string;
   referenceImageUrls?: string[];
+  provider: "fal" | "kie";
+  endpoint: string;
+  extra?: Record<string, unknown>;
   /** Ad this generation is attributed to for cost breakdown, when it has one — cast reference generation is triggered from inside an ad's Studio flow even though the resulting asset is brand-scoped, not ad-scoped. */
   attributedAdId?: string;
   /** spend_events.kind — identifies which pipeline step this generation belongs to on the cost breakdown. */
@@ -34,9 +45,9 @@ export async function generateReferenceImage(params: {
   const service = createServiceClient();
 
   // Same guard llm.call() uses before spending anything — image
-  // generation was missing this entirely until now, meaning a paused
-  // org could still generate images even though it couldn't run a
-  // Claude call.
+  // generation was missing this entirely until the previous pass,
+  // meaning a paused org could still generate images even though it
+  // couldn't run a Claude call.
   const { error: claimError } = await service.rpc("claim_paid_job", {
     target_org_id: params.orgId,
   });
@@ -46,23 +57,27 @@ export async function generateReferenceImage(params: {
 
   const { data: apiKey, error: keyError } = await service.rpc("get_org_secret_value", {
     target_org_id: params.orgId,
-    target_provider: "fal",
+    target_provider: params.provider,
   });
   if (keyError || !apiKey) {
-    return { ok: false, error: "No fal.ai key saved for this org." };
+    return {
+      ok: false,
+      error: `No ${params.provider} key saved for this org.`,
+      code: "KEY_MISSING",
+      provider: params.provider,
+    };
   }
 
-  const adapter = new FalAdapter(apiKey);
+  const adapter: ProviderAdapter = params.provider === "kie" ? new KieAdapter(apiKey) : new FalAdapter(apiKey);
 
   let externalTaskId: string;
   try {
     const submitResult = await adapter.submit({
       kind: "image",
-      model: "fal-ai/flux/dev",
+      model: params.endpoint,
       prompt: params.prompt,
       referenceImageUrls: params.referenceImageUrls,
-      aspectRatio: undefined,
-      extra: { image_size: "portrait_4_3" },
+      extra: params.extra,
     });
     externalTaskId = submitResult.externalTaskId;
   } catch (err) {
@@ -118,7 +133,7 @@ export async function generateReferenceImage(params: {
       ad_id: null,
       kind: "image",
       storage_path: storagePath,
-      source: "fal:fal-ai/flux/dev",
+      source: `${params.provider}:${params.endpoint}`,
     })
     .select("id")
     .single();
@@ -141,16 +156,16 @@ export async function generateReferenceImage(params: {
   const { data: price } = await service
     .from("price_table")
     .select("usd")
-    .eq("provider", "fal")
-    .eq("model", "fal-ai/flux/dev")
+    .eq("provider", params.provider)
+    .eq("model", params.endpoint)
     .eq("unit", "per_image")
     .maybeSingle();
 
   await service.rpc("record_spend_event", {
     target_org_id: params.orgId,
     target_ad_id: params.attributedAdId ?? null,
-    target_provider: "fal",
-    target_model: "fal-ai/flux/dev",
+    target_provider: params.provider,
+    target_model: params.endpoint,
     target_usd_est: price?.usd ?? 0,
     target_kind: params.spendKind,
   });

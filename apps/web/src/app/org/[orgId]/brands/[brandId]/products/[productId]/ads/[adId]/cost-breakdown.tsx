@@ -8,8 +8,6 @@ import { getAdSpend, groupSpendByKind } from "../spend-data";
  */
 export async function CostBreakdown({ orgId, adId }: { orgId: string; adId: string }) {
   const events = await getAdSpend(orgId, adId);
-  if (events.length === 0) return null;
-
   const grouped = groupSpendByKind(events);
   const total = grouped.reduce((sum, g) => sum + g.usd, 0);
 
@@ -19,17 +17,23 @@ export async function CostBreakdown({ orgId, adId }: { orgId: string; adId: stri
         <p className="font-medium text-foreground-muted">Cost so far</p>
         <p className="font-semibold">${total.toFixed(4)}</p>
       </div>
-      <div className="flex flex-col gap-1">
-        {grouped.map((g) => (
-          <div key={g.kind} className="flex items-center justify-between text-foreground-muted">
-            <span>
-              {g.label}
-              {g.count > 1 && <span className="ml-1 text-foreground-muted/60">×{g.count}</span>}
-            </span>
-            <span>${g.usd.toFixed(4)}</span>
-          </div>
-        ))}
-      </div>
+      {grouped.length === 0 ? (
+        <p className="text-foreground-muted">
+          Nothing generated yet — costs appear here as each step runs.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {grouped.map((g) => (
+            <div key={g.kind} className="flex items-center justify-between text-foreground-muted">
+              <span>
+                {g.label}
+                {g.count > 1 && <span className="ml-1 text-foreground-muted/60">×{g.count}</span>}
+              </span>
+              <span>${g.usd.toFixed(4)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <p className="text-[10px] text-foreground-muted/60">Estimates — see spend_events / price_table.</p>
     </div>
   );

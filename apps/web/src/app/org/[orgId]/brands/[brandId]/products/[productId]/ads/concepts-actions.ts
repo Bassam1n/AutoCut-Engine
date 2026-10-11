@@ -18,6 +18,10 @@ import { getBrandCastMembers } from "./concepts-data";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
+
+const DEFAULT_IMAGE_MODEL: ModelChoice = { provider: "fal", endpoint: "fal-ai/flux/dev" };
+
 export async function generateConcepts(
   orgId: string,
   brandId: string,
@@ -160,7 +164,8 @@ export async function extractCast(
   orgId: string,
   brandId: string,
   productId: string,
-  adId: string
+  adId: string,
+  model: ModelChoice = DEFAULT_IMAGE_MODEL
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
 
@@ -243,6 +248,8 @@ export async function extractCast(
       orgId,
       brandId,
       prompt: buildCastReferencePrompt(character.description, styleMasterprompt),
+      provider: model.provider,
+      endpoint: model.endpoint,
       attributedAdId: adId,
       spendKind: "image:cast_reference",
     });
@@ -295,7 +302,8 @@ export async function regenerateCastReference(
   productId: string,
   adId: string,
   castMemberId: string,
-  feedback: string
+  feedback: string,
+  model: ModelChoice = DEFAULT_IMAGE_MODEL
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
 
@@ -325,6 +333,8 @@ export async function regenerateCastReference(
     orgId,
     brandId,
     prompt: `${buildCastReferencePrompt(castMember.description, styleMasterprompt)} Revision requested: ${feedback}`,
+    provider: model.provider,
+    endpoint: model.endpoint,
     attributedAdId: adId,
     spendKind: "image:cast_reference_regenerate",
   });
@@ -405,7 +415,8 @@ export async function generateCharacterSheet(
   brandId: string,
   productId: string,
   adId: string,
-  castMemberId: string
+  castMemberId: string,
+  model: ModelChoice = DEFAULT_IMAGE_MODEL
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
 
@@ -453,6 +464,8 @@ export async function generateCharacterSheet(
     brandId,
     prompt: `Character reference sheet on a plain neutral backdrop: front view, side profile, and three expressions (neutral, smiling, speaking), all of the same person for visual consistency across a video ad.${styleGuidance} ${castMember.description}`,
     referenceImageUrls: referenceUrls,
+    provider: model.provider,
+    endpoint: model.endpoint,
     attributedAdId: adId,
     spendKind: "image:character_sheet",
   });

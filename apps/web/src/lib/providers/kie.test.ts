@@ -54,6 +54,24 @@ describe("KieAdapter", () => {
     expect(body.input.aspect_ratio).toBe("16:9");
   });
 
+  it("submit() maps referenceImageUrls to input.image_urls, confirmed against grok-imagine/image-to-image's real request shape", async () => {
+    const fetchSpy = mockFetchOnce(createTaskSuccess);
+    global.fetch = fetchSpy;
+    const adapter = new KieAdapter("test-key");
+
+    await adapter.submit({
+      kind: "image",
+      model: "grok-imagine/image-to-image",
+      prompt: "recreate the pose",
+      referenceImageUrls: ["https://example.com/ref1.png"],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.input.image_urls).toEqual(["https://example.com/ref1.png"]);
+    expect(body.input.aspect_ratio).toBeUndefined();
+  });
+
   it("poll() maps state=waiting to queued", async () => {
     global.fetch = mockFetchOnce(recordInfoQueued);
     const adapter = new KieAdapter("test-key");

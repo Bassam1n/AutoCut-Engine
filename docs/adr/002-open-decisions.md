@@ -161,6 +161,51 @@ once each is resolved.
     ran against. Lives at `/platform-admin/prompts`, editing all 6 tasks
     with inline history.
 
+19. **Cost breakdown was hiding itself when an ad had zero spend.**
+    `CostBreakdown` returned `null` on an empty `spend_events` result —
+    the user reported never seeing the feature at all, which was really
+    "nothing has been generated yet on this ad" always short-circuiting
+    before render. Fixed to always render with a "nothing generated yet"
+    empty state instead of returning null.
+20. **Image generation model is now editor-chosen per generation, not
+    hardcoded to fal/flux-dev.** The user hit a real wall: cast reference
+    generation failed whenever an org had a kie.ai key but no fal.ai
+    key, because the code only ever checked for and used fal. kie.ai
+    covers most of the image-model catalog an org might want (confirmed
+    from the user's own kie.ai dashboard screenshot: Seedream, Z-image,
+    Google, Flux-2, Grok Imagine, GPT Image, Topaz, Recraft, Ideogram,
+    Qwen, Wan, 4o Image API, Flux Kontext API). `generateReferenceImage()`
+    now takes a `provider`/`endpoint` instead of assuming fal; a new
+    `ModelPicker` component (`components/model-picker.tsx`) lets the
+    editor choose any registered image model, shows which providers
+    have a key saved, and links to `/org/{orgId}/settings/keys?returnTo=
+    {current path}` when the chosen provider has none — `keys-screen.tsx`
+    now honors `returnTo` and redirects back after a successful save.
+    No per-org "default model" preference was added (explicit choice —
+    the user said per-generation with no memory is fine); each
+    generation call defaults to fal/flux-dev when the editor hasn't
+    picked, preserving existing behavior for callers that don't pass a
+    model yet.
+21. **kie.ai's per-model API docs aren't reachable by direct URL fetch**
+    (confirmed: even z-image's own docs page, already used to build the
+    existing registry entry, 404s now — the site appears to be a
+    JS-rendered SPA that doesn't serve content to a plain HTML fetch).
+    Two new kie models (`google/nano-banana`, `grok-imagine/image-to-
+    image`) were added to the registry from real request payloads the
+    user pasted directly, not guessed — confirmed the two models have
+    genuinely different input shapes (nano-banana: `aspect_ratio` +
+    `output_format`, no reference image field in the example given;
+    grok-imagine/image-to-image: `image_urls` array, no `aspect_ratio`
+    at all). This also surfaced a real bug in `KieAdapter.submit()`:
+    `aspect_ratio` was unconditionally injected into every kie request
+    regardless of model, and `referenceImageUrls` was never mapped to
+    any field at all — fixed (`kie.ts`), both conditional on being
+    genuinely provided, reference images mapped to `image_urls`. Only
+    these two kie image models plus the two already-confirmed fal
+    models are in the picker for now; the rest of the user's dropdown
+    (Flux-2, Grok Imagine other entry points, Topaz, etc.) need their
+    own confirmed payload before being added the same way.
+
 ## Consequences
 
 Nothing in M1–M8 is blocked by any of these — schema, auth, provider

@@ -5,6 +5,8 @@ import { getAd } from "../ads-data";
 import { getAdScripts } from "../scripts-data";
 import { getScenes } from "../scenes-data";
 import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data";
+import { getModelOptions } from "@/lib/providers/models-data";
+import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
 import { StudioCanvas } from "./studio-canvas";
 import { CostBreakdown } from "./cost-breakdown";
 
@@ -52,6 +54,10 @@ async function GatedCanvas({
     .filter((id): id is string => id !== null);
   const assetUrls = await getAssetSignedUrls(orgId, assetIds);
 
+  const imageModelOptions = await getModelOptions("image");
+  const secrets = await getOrgSecrets(orgId);
+  const providersWithKeys = secrets.map((s) => s.provider);
+
   return (
     <StudioCanvas
       orgId={orgId}
@@ -63,6 +69,8 @@ async function GatedCanvas({
       concept={concept}
       castMembers={castMembers}
       assetUrls={assetUrls}
+      imageModelOptions={imageModelOptions}
+      providersWithKeys={providersWithKeys}
       costBreakdown={<CostBreakdown orgId={orgId} adId={adId} />}
     />
   );

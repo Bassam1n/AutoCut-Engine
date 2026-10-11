@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/modal";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { ModelPicker } from "@/components/model-picker";
 import {
   generateConcepts,
   selectConcept,
@@ -14,11 +15,13 @@ import {
   approveCastMember,
   reserveCastReferenceUploadPath,
   recordUploadedCastReference,
+  type ModelChoice,
 } from "../concepts-actions";
 import { generateSceneVisuals } from "../scene-visuals-actions";
 import type { Ad } from "../ads-data";
 import type { Concept, CastMember } from "../concepts-data";
 import type { ConceptOption } from "@/lib/claude/schemas/concepts";
+import type { ModelOption } from "@/lib/providers/models-data";
 
 export function ConceptCastStep({
   orgId,
@@ -28,6 +31,8 @@ export function ConceptCastStep({
   concept,
   castMembers,
   assetUrls,
+  imageModelOptions,
+  providersWithKeys,
   onContinue,
 }: {
   orgId: string;
@@ -37,12 +42,17 @@ export function ConceptCastStep({
   concept: Concept | null;
   castMembers: CastMember[];
   assetUrls: Record<string, string>;
+  imageModelOptions: ModelOption[];
+  providersWithKeys: Set<string>;
   onContinue: () => void;
 }) {
   const [isGenerating, startGenerating] = useTransition();
   const [isExtracting, startExtracting] = useTransition();
   const [isStoryboarding, startStoryboarding] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [imageModel, setImageModel] = useState<ModelOption | null>(imageModelOptions[0] ?? null);
+
+  const returnToPath = `/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`;
 
   function onGenerateConcepts() {
     setError(null);
@@ -54,8 +64,13 @@ export function ConceptCastStep({
 
   function onExtractCast() {
     setError(null);
+    if (!imageModel) {
+      setError("Pick an image model first.");
+      return;
+    }
+    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie", endpoint: imageModel.endpoint };
     startExtracting(async () => {
-      const result = await extractCast(orgId, brandId, productId, ad.id);
+      const result = await extractCast(orgId, brandId, productId, ad.id, model);
       if (!result.ok) setError(result.error);
     });
   }
@@ -117,7 +132,7 @@ export function ConceptCastStep({
 
       {hasSelectedConcept && (
         <div className="flex flex-col gap-4 border-t border-border pt-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <h3 className="text-sm font-semibold">Cast</h3>
             <button
               type="button"
@@ -128,6 +143,17 @@ export function ConceptCastStep({
               {isExtracting ? <LoadingIndicator label="Extracting cast..." /> : castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
             </button>
           </div>
+
+          {imageModelOptions.length > 0 && (
+            <ModelPicker
+              orgId={orgId}
+              options={imageModelOptions}
+              providersWithKeys={providersWithKeys}
+              value={imageModel ? { provider: imageModel.provider, endpoint: imageModel.endpoint } : null}
+              onChange={setImageModel}
+              returnToPath={returnToPath}
+            />
+          )}
 
           {castMembers.length === 0 ? (
             <p className="text-sm text-foreground-muted">
@@ -145,6 +171,10 @@ export function ConceptCastStep({
                   member={member}
                   imageUrl={member.ref_asset_id ? assetUrls[member.ref_asset_id] : undefined}
                   sheetUrl={member.sheet_asset_id ? assetUrls[member.sheet_asset_id] : undefined}
+                  imageModel={imageModel}
+                  imageModelOptions={imageModelOptions}
+                  providersWithKeys={providersWithKeys}
+                  returnToPath={returnToPath}
                 />
               ))}
             </div>
@@ -284,6 +314,10 @@ function CastMemberCard({
   member,
   imageUrl,
   sheetUrl,
+  imageModel,
+  imageModelOptions,
+  providersWithKeys,
+  returnToPath,
 }: {
   orgId: string;
   brandId: string;
@@ -292,6 +326,10 @@ function CastMemberCard({
   member: CastMember;
   imageUrl?: string;
   sheetUrl?: string;
+  imageModel: ModelOption | null;
+  imageModelOptions: ModelOption[];
+  providersWithKeys: Set<string>;
+  returnToPath: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [isRegenerateOpen, setIsRegenerateOpen] = useState(false);
@@ -300,9 +338,14 @@ function CastMemberCard({
 
   function onGenerateSheet() {
     setError(null);
+    if (!imageModel) {
+      setError("Pick an image model first.");
+      return;
+    }
     setSheetStatus("generating");
+    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie", endpoint: imageModel.endpoint };
     startTransition(async () => {
-      const result = await generateCharacterSheet(orgId, brandId, productId, ad.id, member.id);
+      const result = await generateCharacterSheet(orgId, brandId, productId, ad.id, member.id, model);
       if (result.ok) {
         setSheetStatus("idle");
       } else {
@@ -384,6 +427,10 @@ function CastMemberCard({
           ad={ad}
           member={member}
           imageUrl={imageUrl}
+          imageModel={imageModel}
+          imageModelOptions={imageModelOptions}
+          providersWithKeys={providersWithKeys}
+          returnToPath={returnToPath}
           onClose={() => setIsRegenerateOpen(false)}
         />
       )}
@@ -398,6 +445,10 @@ function RegenerateModal({
   ad,
   member,
   imageUrl,
+  imageModel,
+  imageModelOptions,
+  providersWithKeys,
+  returnToPath,
   onClose,
 }: {
   orgId: string;
@@ -406,18 +457,28 @@ function RegenerateModal({
   ad: Ad;
   member: CastMember;
   imageUrl?: string;
+  imageModel: ModelOption | null;
+  imageModelOptions: ModelOption[];
+  providersWithKeys: Set<string>;
+  returnToPath: string;
   onClose: () => void;
 }) {
   const [feedback, setFeedback] = useState("");
   const [isPending, startTransition] = useTransition();
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<ModelOption | null>(imageModel);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function onRegenerateWithFeedback() {
     setError(null);
+    if (!selectedModel) {
+      setError("Pick an image model first.");
+      return;
+    }
+    const model: ModelChoice = { provider: selectedModel.provider as "fal" | "kie", endpoint: selectedModel.endpoint };
     startTransition(async () => {
-      const result = await regenerateCastReference(orgId, brandId, productId, ad.id, member.id, feedback || "make it better");
+      const result = await regenerateCastReference(orgId, brandId, productId, ad.id, member.id, feedback || "make it better", model);
       if (result.ok) {
         onClose();
       } else {
@@ -472,6 +533,16 @@ function RegenerateModal({
       )}
 
       <div className="flex flex-col gap-1.5">
+        {imageModelOptions.length > 0 && (
+          <ModelPicker
+            orgId={orgId}
+            options={imageModelOptions}
+            providersWithKeys={providersWithKeys}
+            value={selectedModel ? { provider: selectedModel.provider, endpoint: selectedModel.endpoint } : null}
+            onChange={setSelectedModel}
+            returnToPath={returnToPath}
+          />
+        )}
         <label className="text-xs font-medium">Small change — describe what to adjust</label>
         <textarea
           value={feedback}

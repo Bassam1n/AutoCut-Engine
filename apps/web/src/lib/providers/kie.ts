@@ -42,11 +42,21 @@ export class KieAdapter implements ProviderAdapter {
   }
 
   async submit(params: SubmitParams): Promise<SubmitResult> {
+    // Confirmed from real kie.ai request payloads for three different
+    // models (z-image, google/nano-banana, grok-imagine/image-to-
+    // image): input shape genuinely differs per model — some take
+    // aspect_ratio, grok-imagine/image-to-image doesn't and instead
+    // takes image_urls for its reference image(s). aspect_ratio is
+    // only injected when the caller actually asked for one (or a
+    // default is appropriate) rather than unconditionally on every
+    // model, and referenceImageUrls maps to image_urls, the field
+    // every reference-capable kie model observed so far actually uses.
     const body: Record<string, unknown> = {
       model: params.model,
       input: {
         prompt: params.prompt,
-        aspect_ratio: params.aspectRatio ?? "9:16",
+        ...(params.aspectRatio ? { aspect_ratio: params.aspectRatio } : {}),
+        ...(params.referenceImageUrls?.length ? { image_urls: params.referenceImageUrls } : {}),
         ...params.extra,
       },
     };

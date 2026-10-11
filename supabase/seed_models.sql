@@ -18,7 +18,9 @@ values
   ('z-image', 'image', true, 'Fast text-to-image. Max prompt length not documented by kie.ai; keep prompts concise and concrete.'),
   ('flux-dev', 'image', true, 'FLUX.1 [dev] via fal.ai. Strong prompt adherence at default guidance_scale 3.5; raise for stricter prompt-following, lower for more creative variation.'),
   ('kling-v2-1-pro', 'video', true, 'Image-to-video. Requires a starting image_url — this model cannot generate video from text alone. Max prompt 5000 characters.'),
-  ('kling-v3-pro-i2v', 'video', true, 'Image-to-video via fal.ai. Requires start_image_url. Supports multi-shot generation via multi_prompt as an alternative to a single prompt.')
+  ('kling-v3-pro-i2v', 'video', true, 'Image-to-video via fal.ai. Requires start_image_url. Supports multi-shot generation via multi_prompt as an alternative to a single prompt.'),
+  ('nano-banana', 'image', true, 'Google Nano Banana via kie.ai. Text-to-image; no reference image input confirmed for this entry point.'),
+  ('grok-imagine-i2i', 'image', true, 'Grok Imagine image-to-image via kie.ai. Takes one or more reference images (image_urls) the model edits/recreates from — the model this org''s cast reference generation should use once a kie key is saved.')
 on conflict (name) do update
   set capability = excluded.capability,
       active = excluded.active,
@@ -86,6 +88,41 @@ select m.id, 'fal', 'fal-ai/kling-video/v3/pro/image-to-video',
   '{}'::jsonb,
   true
 from public.models m where m.name = 'kling-v3-pro-i2v'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+-- Confirmed against a real kie.ai request payload the user provided
+-- (not guessed): {"model": "google/nano-banana", "input": {"prompt",
+-- "output_format", "aspect_ratio"}}. No reference-image field shown
+-- in that example — treated as text-to-image only until a payload
+-- with an image input is confirmed.
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'google/nano-banana',
+  '[
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["1:1", "4:3", "3:4", "16:9", "9:16"], "default": "1:1", "required": false},
+    {"key": "output_format", "label": "Format", "type": "enum", "options": ["png", "jpeg"], "default": "png", "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'nano-banana'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+-- Confirmed against a real kie.ai request payload the user provided:
+-- {"model": "grok-imagine/image-to-image", "input": {"prompt",
+-- "image_urls"}} — no aspect_ratio field in this example, reference
+-- images go in image_urls (an array), which is exactly what
+-- SubmitParams.referenceImageUrls now maps onto in KieAdapter.
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'grok-imagine/image-to-image',
+  '[]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'grok-imagine-i2i'
 on conflict (model_id, provider, endpoint) do update
   set parameter_schema = excluded.parameter_schema,
       price_rule = excluded.price_rule,

@@ -10,6 +10,7 @@ import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 import type { Scene } from "../scenes-data";
 import type { Concept, CastMember } from "../concepts-data";
+import type { ModelOption } from "@/lib/providers/models-data";
 
 export function StudioCanvas({
   orgId,
@@ -21,6 +22,8 @@ export function StudioCanvas({
   concept,
   castMembers,
   assetUrls,
+  imageModelOptions,
+  providersWithKeys,
   costBreakdown,
 }: {
   orgId: string;
@@ -32,6 +35,8 @@ export function StudioCanvas({
   concept: Concept | null;
   castMembers: CastMember[];
   assetUrls: Record<string, string>;
+  imageModelOptions: ModelOption[];
+  providersWithKeys: string[];
   /** Server-rendered <CostBreakdown /> slot — composed in from page.tsx since it's an async Server Component and can't be imported directly into this Client Component. */
   costBreakdown: React.ReactNode;
 }) {
@@ -90,6 +95,8 @@ export function StudioCanvas({
             concept={concept}
             castMembers={castMembers}
             assetUrls={assetUrls}
+            imageModelOptions={imageModelOptions}
+            providersWithKeys={new Set(providersWithKeys)}
             onContinue={() => setStep("storyboard")}
           />
         )}

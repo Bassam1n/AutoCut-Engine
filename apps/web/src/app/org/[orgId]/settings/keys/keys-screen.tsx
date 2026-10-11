@@ -1,8 +1,26 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Suspense, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { ApiKeyProvider, OrgSecretRow } from "./keys-data";
 import { saveProviderKey } from "./keys-actions";
+
+/**
+ * When linked to with ?returnTo=<path>, shows a banner so the editor
+ * knows saving a key will bring them back to where they came from —
+ * the model picker's "no key saved, add one" redirect relies on this.
+ */
+function ReturnToBanner() {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
+  if (!returnTo) return null;
+
+  return (
+    <div className="rounded-lg bg-accent-soft px-3 py-2 text-xs text-accent">
+      Add the key below, then you&apos;ll be able to continue where you left off.
+    </div>
+  );
+}
 
 const API_KEY_PROVIDERS: { id: ApiKeyProvider; label: string }[] = [
   { id: "anthropic", label: "Anthropic" },
@@ -29,6 +47,10 @@ export function KeysScreen({
 
   return (
     <div className="flex flex-col gap-3">
+      <Suspense fallback={null}>
+        <ReturnToBanner />
+      </Suspense>
+
       {API_KEY_PROVIDERS.map((p) => (
         <ProviderRow key={p.id} orgId={orgId} provider={p.id} label={p.label} existing={byProvider[p.id]} />
       ))}
@@ -73,6 +95,7 @@ function ProviderRow({
   const [value, setValue] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   function onSave() {
     setError(null);
@@ -85,6 +108,8 @@ function ProviderRow({
       if (result.ok) {
         setValue("");
         setEditing(false);
+        const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+        if (returnTo) router.push(returnTo);
       } else {
         setError(result.error);
       }
