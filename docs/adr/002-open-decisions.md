@@ -116,6 +116,50 @@ once each is resolved.
     changing the calling contract (`generateReferenceImage()` just
     returns an asset id either way). Still open: M9 should replace the
     inline poll, not coexist with it.
+15. ~~**Ad deletion: archive-only or real hard delete.**~~ **Resolved.**
+    Spec §4's own stated rule ("Archive, never delete") already applies to
+    generated assets. Extended the same rule to ads themselves rather
+    than adding a destructive delete: `ads.archived` (soft-hide from the
+    list) plus `ads.name` (nullable, for rename) — migration
+    `00000000000037_ads_name_archive.sql`. No hard-delete path exists for
+    ads; archiving never discards scripts/scenes/concepts/cast/spend
+    history under an ad.
+16. **In-app prompt editor fixed three real bugs found by live use:**
+    cast extraction never passed the chosen style into `extract_cast` or
+    into the cast-reference image prompt (cast wasn't actually
+    style-grounded); the character-sheet and cast-regenerate actions used
+    `void someAction(...)` fire-and-forget calls that silently swallowed
+    every error, so a failed generation showed nothing happening; and the
+    regenerate flow was a native `window.prompt()` with no way to see the
+    current reference image or upload a replacement, despite spec saying
+    "approve, or upload their own." Fixed in the same pass as the
+    editor's new shared primitives (`components/modal.tsx`,
+    `components/loading-indicator.tsx`), which also replaced `scene-plan-
+    step.tsx`'s `window.prompt()` for idea/rule notes with the same
+    modal, and added the Studio's own in-flow "Previous step" control
+    plus a "Back to ads" link (`stepper.tsx`) alongside the existing
+    `back-button.tsx`.
+17. **Cost breakdown is per-ad, not per-org.** `spend_events.ad_id` and
+    `kind` (already `llm:${task}` from `llm.call()`) were enough to group
+    by pipeline step without new columns — `spend-data.ts`'s
+    `groupSpendByKind()`. Image generation (`generate-reference-image.ts`)
+    never recorded spend before this pass; it now calls
+    `claim_paid_job`/`record_spend_event` the same way `llm.call()` does,
+    priced from a new `price_table` row for `fal-ai/flux/dev`
+    (`seed_price_table.sql`, fal.ai's documented $0.025/megapixel,
+    applied to one generation — not a guessed number, but still an
+    estimate per spec's own labeling convention for this table).
+18. **In-app prompt editor is platform-admin-only**, matching
+    `prompt_versions`' actual RLS (no insert/update policy for any role —
+    genuinely service-role-write-only, confirmed by reading the table's
+    own migration rather than assumed). New `save_prompt_version()` RPC
+    (`00000000000038_prompt_editor.sql`), `SECURITY DEFINER` gated on
+    `is_platform_admin()`, always **inserts** a new version and
+    deactivates the previous one rather than overwriting — prompt history
+    is load-bearing (`llm.call()` records which version every real call
+    used), so an edit must never destroy what an earlier call actually
+    ran against. Lives at `/platform-admin/prompts`, editing all 6 tasks
+    with inline history.
 
 ## Consequences
 

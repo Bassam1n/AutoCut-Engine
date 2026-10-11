@@ -21,6 +21,7 @@ export function StudioCanvas({
   concept,
   castMembers,
   assetUrls,
+  costBreakdown,
 }: {
   orgId: string;
   brandId: string;
@@ -31,14 +32,24 @@ export function StudioCanvas({
   concept: Concept | null;
   castMembers: CastMember[];
   assetUrls: Record<string, string>;
+  /** Server-rendered <CostBreakdown /> slot — composed in from page.tsx since it's an async Server Component and can't be imported directly into this Client Component. */
+  costBreakdown: React.ReactNode;
 }) {
   const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts, scenes));
+  const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
+  const previousStep = previousStepFor(step);
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Stepper currentStep={step} onStepClick={setStep} />
+      <Stepper
+        currentStep={step}
+        onStepClick={setStep}
+        onPreviousStep={previousStep ? () => setStep(previousStep) : undefined}
+        adsListHref={adsListHref}
+      />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-8">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-8">
+        {costBreakdown}
         {step === "scripts" && (
           <ScriptsStep
             orgId={orgId}
@@ -87,6 +98,32 @@ export function StudioCanvas({
       </div>
     </div>
   );
+}
+
+/**
+ * Step-back order for the in-Studio "Previous step" control. "brief"
+ * steps back to "scripts" (its own fallback origin) rather than
+ * "dial_in", since that's where the editor actually came from.
+ * Returns undefined on the first reachable step (nothing to go back
+ * to within the Studio — use the "Back to ads" link instead).
+ */
+function previousStepFor(step: StudioStep): StudioStep | undefined {
+  switch (step) {
+    case "scripts":
+      return undefined;
+    case "brief":
+      return "scripts";
+    case "dial_in":
+      return "scripts";
+    case "plan":
+      return "dial_in";
+    case "concept":
+      return "plan";
+    case "storyboard":
+      return "concept";
+    case "review":
+      return "storyboard";
+  }
 }
 
 function initialStep(ad: Ad, scripts: AdScriptRow[], scenes: Scene[]): StudioStep {

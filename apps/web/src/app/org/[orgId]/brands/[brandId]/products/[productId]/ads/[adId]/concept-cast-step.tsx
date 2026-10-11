@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Modal } from "@/components/modal";
+import { LoadingIndicator } from "@/components/loading-indicator";
 import {
   generateConcepts,
   selectConcept,
@@ -9,6 +12,8 @@ import {
   regenerateCastReference,
   generateCharacterSheet,
   approveCastMember,
+  reserveCastReferenceUploadPath,
+  recordUploadedCastReference,
 } from "../concepts-actions";
 import { generateSceneVisuals } from "../scene-visuals-actions";
 import type { Ad } from "../ads-data";
@@ -87,7 +92,7 @@ export function ConceptCastStep({
           disabled={isGenerating}
           className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
         >
-          {isGenerating ? "Generating..." : hasConcepts ? "Regenerate concepts" : "Generate concepts"}
+          {isGenerating ? <LoadingIndicator label="Generating concepts..." /> : hasConcepts ? "Regenerate concepts" : "Generate concepts"}
         </button>
       </div>
 
@@ -120,7 +125,7 @@ export function ConceptCastStep({
               disabled={isExtracting}
               className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
             >
-              {isExtracting ? "Extracting..." : castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
+              {isExtracting ? <LoadingIndicator label="Extracting cast..." /> : castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
             </button>
           </div>
 
@@ -154,7 +159,7 @@ export function ConceptCastStep({
           disabled={isStoryboarding}
           className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {isStoryboarding ? "Generating storyboard..." : "Generate storyboard →"}
+          {isStoryboarding ? <LoadingIndicator label="Generating storyboard..." /> : "Generate storyboard →"}
         </button>
       )}
     </div>
@@ -182,17 +187,25 @@ function ConceptCard({
   const [story, setStory] = useState(option.story);
   const [world, setWorld] = useState(option.world);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function onSelect() {
-    startTransition(() => {
-      void selectConcept(orgId, brandId, productId, ad.id, index);
+    setError(null);
+    startTransition(async () => {
+      const result = await selectConcept(orgId, brandId, productId, ad.id, index);
+      if (!result.ok) setError(result.error);
     });
   }
 
   function onSaveEdit() {
+    setError(null);
     startTransition(async () => {
-      await editSelectedConcept(orgId, brandId, productId, ad.id, index, { ...option, story, world });
-      setIsEditing(false);
+      const result = await editSelectedConcept(orgId, brandId, productId, ad.id, index, { ...option, story, world });
+      if (result.ok) {
+        setIsEditing(false);
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -258,6 +271,7 @@ function ConceptCard({
           </button>
         )}
       </div>
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }
@@ -280,24 +294,29 @@ function CastMemberCard({
   sheetUrl?: string;
 }) {
   const [isPending, startTransition] = useTransition();
-
-  function onRegenerate() {
-    const feedback = window.prompt("What should change about this reference image?");
-    if (!feedback) return;
-    startTransition(() => {
-      void regenerateCastReference(orgId, brandId, productId, ad.id, member.id, feedback);
-    });
-  }
+  const [isRegenerateOpen, setIsRegenerateOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sheetStatus, setSheetStatus] = useState<"idle" | "generating" | "failed">("idle");
 
   function onGenerateSheet() {
-    startTransition(() => {
-      void generateCharacterSheet(orgId, brandId, productId, ad.id, member.id);
+    setError(null);
+    setSheetStatus("generating");
+    startTransition(async () => {
+      const result = await generateCharacterSheet(orgId, brandId, productId, ad.id, member.id);
+      if (result.ok) {
+        setSheetStatus("idle");
+      } else {
+        setSheetStatus("failed");
+        setError(result.error);
+      }
     });
   }
 
   function onApprove() {
-    startTransition(() => {
-      void approveCastMember(orgId, brandId, productId, ad.id, member.id);
+    setError(null);
+    startTransition(async () => {
+      const result = await approveCastMember(orgId, brandId, productId, ad.id, member.id);
+      if (!result.ok) setError(result.error);
     });
   }
 
@@ -313,6 +332,7 @@ function CastMemberCard({
       )}
       <p className="text-sm font-medium">{member.name}</p>
       <p className="text-xs text-foreground-muted">{member.description}</p>
+      {error && <p className="text-xs text-danger">{error}</p>}
       {member.approved ? (
         <span className="self-start rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
           Approved ✓
@@ -330,7 +350,7 @@ function CastMemberCard({
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={onRegenerate}
+          onClick={() => setIsRegenerateOpen(true)}
           disabled={isPending}
           className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
         >
@@ -342,13 +362,155 @@ function CastMemberCard({
           disabled={isPending}
           className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
         >
-          {sheetUrl ? "Regenerate sheet" : "Character sheet"}
+          {sheetStatus === "generating" ? (
+            <LoadingIndicator label="Generating sheet..." />
+          ) : sheetUrl ? (
+            "Regenerate sheet"
+          ) : (
+            "Character sheet"
+          )}
         </button>
       </div>
       {sheetUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={sheetUrl} alt={`${member.name} character sheet`} className="w-full rounded-lg object-cover" />
       )}
+
+      {isRegenerateOpen && (
+        <RegenerateModal
+          orgId={orgId}
+          brandId={brandId}
+          productId={productId}
+          ad={ad}
+          member={member}
+          imageUrl={imageUrl}
+          onClose={() => setIsRegenerateOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function RegenerateModal({
+  orgId,
+  brandId,
+  productId,
+  ad,
+  member,
+  imageUrl,
+  onClose,
+}: {
+  orgId: string;
+  brandId: string;
+  productId: string;
+  ad: Ad;
+  member: CastMember;
+  imageUrl?: string;
+  onClose: () => void;
+}) {
+  const [feedback, setFeedback] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function onRegenerateWithFeedback() {
+    setError(null);
+    startTransition(async () => {
+      const result = await regenerateCastReference(orgId, brandId, productId, ad.id, member.id, feedback || "make it better");
+      if (result.ok) {
+        onClose();
+      } else {
+        setError(result.error);
+      }
+    });
+  }
+
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    setIsUploading(true);
+    try {
+      const reserved = await reserveCastReferenceUploadPath(orgId, brandId, file.name);
+      if (!reserved.ok) {
+        setError(reserved.error);
+        return;
+      }
+
+      const supabase = createClient();
+      const { error: uploadError } = await supabase.storage
+        .from("renders")
+        .upload(reserved.path, file, { upsert: false });
+      if (uploadError) {
+        setError(uploadError.message);
+        return;
+      }
+
+      const result = await recordUploadedCastReference(orgId, brandId, productId, ad.id, member.id, reserved.path);
+      if (result.ok) {
+        onClose();
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <Modal title={`Update ${member.name}'s reference image`} onClose={onClose}>
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={imageUrl} alt={member.name} className="aspect-[4/5] w-full rounded-lg object-cover" />
+      ) : (
+        <div className="flex aspect-[4/5] w-full items-center justify-center rounded-lg bg-border text-xs text-foreground-muted">
+          No current image
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium">Small change — describe what to adjust</label>
+        <textarea
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          rows={2}
+          placeholder="e.g. make the expression friendlier"
+          disabled={isPending || isUploading}
+          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+        />
+        <button
+          type="button"
+          onClick={onRegenerateWithFeedback}
+          disabled={isPending || isUploading}
+          className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {isPending ? <LoadingIndicator label="Regenerating..." /> : "Regenerate"}
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+        <label className="text-xs font-medium">Big change — upload your own image instead</label>
+        <label
+          className={`self-start rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium ${
+            isUploading || isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-border/40"
+          }`}
+        >
+          {isUploading ? "Uploading..." : "Upload image"}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={onFileChange}
+            disabled={isUploading || isPending}
+            className="hidden"
+          />
+        </label>
+      </div>
+
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </Modal>
   );
 }

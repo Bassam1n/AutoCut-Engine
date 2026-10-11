@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { generateScripts, selectScript } from "../scripts-actions";
+import { LoadingIndicator } from "@/components/loading-indicator";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 
@@ -87,11 +88,13 @@ export function ScriptsStep({
           disabled={isGenerating}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {isGenerating
-            ? "Generating..."
-            : scripts.length > 0
-              ? "Regenerate scripts"
-              : "Generate 3 scripts"}
+          {isGenerating ? (
+            <LoadingIndicator label="Generating scripts..." />
+          ) : scripts.length > 0 ? (
+            "Regenerate scripts"
+          ) : (
+            "Generate 3 scripts"
+          )}
         </button>
       </div>
 

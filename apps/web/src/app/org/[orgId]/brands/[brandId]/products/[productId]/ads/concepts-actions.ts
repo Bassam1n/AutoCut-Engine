@@ -181,6 +181,17 @@ export async function extractCast(
   const scenes = await getScenes(orgId, adId);
   const brandCast = await getBrandCastMembers(orgId, brandId);
 
+  const ad = await getAd(orgId, productId, adId);
+  let styleMasterprompt: string | null = null;
+  if (ad?.style_id) {
+    const { data: style } = await supabase
+      .from("styles")
+      .select("masterprompt")
+      .eq("id", ad.style_id)
+      .maybeSingle();
+    styleMasterprompt = style?.masterprompt ?? null;
+  }
+
   let output;
   try {
     const result = await llmCall({
@@ -191,6 +202,7 @@ export async function extractCast(
         concept: selectedConcept,
         scenes: scenes.map((s) => ({ idx: s.idx, copy: s.copy })),
         existing_brand_cast: brandCast.map((c) => ({ id: c.id, name: c.name, description: c.description })),
+        style_masterprompt: styleMasterprompt,
       },
     });
     output = result.output;
@@ -230,7 +242,9 @@ export async function extractCast(
     const imageResult = await generateReferenceImage({
       orgId,
       brandId,
-      prompt: `Reference character portrait on a plain neutral backdrop, face clearly visible, consistent for reuse across a video ad. ${character.description}`,
+      prompt: buildCastReferencePrompt(character.description, styleMasterprompt),
+      attributedAdId: adId,
+      spendKind: "image:cast_reference",
     });
 
     const { data: newCastMember, error: insertError } = await supabase
@@ -268,6 +282,13 @@ export async function extractCast(
   return { ok: true };
 }
 
+/**
+ * Small change: Claude redraws the reference image with the feedback
+ * folded into the prompt (and the style masterprompt, same as initial
+ * extraction). Big change: the editor uploads their own image
+ * instead, skipping generation entirely — spec §5.4 step 4: "approve,
+ * or upload their own."
+ */
 export async function regenerateCastReference(
   orgId: string,
   brandId: string,
@@ -279,6 +300,8 @@ export async function regenerateCastReference(
   await requireOrgMember(orgId);
 
   const supabase = await createClient();
+  const ad = await getAd(orgId, productId, adId);
+
   const { data: castMember, error: fetchError } = await supabase
     .from("cast_members")
     .select("description")
@@ -288,10 +311,22 @@ export async function regenerateCastReference(
   if (fetchError) return { ok: false, error: fetchError.message };
   if (!castMember) return { ok: false, error: "Cast member not found." };
 
+  let styleMasterprompt: string | null = null;
+  if (ad?.style_id) {
+    const { data: style } = await supabase
+      .from("styles")
+      .select("masterprompt")
+      .eq("id", ad.style_id)
+      .maybeSingle();
+    styleMasterprompt = style?.masterprompt ?? null;
+  }
+
   const imageResult = await generateReferenceImage({
     orgId,
     brandId,
-    prompt: `Reference character portrait on a plain neutral backdrop, face clearly visible. ${castMember.description}. Revision requested: ${feedback}`,
+    prompt: `${buildCastReferencePrompt(castMember.description, styleMasterprompt)} Revision requested: ${feedback}`,
+    attributedAdId: adId,
+    spendKind: "image:cast_reference_regenerate",
   });
   if (!imageResult.ok) return { ok: false, error: imageResult.error };
 
@@ -306,6 +341,65 @@ export async function regenerateCastReference(
   return { ok: true };
 }
 
+/**
+ * Reserves a storage path for the editor to upload their own cast
+ * reference image directly, the same browser-to-Storage-direct
+ * pattern used for product refs (never through a Next.js route, per
+ * spec §6's Vercel body-limit note) — this action only computes the
+ * path server-side so the {org_id}/... prefix storage RLS checks
+ * against is never client-controlled.
+ */
+export async function reserveCastReferenceUploadPath(
+  orgId: string,
+  brandId: string,
+  fileName: string
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  await requireOrgMember(orgId);
+
+  const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${orgId}/brand_cast/${brandId}/${Date.now()}_${safeName}`;
+
+  return { ok: true, path };
+}
+
+export async function recordUploadedCastReference(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string,
+  castMemberId: string,
+  storagePath: string
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const supabase = await createClient();
+  const service = createServiceClient();
+
+  const { data: assetRow, error: assetError } = await service
+    .from("assets")
+    .insert({ org_id: orgId, brand_id: brandId, ad_id: null, kind: "image", storage_path: storagePath, source: "upload" })
+    .select("id")
+    .single();
+  if (assetError) return { ok: false, error: assetError.message };
+
+  const { error } = await supabase
+    .from("cast_members")
+    .update({ ref_asset_id: assetRow.id, approved: false })
+    .eq("org_id", orgId)
+    .eq("id", castMemberId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${adId}`);
+  return { ok: true };
+}
+
+function buildCastReferencePrompt(description: string, styleMasterprompt: string | null): string {
+  const styleGuidance = styleMasterprompt
+    ? ` Render in the following visual style: ${styleMasterprompt}`
+    : "";
+  return `Reference character portrait on a plain neutral backdrop, face clearly visible, consistent for reuse across a video ad.${styleGuidance} ${description}`;
+}
+
 export async function generateCharacterSheet(
   orgId: string,
   brandId: string,
@@ -316,6 +410,8 @@ export async function generateCharacterSheet(
   await requireOrgMember(orgId);
 
   const supabase = await createClient();
+  const ad = await getAd(orgId, productId, adId);
+
   const { data: castMember, error: fetchError } = await supabase
     .from("cast_members")
     .select("description, ref_asset_id")
@@ -324,6 +420,16 @@ export async function generateCharacterSheet(
     .maybeSingle();
   if (fetchError) return { ok: false, error: fetchError.message };
   if (!castMember) return { ok: false, error: "Cast member not found." };
+
+  let styleMasterprompt: string | null = null;
+  if (ad?.style_id) {
+    const { data: style } = await supabase
+      .from("styles")
+      .select("masterprompt")
+      .eq("id", ad.style_id)
+      .maybeSingle();
+    styleMasterprompt = style?.masterprompt ?? null;
+  }
 
   const service = createServiceClient();
   let referenceUrls: string[] | undefined;
@@ -341,13 +447,16 @@ export async function generateCharacterSheet(
     }
   }
 
+  const styleGuidance = styleMasterprompt ? ` Render in the following visual style: ${styleMasterprompt}` : "";
   const imageResult = await generateReferenceImage({
     orgId,
     brandId,
-    prompt: `Character reference sheet on a plain neutral backdrop: front view, side profile, and three expressions (neutral, smiling, speaking), all of the same person for visual consistency across a video ad. ${castMember.description}`,
+    prompt: `Character reference sheet on a plain neutral backdrop: front view, side profile, and three expressions (neutral, smiling, speaking), all of the same person for visual consistency across a video ad.${styleGuidance} ${castMember.description}`,
     referenceImageUrls: referenceUrls,
+    attributedAdId: adId,
+    spendKind: "image:character_sheet",
   });
-  if (!imageResult.ok) return { ok: false, error: imageResult.error };
+  if (!imageResult.ok) return { ok: false, error: `Character sheet generation failed: ${imageResult.error}` };
 
   const { error } = await supabase
     .from("cast_members")

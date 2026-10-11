@@ -77,3 +77,74 @@ export async function lockPlan(
   revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${adId}`);
   return { ok: true };
 }
+
+export async function renameAd(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string,
+  name: string
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const trimmed = name.trim();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("ads")
+    .update({ name: trimmed || null })
+    .eq("org_id", orgId)
+    .eq("id", adId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads`);
+  return { ok: true };
+}
+
+/**
+ * Archives an ad — spec §4's own "archive, never delete" rule for
+ * generated work, applied here too. Hides it from the default ads
+ * list without removing any of its scripts/scenes/concepts/cast/
+ * spend history.
+ */
+export async function archiveAd(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("ads")
+    .update({ archived: true })
+    .eq("org_id", orgId)
+    .eq("id", adId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads`);
+  return { ok: true };
+}
+
+export async function unarchiveAd(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("ads")
+    .update({ archived: false })
+    .eq("org_id", orgId)
+    .eq("id", adId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads`);
+  return { ok: true };
+}

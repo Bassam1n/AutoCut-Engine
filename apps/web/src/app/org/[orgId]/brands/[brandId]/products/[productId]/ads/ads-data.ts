@@ -16,6 +16,8 @@ export type Ad = {
   style_id: string | null;
   mode: "studio" | "autopilot";
   brief: AdBrief;
+  name: string | null;
+  archived: boolean;
   target_length_seconds: number | null;
   plan_locked: boolean;
   status: string;
@@ -23,14 +25,23 @@ export type Ad = {
   updated_at: string;
 };
 
-export async function getAds(orgId: string, productId: string): Promise<Ad[]> {
+export async function getAds(
+  orgId: string,
+  productId: string,
+  options: { includeArchived?: boolean } = {}
+): Promise<Ad[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("ads")
     .select("*")
     .eq("org_id", orgId)
-    .eq("product_id", productId)
-    .order("created_at", { ascending: false });
+    .eq("product_id", productId);
+
+  if (!options.includeArchived) {
+    query = query.eq("archived", false);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   return data ?? [];

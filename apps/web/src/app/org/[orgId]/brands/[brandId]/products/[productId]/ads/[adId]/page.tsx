@@ -6,6 +6,7 @@ import { getAdScripts } from "../scripts-data";
 import { getScenes } from "../scenes-data";
 import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data";
 import { StudioCanvas } from "./studio-canvas";
+import { CostBreakdown } from "./cost-breakdown";
 
 export default function AdStudioPage({
   params,
@@ -62,6 +63,7 @@ async function GatedCanvas({
       concept={concept}
       castMembers={castMembers}
       assetUrls={assetUrls}
+      costBreakdown={<CostBreakdown orgId={orgId} adId={adId} />}
     />
   );
 }

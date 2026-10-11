@@ -26,8 +26,23 @@ export async function generateReferenceImage(params: {
   brandId: string;
   prompt: string;
   referenceImageUrls?: string[];
+  /** Ad this generation is attributed to for cost breakdown, when it has one — cast reference generation is triggered from inside an ad's Studio flow even though the resulting asset is brand-scoped, not ad-scoped. */
+  attributedAdId?: string;
+  /** spend_events.kind — identifies which pipeline step this generation belongs to on the cost breakdown. */
+  spendKind: string;
 }): Promise<GenerateReferenceImageResult> {
   const service = createServiceClient();
+
+  // Same guard llm.call() uses before spending anything — image
+  // generation was missing this entirely until now, meaning a paused
+  // org could still generate images even though it couldn't run a
+  // Claude call.
+  const { error: claimError } = await service.rpc("claim_paid_job", {
+    target_org_id: params.orgId,
+  });
+  if (claimError) {
+    return { ok: false, error: claimError.message };
+  }
 
   const { data: apiKey, error: keyError } = await service.rpc("get_org_secret_value", {
     target_org_id: params.orgId,
@@ -117,6 +132,28 @@ export async function generateReferenceImage(params: {
   if (signError || !signedUrlData) {
     return { ok: false, error: signError?.message ?? "Could not sign the generated image's URL." };
   }
+
+  // Recorded after the asset exists, same ordering as llm.call() —
+  // spend reflects work actually done, never charged for a failed
+  // attempt. price_table (supabase/seed_price_table.sql) holds the
+  // per-image estimate; 0 if it's ever missing rather than throwing,
+  // since a pricing-table gap shouldn't block a successful generation.
+  const { data: price } = await service
+    .from("price_table")
+    .select("usd")
+    .eq("provider", "fal")
+    .eq("model", "fal-ai/flux/dev")
+    .eq("unit", "per_image")
+    .maybeSingle();
+
+  await service.rpc("record_spend_event", {
+    target_org_id: params.orgId,
+    target_ad_id: params.attributedAdId ?? null,
+    target_provider: "fal",
+    target_model: "fal-ai/flux/dev",
+    target_usd_est: price?.usd ?? 0,
+    target_kind: params.spendKind,
+  });
 
   return { ok: true, assetId: assetRow.id, signedUrl: signedUrlData.signedUrl };
 }

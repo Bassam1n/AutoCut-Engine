@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { requirePlatformAdmin, getCurrentUser } from "@/lib/auth";
 import { signOut } from "../actions";
 import { RegisterAgencyForm } from "./register-agency-form";
@@ -23,9 +24,17 @@ export default function PlatformAdminPage() {
           </p>
         </div>
 
-        <Suspense fallback={<SignOutSkeleton />}>
-          <AccountMenu />
-        </Suspense>
+        <div className="flex shrink-0 items-start gap-3">
+          <Link
+            href="/platform-admin/prompts"
+            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+          >
+            Agent prompts
+          </Link>
+          <Suspense fallback={<SignOutSkeleton />}>
+            <AccountMenu />
+          </Suspense>
+        </div>
       </div>
 
       <div>

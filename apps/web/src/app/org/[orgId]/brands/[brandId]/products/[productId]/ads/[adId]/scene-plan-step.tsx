@@ -9,6 +9,8 @@ import {
   mergeSceneIntoPrevious,
 } from "../scenes-actions";
 import { lockPlan } from "../ads-actions";
+import { PromptModal } from "@/components/modal";
+import { LoadingIndicator } from "@/components/loading-indicator";
 import type { Ad } from "../ads-data";
 import type { Scene, SceneNote } from "../scenes-data";
 
@@ -76,7 +78,7 @@ export function ScenePlanStep({
           disabled={isGenerating || ad.plan_locked}
           className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
         >
-          {isGenerating ? "Generating..." : scenes.length > 0 ? "Regenerate" : "Generate scene plan"}
+          {isGenerating ? <LoadingIndicator label="Generating scene plan..." /> : scenes.length > 0 ? "Regenerate" : "Generate scene plan"}
         </button>
       </div>
 
@@ -145,40 +147,52 @@ function SceneRow({
 }) {
   const [copy, setCopy] = useState(scene.copy);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [noteModalType, setNoteModalType] = useState<SceneNote["type"] | null>(null);
   const note = isNote(scene.notes) ? scene.notes : null;
 
   function saveCopy() {
     if (copy === scene.copy) return;
-    startTransition(() => {
-      void updateSceneCopy(orgId, brandId, productId, ad.id, scene.id, copy);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateSceneCopy(orgId, brandId, productId, ad.id, scene.id, copy);
+      if (!result.ok) setError(result.error);
     });
   }
 
-  function toggleNote(type: SceneNote["type"]) {
+  function onRemoveNote() {
+    setError(null);
     startTransition(async () => {
-      if (note?.type === type) {
-        await setSceneNote(orgId, brandId, productId, ad.id, scene.id, null);
-      } else {
-        const text = window.prompt(
-          type === "rule" ? "Rule text (kept word-for-word):" : "Idea note:",
-          note?.text ?? ""
-        );
-        if (text === null) return;
-        await setSceneNote(orgId, brandId, productId, ad.id, scene.id, { type, text });
-      }
+      const result = await setSceneNote(orgId, brandId, productId, ad.id, scene.id, null);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  function onSubmitNote(text: string) {
+    const type = noteModalType;
+    setNoteModalType(null);
+    if (!type || !text.trim()) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await setSceneNote(orgId, brandId, productId, ad.id, scene.id, { type, text });
+      if (!result.ok) setError(result.error);
     });
   }
 
   function onSplit() {
     const mid = Math.floor(copy.length / 2);
-    startTransition(() => {
-      void splitScene(orgId, brandId, productId, ad.id, scene.id, mid);
+    setError(null);
+    startTransition(async () => {
+      const result = await splitScene(orgId, brandId, productId, ad.id, scene.id, mid);
+      if (!result.ok) setError(result.error);
     });
   }
 
   function onMerge() {
-    startTransition(() => {
-      void mergeSceneIntoPrevious(orgId, brandId, productId, ad.id, scene.id);
+    setError(null);
+    startTransition(async () => {
+      const result = await mergeSceneIntoPrevious(orgId, brandId, productId, ad.id, scene.id);
+      if (!result.ok) setError(result.error);
     });
   }
 
@@ -218,11 +232,13 @@ function SceneRow({
         className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
       />
 
+      {error && <p className="text-xs text-danger">{error}</p>}
+
       {!ad.plan_locked && (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => toggleNote("idea")}
+            onClick={() => (note?.type === "idea" ? onRemoveNote() : setNoteModalType("idea"))}
             disabled={isPending}
             className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
           >
@@ -230,7 +246,7 @@ function SceneRow({
           </button>
           <button
             type="button"
-            onClick={() => toggleNote("rule")}
+            onClick={() => (note?.type === "rule" ? onRemoveNote() : setNoteModalType("rule"))}
             disabled={isPending}
             className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
           >
@@ -255,6 +271,20 @@ function SceneRow({
             </button>
           )}
         </div>
+      )}
+
+      {noteModalType && (
+        <PromptModal
+          title={noteModalType === "rule" ? "Pin a rule note" : "Pin an idea note"}
+          label={
+            noteModalType === "rule"
+              ? "Rule text — kept word-for-word, survives regeneration"
+              : "Idea note — the writer may adapt it"
+          }
+          placeholder={note?.text ?? ""}
+          onSubmit={onSubmitNote}
+          onClose={() => setNoteModalType(null)}
+        />
       )}
     </div>
   );

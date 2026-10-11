@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 export type StudioStep =
   | "scripts"
   | "brief"
@@ -25,9 +27,15 @@ const STEPS: { id: Exclude<StudioStep, "brief">; label: string }[] = [
 export function Stepper({
   currentStep,
   onStepClick,
+  onPreviousStep,
+  adsListHref,
 }: {
   currentStep: StudioStep;
   onStepClick?: (step: StudioStep) => void;
+  /** Steps back one Studio phase without leaving the ad — undefined on the first step. */
+  onPreviousStep?: () => void;
+  /** Where the top-level "leave Studio" back link goes — the ad's product's ads list. */
+  adsListHref: string;
 }) {
   // "brief" has no entry of its own in STEPS (it's the fallback off of
   // "scripts") — treat it as still being on the "scripts" step so the
@@ -36,7 +44,25 @@ export function Stepper({
   const currentIndex = STEPS.findIndex((s) => s.id === effectiveStep);
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-6 py-3">
+    <div className="flex flex-col border-b border-border">
+      <div className="flex items-center gap-3 px-6 pt-3">
+        <Link
+          href={adsListHref}
+          className="inline-flex items-center gap-1 text-sm font-medium text-foreground-muted transition-colors hover:text-foreground"
+        >
+          <span aria-hidden="true">←</span> Back to ads
+        </Link>
+        {onPreviousStep && (
+          <button
+            type="button"
+            onClick={onPreviousStep}
+            className="inline-flex items-center gap-1 rounded-lg border border-border-strong px-2 py-1 text-xs font-medium text-foreground-muted transition-colors hover:bg-border/40 hover:text-foreground"
+          >
+            <span aria-hidden="true">←</span> Previous step
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-1 overflow-x-auto px-6 py-3">
       {STEPS.map((step, i) => {
         const isActive = step.id === effectiveStep;
         const isDone = i < currentIndex;
@@ -75,6 +101,7 @@ export function Stepper({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

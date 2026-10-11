@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireOrgMember } from "@/lib/auth";
 import { getProduct } from "../../products-data";
 import { getAds } from "./ads-data";
+import { AdsList } from "./ads-list";
 import { BackButton } from "@/app/org/[orgId]/back-button";
 
 export default function AdsPage({
@@ -73,42 +74,7 @@ async function GatedAds({
   const product = await getProduct(orgId, brandId, productId);
   if (!product) notFound();
 
-  const ads = await getAds(orgId, productId);
+  const ads = await getAds(orgId, productId, { includeArchived: true });
 
-  return (
-    <div className="flex flex-col gap-3">
-      <Link
-        href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads/new`}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
-      >
-        New ad
-      </Link>
-
-      {ads.length === 0 ? (
-        <p className="text-sm text-foreground-muted">No ads yet for this product.</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {ads.map((ad) => (
-            <Link
-              key={ad.id}
-              href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`}
-              className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4 transition-colors hover:border-border-strong"
-            >
-              <div>
-                <p className="font-medium">
-                  {ad.brief.hooks?.[0] || ad.brief.idea || "Untitled ad"}
-                </p>
-                <p className="mt-0.5 text-xs text-foreground-muted">
-                  {new Date(ad.created_at).toLocaleDateString()}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium capitalize text-accent">
-                {ad.status}
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <AdsList orgId={orgId} brandId={brandId} productId={productId} ads={ads} />;
 }
