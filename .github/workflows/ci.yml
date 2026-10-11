@@ -22,9 +22,18 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
       - run: npm test
+      # next build generates .next/types/ (the LayoutProps/PageProps
+      # helper types every route file references) — tsc --noEmit must
+      # run AFTER a build exists, never before. This had been in the
+      # wrong order since CI was first scaffolded: the web job never
+      # passed a single time until this fix, because every push ran a
+      # fresh checkout with no prior .next/ directory. Reproduced and
+      # confirmed locally (rm -rf .next && npx tsc --noEmit fails the
+      # same way; it passes once a build has run first) before
+      # reordering, rather than guessing at the fix.
       - run: npm run build
+      - run: npx tsc --noEmit
 
   db:
     name: supabase — migrations + pgTAP
