@@ -1,5 +1,6 @@
 import { Suspense } from "react";
-import { requirePlatformAdmin } from "@/lib/auth";
+import { requirePlatformAdmin, getCurrentUser } from "@/lib/auth";
+import { signOut } from "../actions";
 import { RegisterAgencyForm } from "./register-agency-form";
 import { MembershipTable } from "./membership-table";
 import { getAllOrgsWithMembers, getAllPendingInvites } from "./membership-data";
@@ -7,8 +8,8 @@ import { getAllOrgsWithMembers, getAllPendingInvites } from "./membership-data";
 export default function PlatformAdminPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-10 px-6 py-10">
-      <div>
-        <div className="mb-8">
+      <div className="flex items-start justify-between gap-4">
+        <div>
           <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
             Platform admin
           </p>
@@ -22,6 +23,12 @@ export default function PlatformAdminPage() {
           </p>
         </div>
 
+        <Suspense fallback={<SignOutSkeleton />}>
+          <AccountMenu />
+        </Suspense>
+      </div>
+
+      <div>
         {/* Gate check happens inside; this suspends on the session read. */}
         <Suspense fallback={<FormSkeleton />}>
           <GatedForm />
@@ -61,6 +68,27 @@ function TableSkeleton() {
     <div className="flex flex-col gap-3">
       <div className="h-24 animate-pulse rounded-xl bg-border" />
       <div className="h-24 animate-pulse rounded-xl bg-border" />
+    </div>
+  );
+}
+
+function SignOutSkeleton() {
+  return <div className="h-9 w-20 shrink-0 animate-pulse rounded-lg bg-border" />;
+}
+
+async function AccountMenu() {
+  const user = await getCurrentUser();
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1.5">
+      <p className="text-xs text-foreground-muted">{user.email}</p>
+      <form action={signOut}>
+        <button
+          type="submit"
+          className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+        >
+          Sign out
+        </button>
+      </form>
     </div>
   );
 }
