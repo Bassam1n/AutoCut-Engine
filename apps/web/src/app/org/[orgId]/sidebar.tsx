@@ -16,6 +16,7 @@ export function Sidebar({
 
   const links = [
     { href: `/org/${orgId}/brands`, label: "Brands" },
+    { href: `/org/${orgId}/styles`, label: "Styles" },
     ...(info.isAdmin
       ? [
           { href: `/org/${orgId}/team`, label: "Team" },
