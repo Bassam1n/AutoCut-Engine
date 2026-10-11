@@ -18,6 +18,10 @@ export default function BrandCustomersPage({
       </Suspense>
 
       <Suspense fallback={<CustomersSkeleton />}>
+        <GatedBrandNav params={params} />
+      </Suspense>
+
+      <Suspense fallback={<CustomersSkeleton />}>
         <GatedCustomers params={params} />
       </Suspense>
     </main>
@@ -68,6 +72,29 @@ async function GatedHeader({
         className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
       >
         Edit brand
+      </Link>
+    </div>
+  );
+}
+
+async function GatedBrandNav({
+  params,
+}: {
+  params: Promise<{ orgId: string; brandId: string }>;
+}) {
+  const { orgId, brandId } = await params;
+  await requireOrgMember(orgId);
+
+  return (
+    <div className="flex gap-2 border-b border-border pb-3">
+      <span className="rounded-lg bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent">
+        Customers
+      </span>
+      <Link
+        href={`/org/${orgId}/brands/${brandId}/products`}
+        className="rounded-lg px-3 py-1.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-border/40"
+      >
+        Products
       </Link>
     </div>
   );
