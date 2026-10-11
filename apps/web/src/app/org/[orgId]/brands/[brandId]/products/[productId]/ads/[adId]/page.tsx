@@ -4,6 +4,7 @@ import { requireOrgMember } from "@/lib/auth";
 import { getAd } from "../ads-data";
 import { getAdScripts } from "../scripts-data";
 import { getScenes } from "../scenes-data";
+import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data";
 import { StudioCanvas } from "./studio-canvas";
 
 export default function AdStudioPage({
@@ -42,6 +43,13 @@ async function GatedCanvas({
 
   const scripts = await getAdScripts(orgId, adId);
   const scenes = await getScenes(orgId, adId);
+  const concept = await getConcept(orgId, adId);
+  const castMembers = await getCastMembers(orgId, adId);
+
+  const assetIds = castMembers
+    .flatMap((c) => [c.ref_asset_id, c.sheet_asset_id])
+    .filter((id): id is string => id !== null);
+  const assetUrls = await getAssetSignedUrls(orgId, assetIds);
 
   return (
     <StudioCanvas
@@ -51,6 +59,9 @@ async function GatedCanvas({
       ad={ad}
       scripts={scripts}
       scenes={scenes}
+      concept={concept}
+      castMembers={castMembers}
+      assetUrls={assetUrls}
     />
   );
 }

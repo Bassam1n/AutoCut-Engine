@@ -5,9 +5,11 @@ import { Stepper, type StudioStep } from "./stepper";
 import { ScriptsStep } from "./scripts-step";
 import { BriefStep } from "./brief-step";
 import { ScenePlanStep } from "./scene-plan-step";
+import { ConceptCastStep } from "./concept-cast-step";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 import type { Scene } from "../scenes-data";
+import type { Concept, CastMember } from "../concepts-data";
 
 export function StudioCanvas({
   orgId,
@@ -16,6 +18,9 @@ export function StudioCanvas({
   ad,
   scripts,
   scenes,
+  concept,
+  castMembers,
+  assetUrls,
 }: {
   orgId: string;
   brandId: string;
@@ -23,6 +28,9 @@ export function StudioCanvas({
   ad: Ad;
   scripts: AdScriptRow[];
   scenes: Scene[];
+  concept: Concept | null;
+  castMembers: CastMember[];
+  assetUrls: Record<string, string>;
 }) {
   const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts, scenes));
 
@@ -62,7 +70,18 @@ export function StudioCanvas({
             onContinue={() => setStep("concept")}
           />
         )}
-        {step === "concept" && <ComingSoonStep label="Concept & cast" onContinue={() => setStep("storyboard")} />}
+        {step === "concept" && (
+          <ConceptCastStep
+            orgId={orgId}
+            brandId={brandId}
+            productId={productId}
+            ad={ad}
+            concept={concept}
+            castMembers={castMembers}
+            assetUrls={assetUrls}
+            onContinue={() => setStep("storyboard")}
+          />
+        )}
         {step === "storyboard" && <ComingSoonStep label="Storyboard" onContinue={() => setStep("review")} />}
         {step === "review" && <ComingSoonStep label="Review" />}
       </div>

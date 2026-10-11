@@ -24,6 +24,16 @@ export const PINNED_MODEL_PER_TASK = {
   // rule-following task much closer to extraction/classification
   // than to open creative writing — Sonnet is the right pin.
   generate_scene_plan: "claude-sonnet-5-5",
+  // Pitching 3 genuinely distinct creative concepts is open creative
+  // work, same tier as script generation — pinned to Opus.
+  generate_concepts: "claude-opus-5-5",
+  // Identifying/matching characters is closer to extraction than
+  // creative writing — Sonnet is the right pin.
+  extract_cast: "claude-sonnet-5-5",
+  // Visual Director's editorial judgment (shot variety, energy arc,
+  // concretizing abstract copy) is a real creative-reasoning task,
+  // not mechanical extraction — pinned to Opus like concepts/scripts.
+  generate_scene_visuals: "claude-opus-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

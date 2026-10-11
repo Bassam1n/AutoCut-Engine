@@ -96,6 +96,27 @@ once each is resolved.
     separate step. Scene plan (step 3) stays pure text-splitting with no
     visual-direction responsibility.
 
+13. ~~**Reusable brand-level cast members.**~~ **Resolved** (M5). Spec §4
+    models cast as extracted fresh per concept (`cast_members`, one row per
+    ad). The human asked for reusable "brand spokesperson" characters an
+    org defines once and reuses across ads. New `brand_cast_members` table
+    (org/brand-scoped, reusable). `extract_cast` is given the brand's
+    existing cast library as context and matches a returning character by
+    name/description before inventing a new one; `cast_members` gained a
+    nullable `brand_cast_member_id` link. Required relaxing
+    `assets.ad_id` to nullable with a parallel nullable `brand_id` (exactly
+    one of the two set, enforced by a check constraint), since a reusable
+    reference image can't be pinned to whichever ad first generated it.
+14. **No async job runner exists yet (M9).** Cast reference image and
+    character sheet generation need submit→poll→asset, but there's no
+    background worker. Resolved for this batch by polling synchronously
+    inline inside the triggering server action (fal.ai adapter, capped
+    polling loop with a fixed delay) rather than building a real queue
+    now. This is swappable for the real M9 job runner later without
+    changing the calling contract (`generateReferenceImage()` just
+    returns an asset id either way). Still open: M9 should replace the
+    inline poll, not coexist with it.
+
 ## Consequences
 
 Nothing in M1–M8 is blocked by any of these — schema, auth, provider
