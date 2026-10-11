@@ -1,0 +1,50 @@
+{
+  "task": "example_extraction",
+  "promptVersion": 1,
+  "model": "claude-sonnet-5-5",
+  "input": {
+    "description": "AutoCut Pro is a browser-based video editor for small ecommerce brands. It turns a product photo and a short brief into a finished 30-second ad in under 10 minutes, with no editing experience required. Starts at $49/month."
+  },
+  "recordedAt": "2026-10-11T08:02:39.959Z",
+  "response": {
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 548,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 315,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "service_tier": "standard",
+      "inference_geo": "global"
+    },
+    "parsed_output": {
+      "claims": [
+        "Browser-based video editor",
+        "Turns a product photo and a short brief into a finished 30-second ad",
+        "Produces the ad in under 10 minutes",
+        "No editing experience required",
+        "Starts at $49/month"
+      ],
+      "benefits": [
+        "Fast ad creation (under 10 minutes)",
+        "Accessible to non-editors with no experience needed",
+        "Requires only a product photo and a short brief as input",
+        "No software installation needed since it runs in the browser"
+      ],
+      "objections": [
+        "Unclear whether a single product photo and short brief can produce ad quality that meets brand standards",
+        "Limited detail on customization or creative control over the finished ad",
+        "$49/month is the starting price, so total cost with higher tiers or usage limits is unclear",
+        "Only 30-second ads are mentioned, so format and length flexibility is uncertain",
+        "No evidence, examples, or results provided to support the speed and quality claims"
+      ],
+      "audience": "Small ecommerce brands and owners without video editing experience who want to quickly produce product ads"
+    }
+  }
+}
