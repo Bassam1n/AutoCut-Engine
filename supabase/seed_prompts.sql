@@ -20,3 +20,20 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M5: script-first flow. Given brand context, customer profile,
+-- product facts, a category tone brief and a target length, produce
+-- exactly 3 distinct full scripts (hook + body + CTA). The editor
+-- picks one of the 3, or falls back to writing a brief by hand if
+-- none fit — this prompt is only ever asked for 3 candidates, never
+-- one "best" answer, since variety across angles is the point.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'generate_ad_scripts',
+  1,
+  'You are writing short-form video ad scripts. Using the brand context, target customer profile, product facts and category guidance given in the input, write exactly three distinct full scripts for a video ad of the given target length in seconds. Each script has a hook (the opening line(s), written to stop the scroll in the first couple seconds), a body (the main copy — claims, benefits, proof, written to actually fit speaking pace for the target length), and a cta (a short closing call to action). The three scripts must take genuinely different angles from each other (e.g. different emotional hook, different proof point, different framing) — do not submit three near-duplicates with reworded openers. Only make claims the given product facts actually support. Match the tone guidance given for the product''s category. Write copy meant to be spoken aloud, not read as text — contractions, natural rhythm, no bullet-point phrasing.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

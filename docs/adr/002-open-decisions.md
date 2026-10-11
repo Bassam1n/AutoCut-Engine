@@ -63,6 +63,23 @@ once each is resolved.
     `00000000000033_ads_require_product.sql`, applied against zero live
     rows, so no backfill was needed). Routes accordingly:
     `/org/[orgId]/brands/[brandId]/products/[productId]/ads`.
+11. ~~**Scripts-first vs. brief-first.**~~ **Resolved** (M5). The initial M5
+    shell made the manual Brief form the first Studio step. The human
+    corrected this: since the editor already supplies brand/customer/
+    product context elsewhere, the Studio should generate 3 full script
+    variations (hook+body+CTA) up front from that context plus a required
+    ad-length input, with the manual Brief form demoted to a fallback used
+    only if the editor rejects all 3. Checked the old Hermes
+    `visual_library` category system first to see if it had reusable
+    per-category copy templates to port — it didn't (almost entirely empty
+    placeholder scaffolding, and what little was populated modeled video/
+    shot production patterns, not copywriting) — so `category_templates`
+    is fresh content: one prose tone/angle brief per product category, not
+    ported example copy. `products.category` became a fixed enum
+    (migration `00000000000034_scripts_and_category.sql`) so it can key
+    that table. New task `generate_ad_scripts` pinned to
+    `claude-opus-5-5` (creative variance across 3 angles benefits from the
+    stronger model more than pure extraction does).
 
 ## Consequences
 

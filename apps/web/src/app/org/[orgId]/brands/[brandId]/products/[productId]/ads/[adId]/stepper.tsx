@@ -1,9 +1,20 @@
 "use client";
 
-export type StudioStep = "brief" | "dial_in" | "plan" | "concept" | "storyboard" | "review";
+export type StudioStep =
+  | "scripts"
+  | "brief"
+  | "dial_in"
+  | "plan"
+  | "concept"
+  | "storyboard"
+  | "review";
 
-const STEPS: { id: StudioStep; label: string }[] = [
-  { id: "brief", label: "Brief" },
+// "brief" is deliberately not in this list — it's the manual fallback
+// used only when the editor rejects all 3 generated scripts, not a
+// numbered step in the main stepper (spec decision: scripts-first,
+// per the user's correction to the original brief-first M5 shell).
+const STEPS: { id: Exclude<StudioStep, "brief">; label: string }[] = [
+  { id: "scripts", label: "Scripts" },
   { id: "dial_in", label: "Dial it in" },
   { id: "plan", label: "Scene plan" },
   { id: "concept", label: "Concept & cast" },
@@ -18,12 +29,16 @@ export function Stepper({
   currentStep: StudioStep;
   onStepClick?: (step: StudioStep) => void;
 }) {
-  const currentIndex = STEPS.findIndex((s) => s.id === currentStep);
+  // "brief" has no entry of its own in STEPS (it's the fallback off of
+  // "scripts") — treat it as still being on the "scripts" step so the
+  // stepper highlights the right chip instead of highlighting nothing.
+  const effectiveStep = currentStep === "brief" ? "scripts" : currentStep;
+  const currentIndex = STEPS.findIndex((s) => s.id === effectiveStep);
 
   return (
     <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-6 py-3">
       {STEPS.map((step, i) => {
-        const isActive = step.id === currentStep;
+        const isActive = step.id === effectiveStep;
         const isDone = i < currentIndex;
         const isClickable = isDone && onStepClick;
 

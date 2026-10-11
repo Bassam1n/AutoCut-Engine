@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireOrgMember } from "@/lib/auth";
 import { getBrand } from "../../brands-data";
 import { getProducts } from "./products-data";
+import { PRODUCT_CATEGORY_LABELS } from "./product-categories";
 import { BackButton } from "../../../back-button";
 
 export default function ProductsPage({
@@ -133,7 +134,7 @@ async function GatedProducts({
               </div>
               {product.category && (
                 <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent">
-                  {product.category}
+                  {PRODUCT_CATEGORY_LABELS[product.category]}
                 </span>
               )}
             </Link>

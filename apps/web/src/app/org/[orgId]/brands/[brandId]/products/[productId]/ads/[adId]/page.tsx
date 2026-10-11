@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { requireOrgMember } from "@/lib/auth";
 import { getAd } from "../ads-data";
+import { getAdScripts } from "../scripts-data";
 import { StudioCanvas } from "./studio-canvas";
 
 export default function AdStudioPage({
@@ -38,5 +39,15 @@ async function GatedCanvas({
   const ad = await getAd(orgId, productId, adId);
   if (!ad) notFound();
 
-  return <StudioCanvas orgId={orgId} brandId={brandId} productId={productId} ad={ad} />;
+  const scripts = await getAdScripts(orgId, adId);
+
+  return (
+    <StudioCanvas
+      orgId={orgId}
+      brandId={brandId}
+      productId={productId}
+      ad={ad}
+      scripts={scripts}
+    />
+  );
 }

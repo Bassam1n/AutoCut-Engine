@@ -2,27 +2,42 @@
 
 import { useState } from "react";
 import { Stepper, type StudioStep } from "./stepper";
+import { ScriptsStep } from "./scripts-step";
 import { BriefStep } from "./brief-step";
 import type { Ad } from "../ads-data";
+import type { AdScriptRow } from "../scripts-data";
 
 export function StudioCanvas({
   orgId,
   brandId,
   productId,
   ad,
+  scripts,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   ad: Ad;
+  scripts: AdScriptRow[];
 }) {
-  const [step, setStep] = useState<StudioStep>(() => initialStep(ad));
+  const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts));
 
   return (
     <div className="flex min-h-screen flex-col">
       <Stepper currentStep={step} onStepClick={setStep} />
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-8">
+        {step === "scripts" && (
+          <ScriptsStep
+            orgId={orgId}
+            brandId={brandId}
+            productId={productId}
+            ad={ad}
+            scripts={scripts}
+            onContinue={() => setStep("dial_in")}
+            onUseBriefInstead={() => setStep("brief")}
+          />
+        )}
         {step === "brief" && (
           <BriefStep
             orgId={orgId}
@@ -42,10 +57,12 @@ export function StudioCanvas({
   );
 }
 
-function initialStep(ad: Ad): StudioStep {
+function initialStep(ad: Ad, scripts: AdScriptRow[]): StudioStep {
   if (ad.plan_locked) return "concept";
-  if (ad.brief.hooks?.length || ad.brief.body || ad.brief.idea) return "plan";
-  return "brief";
+  const hasSelectedScript = scripts.some((s) => s.selected);
+  const hasManualBrief = Boolean(ad.brief.hooks?.length || ad.brief.body || ad.brief.idea);
+  if (hasSelectedScript || hasManualBrief) return "plan";
+  return "scripts";
 }
 
 function ComingSoonStep({ label, onContinue }: { label: string; onContinue?: () => void }) {

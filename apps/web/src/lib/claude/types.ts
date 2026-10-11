@@ -16,6 +16,10 @@ export const PINNED_MODEL_PER_TASK = {
   // don't need Opus-tier reasoning — Sonnet is the right pin until a
   // specific task is measured to need more.
   example_extraction: "claude-sonnet-5-5",
+  // Copywriting with real creative variance across 3 angles benefits
+  // from the stronger model more than pure extraction does — pinned
+  // to Opus rather than Sonnet.
+  generate_ad_scripts: "claude-opus-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

@@ -16,6 +16,7 @@ export type Ad = {
   style_id: string | null;
   mode: "studio" | "autopilot";
   brief: AdBrief;
+  target_length_seconds: number | null;
   plan_locked: boolean;
   status: string;
   created_at: string;

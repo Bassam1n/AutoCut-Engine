@@ -1,12 +1,13 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import type { ProductCategory } from "./product-categories";
 
 export type Product = {
   id: string;
   org_id: string;
   brand_id: string;
   name: string;
-  category: string | null;
+  category: ProductCategory | null;
   what_it_is: string | null;
   url: string | null;
   active: boolean;

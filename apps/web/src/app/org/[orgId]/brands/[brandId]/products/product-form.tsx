@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { PRODUCT_CATEGORIES, PRODUCT_CATEGORY_LABELS } from "./product-categories";
 import type { Product } from "./products-data";
 import type { ActionResult } from "./products-actions";
 
@@ -47,13 +48,23 @@ export function ProductForm({
             optional
           </span>
         </label>
-        <input
+        <select
           id="category"
           name="category"
           defaultValue={product?.category ?? ""}
           disabled={isPending}
           className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
-        />
+        >
+          <option value="">Select a category</option>
+          {PRODUCT_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {PRODUCT_CATEGORY_LABELS[category]}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-foreground-muted">
+          Used to pick tone and angle guidance when generating ad scripts.
+        </p>
       </div>
 
       <div className="flex flex-col gap-1.5">
