@@ -46,6 +46,24 @@ export async function changeRole(
   return { ok: true };
 }
 
+export async function setOrgSeatCap(
+  orgId: string,
+  seatCap: number | null
+): Promise<ActionResult> {
+  await requirePlatformAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("set_org_seat_cap", {
+    target_org_id: orgId,
+    new_seat_cap: seatCap,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/platform-admin");
+  return { ok: true };
+}
+
 export async function revokeInvite(inviteId: string): Promise<ActionResult> {
   await requirePlatformAdmin();
   const supabase = await createClient();

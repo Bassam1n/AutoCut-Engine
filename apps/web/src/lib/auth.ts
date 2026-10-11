@@ -82,3 +82,28 @@ export async function requirePlatformAdmin(): Promise<CurrentUser> {
 
   return user;
 }
+
+/**
+ * Requires the signed-in user to be an owner or admin of the given
+ * org, redirecting to / otherwise. Gate for /org/[orgId]/team — an
+ * org's own team screen, scoped to that one org only (never another
+ * agency's). Calls is_org_admin(org_id) via RPC for the same reason
+ * requirePlatformAdmin() calls is_platform_admin(): org_members has
+ * its own RLS, so a direct query can't distinguish "not a member" from
+ * "member but not admin" without this explicit check.
+ */
+export async function requireOrgAdmin(orgId: string): Promise<CurrentUser> {
+  "use cache: private";
+
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: isAdmin } = await supabase.rpc("is_org_admin", {
+    check_org_id: orgId,
+  });
+
+  if (!isAdmin) {
+    redirect("/");
+  }
+
+  return user;
+}

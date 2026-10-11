@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./actions";
 
 export default function HomePage() {
@@ -35,6 +37,7 @@ function AccountBadgeSkeleton() {
 
 async function AccountBadge() {
   const user = await getCurrentUser();
+  const adminOrgId = await getFirstAdminOrgId();
 
   return (
     <div className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4">
@@ -42,14 +45,40 @@ async function AccountBadge() {
         Signed in as{" "}
         <span className="font-medium">{user.email}</span>
       </p>
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
-        >
-          Sign out
-        </button>
-      </form>
+      <div className="flex items-center gap-2">
+        {adminOrgId && (
+          <Link
+            href={`/org/${adminOrgId}/team`}
+            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+          >
+            Manage team
+          </Link>
+        )}
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
     </div>
   );
+}
+
+async function getFirstAdminOrgId(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return null;
+
+  const { data } = await supabase
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.user.id)
+    .in("role", ["owner", "admin"])
+    .limit(1)
+    .maybeSingle();
+
+  return data?.org_id ?? null;
 }

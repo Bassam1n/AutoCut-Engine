@@ -2,9 +2,17 @@
 
 import { useState, useTransition } from "react";
 import type { OrgMemberRow, PendingInviteRow } from "./membership-data";
-import { toggleSeatActive, changeRole, revokeInvite } from "./membership-actions";
+import { toggleSeatActive, changeRole, revokeInvite, setOrgSeatCap } from "./membership-actions";
 
 const ROLES = ["owner", "admin", "editor"] as const;
+
+type OrgGroup = {
+  orgId: string;
+  orgName: string;
+  seatCap: number | null;
+  members: OrgMemberRow[];
+  invites: PendingInviteRow[];
+};
 
 export function MembershipTable({
   members,
@@ -13,17 +21,9 @@ export function MembershipTable({
   members: OrgMemberRow[];
   invites: PendingInviteRow[];
 }) {
-  const byOrg = groupByOrg(members);
-  const invitesByOrg = groupInvitesByOrg(invites);
-  const orgIds = Array.from(
-    new Set([...Object.keys(byOrg), ...Object.keys(invitesByOrg)])
-  );
-  const orgNames = Object.fromEntries(
-    members.map((m) => [m.org_id, m.org_name] as const)
-  );
-  for (const inv of invites) orgNames[inv.org_id] ??= inv.org_name;
+  const groups = groupByOrg(members, invites);
 
-  if (orgIds.length === 0) {
+  if (groups.length === 0) {
     return (
       <p className="text-sm text-foreground-muted">
         No agencies registered yet.
@@ -33,32 +33,25 @@ export function MembershipTable({
 
   return (
     <div className="flex flex-col gap-6">
-      {orgIds.map((orgId) => (
-        <OrgSection
-          key={orgId}
-          orgName={orgNames[orgId]}
-          members={byOrg[orgId] ?? []}
-          invites={invitesByOrg[orgId] ?? []}
-        />
+      {groups.map((group) => (
+        <OrgSection key={group.orgId} group={group} />
       ))}
     </div>
   );
 }
 
-function OrgSection({
-  orgName,
-  members,
-  invites,
-}: {
-  orgName: string;
-  members: OrgMemberRow[];
-  invites: PendingInviteRow[];
-}) {
+function OrgSection({ group }: { group: OrgGroup }) {
+  const activeMembers = group.members.filter((m) => m.member_user_id !== null);
+  const seatUsage = activeMembers.filter((m) => m.member_seat_active).length + group.invites.length;
+
   return (
     <div className="rounded-xl border border-border bg-background-raised p-5">
-      <h2 className="mb-3 text-sm font-semibold">{orgName}</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold">{group.orgName}</h2>
+        <SeatCapEditor orgId={group.orgId} seatCap={group.seatCap} seatUsage={seatUsage} />
+      </div>
 
-      {members.length > 0 && (
+      {activeMembers.length > 0 ? (
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-foreground-muted">
@@ -69,20 +62,24 @@ function OrgSection({
             </tr>
           </thead>
           <tbody>
-            {members.map((m) => (
+            {activeMembers.map((m) => (
               <MemberRow key={m.member_user_id} member={m} />
             ))}
           </tbody>
         </table>
+      ) : (
+        <p className="text-sm text-foreground-muted">
+          No one has accepted the owner invite yet.
+        </p>
       )}
 
-      {invites.length > 0 && (
+      {group.invites.length > 0 && (
         <div className="mt-4 border-t border-border pt-3">
           <p className="mb-2 text-xs font-medium text-foreground-muted">
             Pending invites
           </p>
           <ul className="flex flex-col gap-1.5">
-            {invites.map((inv) => (
+            {group.invites.map((inv) => (
               <InviteRow key={inv.invite_id} invite={inv} />
             ))}
           </ul>
@@ -92,14 +89,70 @@ function OrgSection({
   );
 }
 
+function SeatCapEditor({
+  orgId,
+  seatCap,
+  seatUsage,
+}: {
+  orgId: string;
+  seatCap: number | null;
+  seatUsage: number;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [value, setValue] = useState(seatCap === null ? "" : String(seatCap));
+  const [error, setError] = useState<string | null>(null);
+
+  function onSave() {
+    setError(null);
+    const parsed = value.trim() === "" ? null : Number(value);
+    if (parsed !== null && (!Number.isInteger(parsed) || parsed <= 0)) {
+      setError("Must be a positive whole number");
+      return;
+    }
+    startTransition(async () => {
+      const result = await setOrgSeatCap(orgId, parsed);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-foreground-muted">
+        {seatUsage} used ·
+      </span>
+      <input
+        type="number"
+        min={1}
+        placeholder="No cap set"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        disabled={isPending}
+        className="w-24 rounded-md border border-border-strong bg-background px-2 py-1 text-xs outline-none disabled:opacity-60"
+      />
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={isPending}
+        className="text-xs font-medium text-accent hover:underline disabled:opacity-60"
+      >
+        Save seat cap
+      </button>
+      {error && <span className="text-xs text-danger">{error}</span>}
+    </div>
+  );
+}
+
 function MemberRow({ member }: { member: OrgMemberRow }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  if (!member.member_user_id || !member.member_role) return null;
+  const userId = member.member_user_id;
+
   function onRoleChange(role: (typeof ROLES)[number]) {
     setError(null);
     startTransition(async () => {
-      const result = await changeRole(member.org_id, member.member_user_id, role);
+      const result = await changeRole(member.org_id, userId, role);
       if (!result.ok) setError(result.error);
     });
   }
@@ -107,11 +160,7 @@ function MemberRow({ member }: { member: OrgMemberRow }) {
   function onToggleActive() {
     setError(null);
     startTransition(async () => {
-      const result = await toggleSeatActive(
-        member.org_id,
-        member.member_user_id,
-        !member.member_seat_active
-      );
+      const result = await toggleSeatActive(member.org_id, userId, !member.member_seat_active);
       if (!result.ok) setError(result.error);
     });
   }
@@ -199,18 +248,38 @@ function InviteRow({ invite }: { invite: PendingInviteRow }) {
   );
 }
 
-function groupByOrg(rows: OrgMemberRow[]) {
-  const result: Record<string, OrgMemberRow[]> = {};
-  for (const row of rows) {
-    (result[row.org_id] ??= []).push(row);
-  }
-  return result;
-}
+function groupByOrg(members: OrgMemberRow[], invites: PendingInviteRow[]): OrgGroup[] {
+  const byOrg = new Map<string, OrgGroup>();
 
-function groupInvitesByOrg(rows: PendingInviteRow[]) {
-  const result: Record<string, PendingInviteRow[]> = {};
-  for (const row of rows) {
-    (result[row.org_id] ??= []).push(row);
+  for (const row of members) {
+    let group = byOrg.get(row.org_id);
+    if (!group) {
+      group = {
+        orgId: row.org_id,
+        orgName: row.org_name,
+        seatCap: row.org_seat_cap,
+        members: [],
+        invites: [],
+      };
+      byOrg.set(row.org_id, group);
+    }
+    group.members.push(row);
   }
-  return result;
+
+  for (const inv of invites) {
+    let group = byOrg.get(inv.org_id);
+    if (!group) {
+      group = {
+        orgId: inv.org_id,
+        orgName: inv.org_name,
+        seatCap: null,
+        members: [],
+        invites: [],
+      };
+      byOrg.set(inv.org_id, group);
+    }
+    group.invites.push(inv);
+  }
+
+  return Array.from(byOrg.values()).sort((a, b) => a.orgName.localeCompare(b.orgName));
 }

@@ -5,11 +5,12 @@ export type OrgMemberRow = {
   org_id: string;
   org_name: string;
   org_paused: boolean;
-  member_user_id: string;
-  member_email: string;
-  member_role: "owner" | "admin" | "editor";
-  member_seat_active: boolean;
-  member_joined_at: string;
+  org_seat_cap: number | null;
+  member_user_id: string | null;
+  member_email: string | null;
+  member_role: "owner" | "admin" | "editor" | null;
+  member_seat_active: boolean | null;
+  member_joined_at: string | null;
 };
 
 export type PendingInviteRow = {
