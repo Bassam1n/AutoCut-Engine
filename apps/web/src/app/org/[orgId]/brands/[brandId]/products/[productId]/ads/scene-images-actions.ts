@@ -18,6 +18,15 @@ import { getBrand } from "@/app/org/[orgId]/brands/brands-data";
 import { getProduct, getProductRefs, getProductRefSignedUrls } from "../../products-data";
 import type { ProductRef } from "../../products-data";
 
+// Scene-image generation polls a provider synchronously (no async job
+// runner yet — M9) and can take well over Vercel's default function
+// timeout, especially with several scenes generating concurrently via
+// Generate All's stagger. The matching `maxDuration` route config
+// lives on the ad Studio page.tsx (a "use server" actions file can
+// only export async functions, not a route-segment config const) —
+// see generate-reference-image.ts's MAX_ATTEMPTS for the matching
+// poll-loop cap.
+
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
 

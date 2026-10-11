@@ -84,7 +84,14 @@ export async function generateReferenceImage(params: {
     return { ok: false, error: describeProviderError(err) };
   }
 
-  const MAX_ATTEMPTS = 20;
+  // 90 attempts * 2s = 180s cap. The original 20-attempt (40s) cap was
+  // sized for a single fast request; scene-image generation can run
+  // several of these concurrently (Generate All's ~1s stagger) and
+  // some models are genuinely slower than others, so 40s was timing
+  // out real, still-in-progress generations rather than actually-stuck
+  // ones. Paired with maxDuration on the calling server actions so the
+  // platform's own function timeout doesn't cut this off first.
+  const MAX_ATTEMPTS = 90;
   const POLL_DELAY_MS = 2000;
   let resultUrl: string | null = null;
 

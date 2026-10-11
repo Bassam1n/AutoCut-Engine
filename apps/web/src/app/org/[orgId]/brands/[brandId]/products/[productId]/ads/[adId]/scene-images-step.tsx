@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AsyncButton } from "@/components/async-button";
 import { ModelPicker } from "@/components/model-picker";
@@ -28,6 +29,7 @@ export function SceneImagesStep({
   ad,
   scenes,
   imagesBySceneId,
+  feedbackImagesBySceneId,
   imageUrls,
   imageModelOptions,
   providersWithKeys,
@@ -38,6 +40,7 @@ export function SceneImagesStep({
   ad: Ad;
   scenes: Scene[];
   imagesBySceneId: Record<string, SceneImageAsset[]>;
+  feedbackImagesBySceneId: Record<string, SceneImageAsset[]>;
   imageUrls: Record<string, string>;
   imageModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
@@ -48,6 +51,7 @@ export function SceneImagesStep({
   const [isStaggering, setIsStaggering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [omittedNotes, setOmittedNotes] = useState<Record<string, { tier: ReferenceTierLabel; count: number }[]>>({});
+  const router = useRouter();
 
   const returnToPath = `/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`;
 
@@ -71,6 +75,7 @@ export function SceneImagesStep({
       const result = await generateSceneImages(orgId, brandId, productId, ad.id, sceneId, count, model);
       if (result.ok) {
         setOmittedNotes((prev) => ({ ...prev, [sceneId]: result.omitted }));
+        router.refresh();
       } else {
         setError(`Scene ${sceneIndexLabel(scenes, sceneId)}: ${result.error}`);
       }
@@ -176,6 +181,7 @@ export function SceneImagesStep({
               ad={ad}
               scene={scene}
               images={imagesBySceneId[scene.id] ?? []}
+              feedbackImages={feedbackImagesBySceneId[scene.id] ?? []}
               imageUrls={imageUrls}
               isGenerating={generatingSceneIds.has(scene.id)}
               isSelected={selectedSceneIds.has(scene.id)}
@@ -269,6 +275,7 @@ function SceneImageCard({
   ad,
   scene,
   images,
+  feedbackImages,
   imageUrls,
   isGenerating,
   isSelected,
@@ -282,6 +289,7 @@ function SceneImageCard({
   ad: Ad;
   scene: Scene;
   images: SceneImageAsset[];
+  feedbackImages: SceneImageAsset[];
   imageUrls: Record<string, string>;
   isGenerating: boolean;
   isSelected: boolean;
@@ -291,6 +299,7 @@ function SceneImageCard({
 }) {
   const [count, setCount] = useState(1);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
+  const elapsedSeconds = useElapsedSeconds(isGenerating);
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
@@ -345,6 +354,33 @@ function SceneImageCard({
         </div>
       )}
 
+      {feedbackImages.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-foreground-muted">Feedback images</span>
+          <div className="flex flex-wrap gap-2">
+            {feedbackImages.map((asset) => {
+              const url = imageUrls[asset.storage_path];
+              return url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={asset.id}
+                  src={url}
+                  alt={`Scene ${scene.idx + 1} attached feedback image`}
+                  className="h-16 w-16 rounded-lg object-cover"
+                />
+              ) : (
+                <div
+                  key={asset.id}
+                  className="flex h-16 w-16 items-center justify-center rounded-lg bg-border text-xs text-foreground-muted"
+                >
+                  …
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {omitted.length > 0 && (
         <p className="text-xs text-foreground-muted/70">
           {omitted.map((o) => `${o.count} ${o.tier}${o.count > 1 ? "s" : ""}`).join(", ")} omitted (reference
@@ -369,7 +405,7 @@ function SceneImageCard({
         <AsyncButton
           onClick={() => onGenerate(count)}
           isPending={isGenerating}
-          pendingLabel="Generating..."
+          pendingLabel={`Generating... (${elapsedSeconds}s)`}
           className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
         >
           {images.length > 0 ? "Regenerate" : "Generate"}
@@ -492,6 +528,7 @@ function FeedbackUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -516,7 +553,11 @@ function FeedbackUpload({
       }
 
       const result = await recordFeedbackImage(orgId, brandId, productId, ad.id, scene.id, reserved.path);
-      if (!result.ok) setError(result.error);
+      if (!result.ok) {
+        setError(result.error);
+      } else {
+        router.refresh();
+      }
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -552,4 +593,32 @@ function sceneIndexLabel(scenes: Scene[], sceneId: string): number {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Generation can legitimately take up to ~2 minutes (slower models,
+ * refill rounds) — without this, a slow-but-working run looks
+ * identical to a stuck one, which is exactly what prompts an editor
+ * to hit Generate again mid-flight. Ticks every second while pending.
+ */
+function useElapsedSeconds(isPending: boolean): number {
+  // Counts seconds in a local variable closed over by the interval,
+  // only ever calling setState from inside the tick callback — never
+  // synchronously at effect-entry, which is what the set-state-in-
+  // effect lint rule flags as a cascading-render risk. This also gets
+  // a correct reset for free: a fresh `count` starts at 0 each time
+  // the effect re-runs for a new isPending transition.
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!isPending) return;
+    let count = 0;
+    const interval = setInterval(() => {
+      count += 1;
+      setElapsed(count);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPending]);
+
+  return isPending ? elapsed : 0;
 }

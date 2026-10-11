@@ -30,6 +30,7 @@ export function StudioCanvas({
   providersWithKeys,
   costBreakdown,
   sceneImagesBySceneId,
+  sceneFeedbackImagesBySceneId,
   sceneImageUrls,
 }: {
   orgId: string;
@@ -46,6 +47,7 @@ export function StudioCanvas({
   /** Server-rendered <CostBreakdown /> slot — composed in from page.tsx since it's an async Server Component and can't be imported directly into this Client Component. */
   costBreakdown: React.ReactNode;
   sceneImagesBySceneId: Record<string, SceneImageAsset[]>;
+  sceneFeedbackImagesBySceneId: Record<string, SceneImageAsset[]>;
   sceneImageUrls: Record<string, string>;
 }) {
   const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts, scenes));
@@ -134,6 +136,7 @@ export function StudioCanvas({
             ad={ad}
             scenes={scenes}
             imagesBySceneId={sceneImagesBySceneId}
+            feedbackImagesBySceneId={sceneFeedbackImagesBySceneId}
             imageUrls={sceneImageUrls}
             imageModelOptions={imageModelOptions}
             providersWithKeys={new Set(providersWithKeys)}

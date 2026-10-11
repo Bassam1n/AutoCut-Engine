@@ -7,9 +7,16 @@ import { getScenes } from "../scenes-data";
 import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data";
 import { getModelOptions } from "@/lib/providers/models-data";
 import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
-import { getSceneImages, getAssetSignedUrlsByPath } from "../scene-images-data";
+import { getSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
 import { StudioCanvas } from "./studio-canvas";
 import { CostBreakdown } from "./cost-breakdown";
+
+// Scene-image generation (scene-images-actions.ts) polls a provider
+// synchronously and can run well past Vercel's default function
+// timeout, especially with several scenes generating concurrently via
+// Generate All's ~1s stagger — raised to match generate-reference-
+// image.ts's poll-loop cap (90 attempts * 2s = 180s).
+export const maxDuration = 180;
 
 export default function AdStudioPage({
   params,
@@ -60,9 +67,11 @@ async function GatedCanvas({
   const providersWithKeys = secrets.map((s) => s.provider);
 
   const sceneImagesBySceneId = await getSceneImages(orgId, adId);
-  const sceneImagePaths = Object.values(sceneImagesBySceneId)
-    .flat()
-    .map((a) => a.storage_path);
+  const sceneFeedbackImagesBySceneId = await getSceneFeedbackImages(orgId, adId);
+  const sceneImagePaths = [
+    ...Object.values(sceneImagesBySceneId).flat(),
+    ...Object.values(sceneFeedbackImagesBySceneId).flat(),
+  ].map((a) => a.storage_path);
   const sceneImageUrls = await getAssetSignedUrlsByPath(sceneImagePaths);
 
   return (
@@ -80,6 +89,7 @@ async function GatedCanvas({
       providersWithKeys={providersWithKeys}
       costBreakdown={<CostBreakdown orgId={orgId} adId={adId} />}
       sceneImagesBySceneId={sceneImagesBySceneId}
+      sceneFeedbackImagesBySceneId={sceneFeedbackImagesBySceneId}
       sceneImageUrls={sceneImageUrls}
     />
   );
