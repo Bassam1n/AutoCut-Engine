@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { listBrandsForPicker, listProductsForPicker } from "./create-ad-actions";
@@ -39,15 +39,19 @@ function CreateAdModal({ orgId, onClose }: { orgId: string; onClose: () => void 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  if (brands === null) {
-    startTransition(async () => {
-      try {
-        setBrands(await listBrandsForPicker(orgId));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not load brands.");
-      }
-    });
-  }
+  useEffect(() => {
+    let cancelled = false;
+    listBrandsForPicker(orgId)
+      .then((result) => {
+        if (!cancelled) setBrands(result);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Could not load brands.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
 
   function onPickBrand(brand: Brand) {
     setSelectedBrand(brand);

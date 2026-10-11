@@ -284,6 +284,22 @@ once each is resolved.
     creation pipeline exactly as it already exists rather than building
     a parallel one.
 
+26. **Both new sidebar popups (Products' "New product" and the "Create
+    ad" button) were broken at runtime** — the button appeared to do
+    nothing (Products) or the whole sidebar got stuck loading forever
+    (Create ad). Root cause: `if (brands === null) { startTransition(...)
+    }` was called directly inside the component body during render,
+    not inside a `useEffect` or an event handler. Calling
+    `startTransition` synchronously during render is not a legal React
+    pattern — it re-fires on every render rather than once on mount,
+    which is why the symptoms differed (stuck loading vs. a dead
+    button) depending on exactly how each component's render cycle
+    reacted to it. `PromptHistory` (`prompt-editor.tsx`), built
+    correctly with `useEffect` from the start, never had this bug — a
+    full-codebase grep after the fix confirmed no other component had
+    the same anti-pattern. Fixed both to load via `useEffect` with a
+    `cancelled` guard against the unmount/stale-response race.
+
 ## Consequences
 
 Nothing in M1–M8 is blocked by any of these — schema, auth, provider

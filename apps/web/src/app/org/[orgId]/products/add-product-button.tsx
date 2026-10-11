@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { listBrandsForPicker } from "../create-ad-actions";
@@ -28,17 +28,20 @@ function PickBrandModal({ orgId, onClose }: { orgId: string; onClose: () => void
   const router = useRouter();
   const [brands, setBrands] = useState<Brand[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
-  if (brands === null) {
-    startTransition(async () => {
-      try {
-        setBrands(await listBrandsForPicker(orgId));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not load brands.");
-      }
-    });
-  }
+  useEffect(() => {
+    let cancelled = false;
+    listBrandsForPicker(orgId)
+      .then((result) => {
+        if (!cancelled) setBrands(result);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Could not load brands.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
 
   function onPickBrand(brand: Brand) {
     router.push(`/org/${orgId}/brands/${brand.id}/products/new`);
@@ -49,7 +52,7 @@ function PickBrandModal({ orgId, onClose }: { orgId: string; onClose: () => void
     <Modal title="New product — pick a brand" onClose={onClose}>
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex flex-col gap-1">
-        {brands === null || isPending ? (
+        {brands === null ? (
           <p className="text-sm text-foreground-muted">Loading brands...</p>
         ) : brands.length === 0 ? (
           <p className="text-sm text-foreground-muted">No brands yet — create one first.</p>
