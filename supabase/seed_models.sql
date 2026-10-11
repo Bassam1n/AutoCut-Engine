@@ -20,7 +20,18 @@ values
   ('kling-v2-1-pro', 'video', true, 'Image-to-video. Requires a starting image_url — this model cannot generate video from text alone. Max prompt 5000 characters.'),
   ('kling-v3-pro-i2v', 'video', true, 'Image-to-video via fal.ai. Requires start_image_url. Supports multi-shot generation via multi_prompt as an alternative to a single prompt.'),
   ('nano-banana', 'image', true, 'Google Nano Banana via kie.ai. Text-to-image; no reference image input confirmed for this entry point.'),
-  ('grok-imagine-i2i', 'image', true, 'Grok Imagine image-to-image via kie.ai. Takes one or more reference images (image_urls) the model edits/recreates from — the model this org''s cast reference generation should use once a kie key is saved.')
+  ('grok-imagine-i2i', 'image', true, 'Grok Imagine image-to-image via kie.ai. Takes one or more reference images (image_urls) the model edits/recreates from — the model this org''s cast reference generation should use once a kie key is saved.'),
+  ('gpt-image-2-5-flare', 'image', true, 'GPT Image 2.5 Flare via kie.ai. Text-to-image. Live-tested against kie.ai''s real /jobs/createTask endpoint before adding — submits and starts generating correctly.'),
+  ('gpt-image-2-5-sunburst', 'image', true, 'GPT Image 2.5 Sunburst via kie.ai. Text-to-image, same family as Flare with a different style bias.'),
+  ('nano-banana-2', 'image', true, 'Google Nano Banana 2 via kie.ai.'),
+  ('gemini-omni-video', 'video', true, 'Gemini Omni video via kie.ai.'),
+  ('kling-3', 'video', true, 'Kling 3.0 via kie.ai. Supports multi-shot generation and audio.'),
+  ('minimax-h3', 'video', true, 'MiniMax H3 image-to-video via kie.ai.'),
+  ('seedance-2', 'video', true, 'ByteDance Seedance 2.0 via kie.ai.'),
+  ('seedance-2-5', 'video', true, 'ByteDance Seedance 2.5 via kie.ai.'),
+  ('veo3-fast', 'video', true, 'Google Veo 3.1 Fast via kie.ai.'),
+  ('veo3-lite', 'video', true, 'Google Veo 3.1 Lite via kie.ai. Live-tested against kie.ai''s real /jobs/createTask endpoint before adding — submits correctly.'),
+  ('veo3-quality', 'video', true, 'Google Veo 3.1 Quality via kie.ai.')
 on conflict (name) do update
   set capability = excluded.capability,
       active = excluded.active,
@@ -123,6 +134,191 @@ select m.id, 'kie', 'grok-imagine/image-to-image',
   '{}'::jsonb,
   true
 from public.models m where m.name = 'grok-imagine-i2i'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+-- The following kie.ai models/schemas come from a competitor's
+-- (Trench) live model-config API, which the user had legitimate
+-- access to and explicitly asked to be used as source-of-truth (not
+-- "reference only, write fresh" — that rule applies to creative
+-- content like style masterprompts; model/field names are objective
+-- facts about kie.ai's own public API, not Trench's original work).
+-- Per the user's explicit instruction, every endpoint was tested for
+-- real before being trusted: Trench's config listed submitPath "/v1/
+-- generation/{model_id}" + statusPath "/v1/task/{job_id}" for some
+-- kie.ai models, which does NOT exist on kie.ai's real API — both
+-- paths 404 with a real kie.ai key. The actual, working kie.ai
+-- endpoint for every model below is /jobs/createTask + /jobs/
+-- recordInfo, the same one KieAdapter already implements — confirmed
+-- live by submitting real createTask calls for gpt-image-2-5-flare-
+-- text-to-image (returned a taskId, polled to state: "generating",
+-- creditsConsumed: 6.0 — a real charge, confirming it's genuinely
+-- processing) and veo3_lite (returned a taskId). Trench's
+-- submitPath/statusPath fields are that app's own internal gateway
+-- routing, not kie.ai's wire contract, and are not used here.
+-- parameter_schema values below ARE taken from Trench's config
+-- as-is — those are the real tunable fields for each model.
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'gpt-image-2-5-flare-text-to-image',
+  '[
+    {"key": "background", "label": "Background", "type": "enum", "options": ["auto", "opaque", "transparent"], "default": "auto", "required": false},
+    {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["1K", "2K", "4K"], "required": false},
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["auto", "1:1", "3:2", "2:3", "16:9", "9:16", "4:3", "3:4", "21:9"], "default": "auto", "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'gpt-image-2-5-flare'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'gpt-image-2-5-sunburst-text-to-image',
+  '[
+    {"key": "background", "label": "Background", "type": "enum", "options": ["auto", "opaque", "transparent"], "default": "auto", "required": false},
+    {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["1K", "2K", "4K"], "required": false},
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["auto", "1:1", "3:2", "2:3", "16:9", "9:16", "4:3", "3:4", "21:9"], "default": "auto", "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'gpt-image-2-5-sunburst'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'nano-banana-2',
+  '[
+    {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["1K", "2K", "4K"], "required": false},
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["auto", "1:1", "16:9", "9:16", "4:3", "3:4"], "default": "auto", "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'nano-banana-2'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'gemini-omni-video',
+  '[
+    {"key": "duration", "label": "Duration (seconds)", "type": "enum", "options": ["4", "6", "8", "10"], "default": "8", "required": false},
+    {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["1080p", "720p", "4k"], "required": false},
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["9:16", "16:9"], "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'gemini-omni-video'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'kling-3.0/video',
+  '[
+    {"key": "mode", "label": "Mode", "type": "enum", "options": ["pro", "4K"], "required": false},
+    {"key": "sound", "label": "Sound", "type": "boolean", "required": false},
+    {"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 3, "max": 15, "required": false},
+    {"key": "multi_shots", "label": "Multi-shot", "type": "boolean", "required": false},
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["16:9", "9:16", "1:1"], "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'kling-3'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'minimax-h3/image-to-video',
+  '[
+    {"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 4, "max": 15, "default": 5, "required": false},
+    {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["768P", "2K"], "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'minimax-h3'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'bytedance/seedance-2',
+  '[
+    {"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 4, "max": 15, "required": false},
+    {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["480p", "720p", "1080p", "4K"], "required": false},
+    {"key": "web_search", "label": "Web search", "type": "boolean", "required": false},
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9", "adaptive"], "required": false},
+    {"key": "nsfw_checker", "label": "Content filter", "type": "boolean", "required": false},
+    {"key": "generate_audio", "label": "Audio", "type": "boolean", "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'seedance-2'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'bytedance/seedance-2-5',
+  '[
+    {"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 4, "max": 30, "default": 6, "required": false},
+    {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["720p", "480p", "1080p"], "required": false},
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["adaptive", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], "default": "adaptive", "required": false},
+    {"key": "generate_audio", "label": "Audio", "type": "boolean", "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'seedance-2-5'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'v3-api',
+  '[
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["9:16", "16:9"], "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'veo3-fast'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'veo3_lite',
+  '[
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["9:16", "16:9"], "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'veo3-lite'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'kie', 'veo3_quality',
+  '[
+    {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["9:16", "16:9"], "required": false}
+  ]'::jsonb,
+  '{}'::jsonb,
+  true
+from public.models m where m.name = 'veo3-quality'
 on conflict (model_id, provider, endpoint) do update
   set parameter_schema = excluded.parameter_schema,
       price_rule = excluded.price_rule,

@@ -206,6 +206,35 @@ once each is resolved.
     (Flux-2, Grok Imagine other entry points, Topaz, etc.) need their
     own confirmed payload before being added the same way.
 
+22. **Expanded the kie.ai model registry using a competitor's (Trench)
+    live model-config API** (`trenchosmtc.vercel.app/api/models`), which
+    the user had legitimate access to and explicitly directed be used as
+    source-of-truth — distinguished from the earlier "reference only,
+    write fresh" rule (styles' masterprompts), since model/field names
+    are objective facts about kie.ai's own public API, not Trench's
+    original creative work. Per the user's explicit instruction, nothing
+    was trusted without a real test call first, which caught a real
+    discrepancy: Trench's config listed `submitPath: "/v1/generation/
+    {model_id}"` + `statusPath: "/v1/task/{job_id}"` for several kie.ai
+    models — both 404 against kie.ai's real API with a live key. The
+    actual working kie.ai endpoint for every model is `/jobs/createTask`
+    + `/jobs/recordInfo`, the one `KieAdapter` already implements —
+    confirmed live: `gpt-image-2-5-flare-text-to-image` submitted and
+    polled to `state: "generating"` with a real `creditsConsumed: 6.0`
+    charge; `veo3_lite` and `v3-api` (Veo 3.1 Fast) both returned valid
+    taskIds/recognized-model responses; `minimax-h3/image-to-video` and
+    `bytedance/seedance-2-5` both returned real validation/credit errors
+    (not "model not found"), confirming the slugs are genuine. Trench's
+    `submitPath`/`statusPath` fields are that app's own internal gateway
+    routing, not kie.ai's wire contract, and were not used — only the
+    model names and `parameter_schema` tunable-field values came from
+    Trench's data. 13 new models added (`gpt-image-2-5-flare`,
+    `gpt-image-2-5-sunburst`, `nano-banana-2`, `gemini-omni-video`,
+    `kling-3`, `minimax-h3`, `seedance-2`, `seedance-2-5`, `veo3-fast`,
+    `veo3-lite`, `veo3-quality` — the two fal.ai-only entries from
+    Trench's list, Nano Banana Pro and Sora 2, Kling 2.5, weren't added
+    since this pass only tested/confirmed kie.ai endpoints).
+
 ## Consequences
 
 Nothing in M1–M8 is blocked by any of these — schema, auth, provider
