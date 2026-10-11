@@ -55,3 +55,30 @@ export async function getCurrentUserOrNull(): Promise<CurrentUser | null> {
 
   return { id: user.id, email: user.email };
 }
+
+/**
+ * Requires the signed-in user to be a platform admin (see
+ * supabase/migrations/00000000000017_platform_admins.sql), redirecting
+ * to / otherwise. This is the gate for src/app/platform-admin/ — the
+ * registration screen that's the ONLY way a new agency/org comes into
+ * existence, so it must never be reachable by a regular org member.
+ *
+ * Calls is_platform_admin() via RPC rather than querying
+ * platform_admins directly — the table's own RLS policy already
+ * requires is_platform_admin() to be true to read it at all, so a
+ * direct select would be circular for a non-admin. The RPC is
+ * SECURITY DEFINER and answers the question without that circularity.
+ */
+export async function requirePlatformAdmin(): Promise<CurrentUser> {
+  "use cache: private";
+
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: isAdmin } = await supabase.rpc("is_platform_admin");
+
+  if (!isAdmin) {
+    redirect("/");
+  }
+
+  return user;
+}
