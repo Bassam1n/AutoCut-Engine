@@ -25,6 +25,24 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run build
 
-  # pgTAP policy tests land in M1 once supabase/migrations exist.
+  db:
+    name: supabase — migrations + pgTAP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # CI runners have plenty of RAM, unlike the dev environment this
+      # suite was originally authored in — `supabase start` (local
+      # Postgres + Auth + Storage via Docker Compose) is the right choice
+      # here, not a connection to the real production project. Every test
+      # file wraps its fixtures in begin/rollback, so even if this were
+      # pointed at a real project nothing would persist — but running
+      # locally means CI never needs a production DB credential at all.
+      - run: supabase start
+      - run: supabase db push --local
+      - run: supabase test db --local
+
   # Playwright e2e lands once apps/web has routes worth testing end to end.
-  # Unit tests for packages/shared land alongside the first schema/adapter code in M1/M3.
+  # Unit tests for packages/shared land alongside the first schema/adapter code in M3.
