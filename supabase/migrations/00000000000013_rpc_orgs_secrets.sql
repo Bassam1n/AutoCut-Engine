@@ -104,9 +104,9 @@ begin
 
   secret_name := 'org_secret:' || target_org_id::text || ':' || target_provider;
 
-  select vault_secret_id into existing_vault_id
-  from public.org_secrets
-  where org_id = target_org_id and provider = target_provider;
+  select s.vault_secret_id into existing_vault_id
+  from public.org_secrets s
+  where s.org_id = target_org_id and s.provider = target_provider;
 
   if existing_vault_id is not null then
     perform vault.update_secret(existing_vault_id, secret_value);
@@ -115,16 +115,39 @@ begin
     new_vault_id := vault.create_secret(secret_value, secret_name);
   end if;
 
-  insert into public.org_secrets (org_id, provider, vault_secret_id, last4)
+  -- Table-qualified (os.*), and ON CONFLICT targets the constraint by
+  -- name rather than by column list — this function's own `returns
+  -- table` declares a `provider` OUT parameter in scope for the whole
+  -- body, which collides with org_secrets.provider. An unqualified
+  -- column reference AND a spelled-out `on conflict (org_id,
+  -- provider)` column list both resolve against that OUT parameter,
+  -- not purely the table column — caught as "column reference
+  -- 'provider' is ambiguous" the first time this was actually called
+  -- end-to-end.
+  --
+  -- `returning os.* into row_result` (not a hand-written column list)
+  -- because RETURNING-into-a-rowtype-variable assigns POSITIONALLY —
+  -- a spelled-out list that isn't in the table's exact declared column
+  -- order silently puts the wrong value in the wrong field. That was
+  -- the next bug the same live test caught, right after fixing the
+  -- ambiguity above: a hand-written RETURNING list (id, provider,
+  -- last4, verified_at, org_id, ...) put the `provider` text value
+  -- into row_result's 2nd slot, which is actually org_id (uuid) in
+  -- org_secrets' real column order — "invalid input syntax for type
+  -- uuid: 'anthropic'". Three total passes were needed to get this
+  -- one statement right (00000000000024, 00000000000025,
+  -- 00000000000026) — all three bugs were invisible from reading the
+  -- SQL and only surfaced by actually calling the function.
+  insert into public.org_secrets as os (org_id, provider, vault_secret_id, last4)
   values (
     target_org_id, target_provider, new_vault_id,
     right(secret_value, 4)
   )
-  on conflict (org_id, provider) do update
+  on conflict on constraint org_secrets_org_id_provider_key do update
     set vault_secret_id = excluded.vault_secret_id,
         last4 = excluded.last4,
         verified_at = null
-  returning * into row_result;
+  returning os.* into row_result;
 
   insert into public.audit_log (org_id, actor, action, target)
   values (target_org_id, auth.uid(), 'org_secret_saved', target_provider);
