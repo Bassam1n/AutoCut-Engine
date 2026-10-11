@@ -14,19 +14,20 @@
 -- shot/video-production patterns, not copy tone — so this is a fresh,
 -- smaller list sized to actual copy-generation needs, not a port.
 
+-- Renamed out of the way rather than dropped — non-destructive, and
+-- every value that was ever in it is preserved under this name rather
+-- than lost, even though no application code reads it anymore.
+alter table public.products rename column category to category_legacy_free_text;
+
 alter table public.products
-  add column category_v2 text check (
-    category_v2 in (
+  add column category text check (
+    category in (
       'supplements', 'skincare', 'fitness', 'pain_relief', 'wearables',
       'home_products', 'apparel', 'beauty', 'food_beverage', 'other'
     )
   );
 
-update public.products set category_v2 = 'other' where category is not null;
-
-alter table public.products drop column category;
-alter table public.products rename column category_v2 to category;
-alter table public.products rename constraint products_category_v2_check to products_category_check;
+update public.products set category = 'other' where category_legacy_free_text is not null;
 
 -- Platform-wide, admin-editable tone/angle brief per category — prose
 -- guidance fed to the script-generation prompt as inspiration, not
