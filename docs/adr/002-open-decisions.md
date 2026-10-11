@@ -80,6 +80,21 @@ once each is resolved.
     that table. New task `generate_ad_scripts` pinned to
     `claude-opus-5-5` (creative variance across 3 angles benefits from the
     stronger model more than pure extraction does).
+12. ~~**Visual Director's place in the Studio flow.**~~ **Resolved** (M5).
+    Checked the old Hermes pipeline: Visual Director was Phase 3a, a
+    distinct, later phase that runs *after* scene-splitting, applying nine
+    editorial rules to write a per-scene visual description, shot type,
+    energy and routing — broader than, and separate from, the hook
+    pattern's own "Visual Description" field (which is just one input to
+    it, honored only for HOOK scenes). The human first proposed folding
+    it into Concept & cast, but Concept & cast is ad-level (3 pitched
+    directions + cast extraction) and never writes a per-scene visual —
+    that's exactly Storyboard generation's job (spec §5.4 step 5: "Claude
+    writes one row per scene with copy verbatim, a Visual description,
+    and a Product cell"). Agreed: Visual Director's per-scene rules fold
+    into the Storyboard generation prompt, not Concept & cast and not a
+    separate step. Scene plan (step 3) stays pure text-splitting with no
+    visual-direction responsibility.
 
 ## Consequences
 

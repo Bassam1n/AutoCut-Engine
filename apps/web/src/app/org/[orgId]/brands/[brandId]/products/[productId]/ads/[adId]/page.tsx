@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireOrgMember } from "@/lib/auth";
 import { getAd } from "../ads-data";
 import { getAdScripts } from "../scripts-data";
+import { getScenes } from "../scenes-data";
 import { StudioCanvas } from "./studio-canvas";
 
 export default function AdStudioPage({
@@ -40,6 +41,7 @@ async function GatedCanvas({
   if (!ad) notFound();
 
   const scripts = await getAdScripts(orgId, adId);
+  const scenes = await getScenes(orgId, adId);
 
   return (
     <StudioCanvas
@@ -48,6 +50,7 @@ async function GatedCanvas({
       productId={productId}
       ad={ad}
       scripts={scripts}
+      scenes={scenes}
     />
   );
 }

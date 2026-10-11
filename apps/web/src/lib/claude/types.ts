@@ -20,6 +20,10 @@ export const PINNED_MODEL_PER_TASK = {
   // from the stronger model more than pure extraction does — pinned
   // to Opus rather than Sonnet.
   generate_ad_scripts: "claude-opus-5-5",
+  // Splitting copy into scenes by a cutting rule is a mechanical,
+  // rule-following task much closer to extraction/classification
+  // than to open creative writing — Sonnet is the right pin.
+  generate_scene_plan: "claude-sonnet-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

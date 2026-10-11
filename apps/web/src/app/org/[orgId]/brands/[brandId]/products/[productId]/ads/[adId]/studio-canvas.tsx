@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Stepper, type StudioStep } from "./stepper";
 import { ScriptsStep } from "./scripts-step";
 import { BriefStep } from "./brief-step";
+import { ScenePlanStep } from "./scene-plan-step";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
+import type { Scene } from "../scenes-data";
 
 export function StudioCanvas({
   orgId,
@@ -13,14 +15,16 @@ export function StudioCanvas({
   productId,
   ad,
   scripts,
+  scenes,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   ad: Ad;
   scripts: AdScriptRow[];
+  scenes: Scene[];
 }) {
-  const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts));
+  const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts, scenes));
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -48,7 +52,16 @@ export function StudioCanvas({
           />
         )}
         {step === "dial_in" && <ComingSoonStep label="Dial it in" onContinue={() => setStep("plan")} />}
-        {step === "plan" && <ComingSoonStep label="Scene plan" onContinue={() => setStep("concept")} />}
+        {step === "plan" && (
+          <ScenePlanStep
+            orgId={orgId}
+            brandId={brandId}
+            productId={productId}
+            ad={ad}
+            scenes={scenes}
+            onContinue={() => setStep("concept")}
+          />
+        )}
         {step === "concept" && <ComingSoonStep label="Concept & cast" onContinue={() => setStep("storyboard")} />}
         {step === "storyboard" && <ComingSoonStep label="Storyboard" onContinue={() => setStep("review")} />}
         {step === "review" && <ComingSoonStep label="Review" />}
@@ -57,8 +70,9 @@ export function StudioCanvas({
   );
 }
 
-function initialStep(ad: Ad, scripts: AdScriptRow[]): StudioStep {
+function initialStep(ad: Ad, scripts: AdScriptRow[], scenes: Scene[]): StudioStep {
   if (ad.plan_locked) return "concept";
+  if (scenes.length > 0) return "plan";
   const hasSelectedScript = scripts.some((s) => s.selected);
   const hasManualBrief = Boolean(ad.brief.hooks?.length || ad.brief.body || ad.brief.idea);
   if (hasSelectedScript || hasManualBrief) return "plan";

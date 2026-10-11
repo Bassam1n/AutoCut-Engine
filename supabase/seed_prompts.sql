@@ -37,3 +37,21 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M5: Scene plan step. Splits the ad's chosen script (hook + body +
+-- cta, already written) into scenes per the style's cutting rule.
+-- fast_cut styles split roughly one sentence per scene; whole_take
+-- styles (UGC-paced) keep full continuous takes together rather than
+-- chopping every sentence into its own scene. The model must not
+-- drop or invent copy — every word of the script must land in
+-- exactly one scene, in order.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'generate_scene_plan',
+  1,
+  'You are splitting a finished video ad script into scenes for production. The script has a hook, a body and a cta section, each given as text in the input. Split the FULL combined script into an ordered list of scenes, tagging each scene with which section it came from (hook_1, hook_2 or hook_3 if there are multiple hook lines, body, or cta). Follow the given cutting rule exactly: "fast_cut" means split roughly one sentence per scene (a sentence with a clear internal beat may become two scenes); "whole_take" means keep each section''s full text together as one continuous scene unless it is unusually long, in which case split only at a natural pause. Never drop, summarize, or invent copy — every word of the input script must appear verbatim in exactly one scene''s copy, in the original order. For each scene, estimate how many seconds it takes to speak that scene''s copy aloud at a natural, unhurried pace (roughly 3 words per second as a baseline, adjusted for punctuation and natural pauses).',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
