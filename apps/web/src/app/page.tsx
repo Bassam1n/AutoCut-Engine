@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./actions";
@@ -18,7 +18,10 @@ export default function HomePage() {
       </div>
 
       {/* Reads the session, so this streams in behind the boundary —
-          per ADR 001, never at the layout/page top level. */}
+          per ADR 001, never at the layout/page top level. Redirects
+          into the org sidebar shell when the user belongs to one;
+          this screen is only ever seen by someone signed in but not
+          (yet) a member of any org, e.g. a platform admin. */}
       <Suspense fallback={<AccountBadgeSkeleton />}>
         <AccountBadge />
       </Suspense>
@@ -37,7 +40,11 @@ function AccountBadgeSkeleton() {
 
 async function AccountBadge() {
   const user = await getCurrentUser();
-  const membership = await getFirstMembership();
+  const orgId = await getFirstOrgId();
+
+  if (orgId) {
+    redirect(`/org/${orgId}/brands`);
+  }
 
   return (
     <div className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4">
@@ -45,49 +52,30 @@ async function AccountBadge() {
         Signed in as{" "}
         <span className="font-medium">{user.email}</span>
       </p>
-      <div className="flex items-center gap-2">
-        {membership && (
-          <Link
-            href={`/org/${membership.orgId}/brands`}
-            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
-          >
-            Brands
-          </Link>
-        )}
-        {membership?.isAdmin && (
-          <Link
-            href={`/org/${membership.orgId}/team`}
-            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
-          >
-            Manage team
-          </Link>
-        )}
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
-          >
-            Sign out
-          </button>
-        </form>
-      </div>
+      <form action={signOut}>
+        <button
+          type="submit"
+          className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+        >
+          Sign out
+        </button>
+      </form>
     </div>
   );
 }
 
-async function getFirstMembership(): Promise<{ orgId: string; isAdmin: boolean } | null> {
+async function getFirstOrgId(): Promise<string | null> {
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return null;
 
   const { data } = await supabase
     .from("org_members")
-    .select("org_id, role")
+    .select("org_id")
     .eq("user_id", user.user.id)
     .eq("seat_active", true)
     .limit(1)
     .maybeSingle();
 
-  if (!data) return null;
-  return { orgId: data.org_id, isAdmin: data.role === "owner" || data.role === "admin" };
+  return data?.org_id ?? null;
 }
