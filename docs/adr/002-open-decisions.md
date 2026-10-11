@@ -35,9 +35,12 @@ once each is resolved.
 4. **Launch providers beyond kie.ai/fal.ai.** Which of xAI Grok, ElevenLabs,
    TwelveLabs, Pexels, HeyGen ship at launch vs. later, and which dev keys
    the human can supply. Blocks M3 provider-adapter scope.
-5. **Seed styles.** The human supplies Hermes's own style rules as the
-   starting masterprompts — spec explicitly forbids authoring seeds from
-   any third party's text. Blocks M5/M6 content, not code.
+5. ~~**Seed styles.**~~ **Resolved.** 15 original platform styles seeded
+   (`supabase/seed_styles.sql`), written fresh per spec's own rule — category
+   selection was informed by a competitor style list the human shared (with
+   the compiling party's stated permission to view it), but every
+   masterprompt is original prose, confirmed with the human before writing
+   anything. See the M2/M3 commit history around `seed_styles.sql`.
 6. **Test fixture brand.** Spec names FisioRest (the original Hermes test
    client) as the first live fixture. Needs the human to supply brand
    context and product photos when M5/M6 testing starts.
@@ -51,6 +54,15 @@ once each is resolved.
    deciding now — so the schema (`phase_runs`, `input_hash`-based
    staleness) must not hardcode an order, but the actual sequence used at
    launch is still an open call for M9/M11.
+10. ~~**Ad ownership — brand-level or product-level.**~~ **Resolved** (M5).
+    Spec §4's original data model made `ads.product_id` nullable, allowing a
+    brand-level ad with no specific product. The human corrected this when
+    M5 routing came up: every ad in AutoCut is about a specific product,
+    nested under it (`brand -> product -> ads`), not a brand-level concept.
+    `ads.product_id` is now `not null` (migration
+    `00000000000033_ads_require_product.sql`, applied against zero live
+    rows, so no backfill was needed). Routes accordingly:
+    `/org/[orgId]/brands/[brandId]/products/[productId]/ads`.
 
 ## Consequences
 

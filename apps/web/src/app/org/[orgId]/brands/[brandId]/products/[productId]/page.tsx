@@ -63,17 +63,25 @@ async function GatedHeader({
   if (!product) notFound();
 
   return (
-    <div>
-      <BackButton />
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <BackButton />
+        <Link
+          href={`/org/${orgId}/brands/${brandId}/products`}
+          className="block text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
+        >
+          {brand.name} / Products
+        </Link>
+        <h1 className="mt-1 text-xl font-semibold tracking-tight">
+          {product.name}
+        </h1>
+      </div>
       <Link
-        href={`/org/${orgId}/brands/${brandId}/products`}
-        className="block text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
+        href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads`}
+        className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
       >
-        {brand.name} / Products
+        Ads
       </Link>
-      <h1 className="mt-1 text-xl font-semibold tracking-tight">
-        {product.name}
-      </h1>
     </div>
   );
 }
