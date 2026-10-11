@@ -107,3 +107,29 @@ export async function requireOrgAdmin(orgId: string): Promise<CurrentUser> {
 
   return user;
 }
+
+/**
+ * Requires the signed-in user to be an active member (any role) of the
+ * given org. Gate for org-scoped editor content — brands, customers,
+ * products — that every role can read and write per spec §4 ("browser
+ * role gets select on its org's rows and insert or update only on
+ * user-authored content"). This is a UX-layer redirect, same as
+ * requireOrgAdmin(): the real boundary is each table's own RLS policy
+ * (is_org_member(org_id)), so even if this check were skipped, a
+ * non-member's queries would still return nothing.
+ */
+export async function requireOrgMember(orgId: string): Promise<CurrentUser> {
+  "use cache: private";
+
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: isMember } = await supabase.rpc("is_org_member", {
+    check_org_id: orgId,
+  });
+
+  if (!isMember) {
+    redirect("/");
+  }
+
+  return user;
+}

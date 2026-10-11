@@ -1,0 +1,100 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import type { Brand } from "./brands-data";
+import type { ActionResult } from "./brands-actions";
+
+const CONTEXT_FIELDS = [
+  { key: "audience", label: "Audience", placeholder: "Who this brand speaks to" },
+  { key: "tone", label: "Tone", placeholder: "How the brand sounds — e.g. warm, direct, playful" },
+  { key: "product_facts", label: "Product facts", placeholder: "What's true about the products that should never be misstated" },
+  { key: "visual_feel", label: "Visual feel", placeholder: "Colors, lighting, mood — described positively" },
+  { key: "never_generate", label: "Never generate", placeholder: "Describe what the frame SHOULD contain instead of listing banned items — image models draw whatever a 'no ___' list names" },
+  { key: "claims_rules", label: "Claims rules", placeholder: "What can and can't be claimed about the product" },
+] as const;
+
+export function BrandForm({
+  brand,
+  onSubmit,
+  submitLabel,
+}: {
+  brand?: Brand;
+  onSubmit: (formData: FormData) => Promise<ActionResult>;
+  submitLabel: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSubmit(formData: FormData) {
+    setError(null);
+    startTransition(async () => {
+      const result = await onSubmit(formData);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  return (
+    <form action={handleSubmit} className="flex flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="name" className="text-sm font-medium">
+          Brand name
+        </label>
+        <input
+          id="name"
+          name="name"
+          required
+          defaultValue={brand?.name}
+          disabled={isPending}
+          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="logo_url" className="text-sm font-medium">
+          Logo URL
+          <span className="ml-1.5 text-xs font-normal text-foreground-muted">
+            optional
+          </span>
+        </label>
+        <input
+          id="logo_url"
+          name="logo_url"
+          type="url"
+          defaultValue={brand?.logo_url ?? ""}
+          disabled={isPending}
+          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+        />
+      </div>
+
+      <div className="flex flex-col gap-4 border-t border-border pt-4">
+        <p className="text-sm font-medium">Brand context</p>
+        {CONTEXT_FIELDS.map((field) => (
+          <div key={field.key} className="flex flex-col gap-1.5">
+            <label htmlFor={field.key} className="text-sm">
+              {field.label}
+            </label>
+            <textarea
+              id={field.key}
+              name={field.key}
+              rows={2}
+              placeholder={field.placeholder}
+              defaultValue={brand?.brand_context?.[field.key] ?? ""}
+              disabled={isPending}
+              className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+            />
+          </div>
+        ))}
+      </div>
+
+      {error && <p className="text-sm text-danger">{error}</p>}
+
+      <button
+        type="submit"
+        disabled={isPending}
+        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        {submitLabel}
+      </button>
+    </form>
+  );
+}

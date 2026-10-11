@@ -37,7 +37,7 @@ function AccountBadgeSkeleton() {
 
 async function AccountBadge() {
   const user = await getCurrentUser();
-  const adminOrgId = await getFirstAdminOrgId();
+  const membership = await getFirstMembership();
 
   return (
     <div className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4">
@@ -46,9 +46,17 @@ async function AccountBadge() {
         <span className="font-medium">{user.email}</span>
       </p>
       <div className="flex items-center gap-2">
-        {adminOrgId && (
+        {membership && (
           <Link
-            href={`/org/${adminOrgId}/team`}
+            href={`/org/${membership.orgId}/brands`}
+            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+          >
+            Brands
+          </Link>
+        )}
+        {membership?.isAdmin && (
+          <Link
+            href={`/org/${membership.orgId}/team`}
             className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
           >
             Manage team
@@ -67,18 +75,19 @@ async function AccountBadge() {
   );
 }
 
-async function getFirstAdminOrgId(): Promise<string | null> {
+async function getFirstMembership(): Promise<{ orgId: string; isAdmin: boolean } | null> {
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return null;
 
   const { data } = await supabase
     .from("org_members")
-    .select("org_id")
+    .select("org_id, role")
     .eq("user_id", user.user.id)
-    .in("role", ["owner", "admin"])
+    .eq("seat_active", true)
     .limit(1)
     .maybeSingle();
 
-  return data?.org_id ?? null;
+  if (!data) return null;
+  return { orgId: data.org_id, isAdmin: data.role === "owner" || data.role === "admin" };
 }
