@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
+      - run: npm test
       - run: npm run build
 
   db:
@@ -45,4 +46,7 @@ jobs:
       - run: supabase test db --local
 
   # Playwright e2e lands once apps/web has routes worth testing end to end.
-  # Unit tests for packages/shared land alongside the first schema/adapter code in M3.
+  # Provider adapter contract tests (vitest, apps/web/src/lib/providers/)
+  # landed in M3, run as part of the `web` job above via `npm test` —
+  # they run against recorded fixtures only, no live provider calls, per
+  # spec M3's own "Done when" requirement.

@@ -1,0 +1,7 @@
+{
+  "status": "COMPLETED",
+  "request_id": "764cabcf-b745-4b3e-ae38-1200304cf45b",
+  "response_url": "https://queue.fal.run/fal-ai/flux/dev/requests/764cabcf-b745-4b3e-ae38-1200304cf45b/response",
+  "logs": [{ "message": "Generation complete", "timestamp": "2026-02-17T10:30:01.123Z" }],
+  "metrics": { "inference_time": 3.42 }
+}

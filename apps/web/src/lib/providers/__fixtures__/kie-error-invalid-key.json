@@ -1,0 +1,5 @@
+{
+  "code": 401,
+  "msg": "Unauthorized – Authentication failed. Please check that your Authorization and Content-Type headers are correctly set.",
+  "data": null
+}

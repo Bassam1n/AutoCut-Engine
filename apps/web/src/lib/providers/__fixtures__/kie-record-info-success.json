@@ -1,0 +1,14 @@
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "taskId": "task_z-image_1765174270120",
+    "state": "success",
+    "resultJson": "{\"resultUrls\":[\"https://cdn.kie.ai/results/task_z-image_1765174270120/output_1.png\"]}",
+    "param": "{}",
+    "createTime": 1765174270120,
+    "completeTime": 1765174280500,
+    "costTime": 10380,
+    "creditsConsumed": 2
+  }
+}

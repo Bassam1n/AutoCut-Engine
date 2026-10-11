@@ -1,0 +1,7 @@
+{
+  "status": "COMPLETED",
+  "request_id": "764cabcf-b745-4b3e-ae38-1200304cf45b",
+  "response_url": "https://queue.fal.run/fal-ai/flux/dev/requests/764cabcf-b745-4b3e-ae38-1200304cf45b/response",
+  "error": "Content policy violation.",
+  "error_type": "CONTENT_POLICY_VIOLATION"
+}

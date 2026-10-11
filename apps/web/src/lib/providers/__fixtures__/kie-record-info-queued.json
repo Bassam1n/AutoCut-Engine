@@ -1,0 +1,11 @@
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "taskId": "task_z-image_1765174270120",
+    "state": "waiting",
+    "resultJson": null,
+    "param": "{}",
+    "createTime": 1765174270120
+  }
+}
