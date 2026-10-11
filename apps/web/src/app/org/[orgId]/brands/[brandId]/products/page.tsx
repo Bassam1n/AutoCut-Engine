@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireOrgMember } from "@/lib/auth";
 import { getBrand } from "../../brands-data";
 import { getProducts } from "./products-data";
+import { BackButton } from "../../../back-button";
 
 export default function ProductsPage({
   params,
@@ -53,9 +54,10 @@ async function GatedHeader({
 
   return (
     <div>
+      <BackButton />
       <Link
         href={`/org/${orgId}/brands/${brandId}/customers`}
-        className="text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
+        className="block text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
       >
         {brand.name}
       </Link>

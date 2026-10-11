@@ -5,6 +5,7 @@ import { getBrand } from "../../brands-data";
 import { BrandForm } from "../../brand-form";
 import { updateBrand, archiveBrand } from "../../brands-actions";
 import { ArchiveBrandButton } from "./archive-brand-button";
+import { BackButton } from "../../../back-button";
 
 export default function EditBrandPage({
   params,
@@ -14,6 +15,7 @@ export default function EditBrandPage({
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 px-6 py-10">
       <div>
+        <BackButton />
         <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
           Brands
         </p>

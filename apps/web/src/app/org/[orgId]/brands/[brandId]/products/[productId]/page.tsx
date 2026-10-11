@@ -8,6 +8,7 @@ import { ProductForm } from "../product-form";
 import { updateProduct, archiveProduct } from "../products-actions";
 import { ArchiveProductButton } from "./archive-product-button";
 import { RefUploader } from "./ref-uploader";
+import { BackButton } from "../../../../back-button";
 
 export default function ProductDetailPage({
   params,
@@ -63,9 +64,10 @@ async function GatedHeader({
 
   return (
     <div>
+      <BackButton />
       <Link
         href={`/org/${orgId}/brands/${brandId}/products`}
-        className="text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
+        className="block text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
       >
         {brand.name} / Products
       </Link>

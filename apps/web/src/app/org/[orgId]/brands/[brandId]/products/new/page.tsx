@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { requireOrgMember } from "@/lib/auth";
 import { ProductForm } from "../product-form";
 import { createProduct } from "../products-actions";
+import { BackButton } from "../../../../back-button";
 
 export default function NewProductPage({
   params,
@@ -11,6 +12,7 @@ export default function NewProductPage({
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 px-6 py-10">
       <div>
+        <BackButton />
         <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
           Products
         </p>

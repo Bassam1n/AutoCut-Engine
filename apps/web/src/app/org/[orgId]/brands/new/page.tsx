@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { requireOrgMember } from "@/lib/auth";
 import { BrandForm } from "../brand-form";
 import { createBrand } from "../brands-actions";
+import { BackButton } from "../../back-button";
 
 export default function NewBrandPage({
   params,
@@ -11,6 +12,7 @@ export default function NewBrandPage({
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col gap-6 px-6 py-10">
       <div>
+        <BackButton />
         <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
           Brands
         </p>

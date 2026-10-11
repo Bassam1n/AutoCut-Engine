@@ -5,6 +5,7 @@ import { requireOrgMember } from "@/lib/auth";
 import { getBrand } from "../../brands-data";
 import { getCustomers } from "./customers-data";
 import { CustomerScreen } from "./customer-screen";
+import { BackButton } from "../../../back-button";
 
 export default function BrandCustomersPage({
   params,
@@ -54,9 +55,10 @@ async function GatedHeader({
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
+        <BackButton />
         <Link
           href={`/org/${orgId}/brands`}
-          className="text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
+          className="block text-xs font-medium uppercase tracking-wide text-foreground-muted hover:underline"
         >
           Brands
         </Link>

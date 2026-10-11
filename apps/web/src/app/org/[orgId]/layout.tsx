@@ -20,7 +20,7 @@ export default function OrgLayout({
 
 function SidebarSkeleton() {
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-background-raised">
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col self-start border-r border-border bg-background-raised">
       <div className="flex items-center gap-2.5 px-5 py-5">
         <div className="h-8 w-8 animate-pulse rounded-lg bg-border" />
         <div className="h-4 w-24 animate-pulse rounded bg-border" />
