@@ -1,0 +1,33 @@
+-- M9ish: Library (spec §5.9) + the one real schema gap it surfaces.
+--
+-- 1. styles.reference_asset_id — spec §5.9: a library item can be "set
+--    as... a style reference." styles had no column for this at all
+--    (only preview_image_url, an unrelated marketing thumbnail — see
+--    migration 7's comment). Investigated scene-images-actions.ts's
+--    assembleSceneReferences() before adding this: its tier (d) was
+--    explicitly "place/style references — NOT MODELED in the schema
+--    yet... skipped entirely rather than inventing one." That's still
+--    true as of this migration, and this column is what makes it no
+--    longer true — see scene-images-actions.ts for the new tier that
+--    actually reads this column (chosen over leaving it unconsumed:
+--    the lift is small, assembleSceneReferences already has exactly
+--    this shape of tier for cast references, and only two call sites
+--    exist to touch). Nullable: most styles (especially the platform
+--    seeds, org_id null) have no single reference image, only a text
+--    masterprompt.
+alter table public.styles add column reference_asset_id uuid references public.assets(id);
+
+-- 2. library_items has no new columns — the existing schema (migration
+--    10) already covers everything spec §5.9 needs (name, tags,
+--    favorite, brand_id). This migration only adds the FK the Library
+--    page's "set as style reference" and "set as character reference"
+--    actions write *into other tables* (styles.reference_asset_id
+--    above, cast_members.ref_asset_id/sheet_asset_id already existed).
+--
+-- No RLS change needed for styles: styles_update (migration 7) already
+-- lets an org update its own styles' columns, and this is just a new
+-- column on that same table. A platform-seeded style (org_id is null)
+-- still cannot be updated by any org — same as every other styles
+-- column — so a focused pgTAP case confirms a seeded style's
+-- reference_asset_id cannot be set by an org member, matching the
+-- existing styles_update policy's own org_id is not null check.

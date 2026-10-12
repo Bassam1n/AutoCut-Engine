@@ -125,6 +125,19 @@ export const PINNED_MODEL_PER_TASK = {
   // that will be injected into every future prompt for that scope is
   // higher-stakes than that).
   cluster_remembered_feedback: "claude-opus-5-5",
+  // Spec §5.9: "AI names and tags images." Looking at a saved image
+  // and writing a short descriptive name plus keyword tags is
+  // structural extraction/description — what's visually in the frame
+  // — not open creative judgment or editorial prompt-writing, the
+  // same shape as generate_product_spec's vision call (also Sonnet).
+  // Not Haiku: generate_product_spec (the closest sibling task,
+  // reading product photos and describing what's there) was pinned to
+  // Sonnet rather than Haiku for the same description-not-
+  // classification reasoning, and a wrong/sloppy library name or tag
+  // set actively hurts the Library's whole point (search and filter
+  // depend on it), so this keeps the stronger of the two cheap tiers
+  // rather than reaching for Haiku to save a fraction of a cent.
+  generate_library_tags: "claude-sonnet-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

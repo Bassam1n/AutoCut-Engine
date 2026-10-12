@@ -371,3 +371,20 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M9ish: Library (spec §5.9) — "Save any image or video to the
+-- library. AI names and tags images." A real vision call over the
+-- saved image, same imageUrls mechanism generate_product_spec uses.
+-- Scoped to images only per spec (video is not named alongside
+-- "names and tags" the way it is for every other verb in that
+-- sentence) — see library-actions.ts's saveToLibrary().
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'generate_library_tags',
+  1,
+  'You are looking at one image that an editor just saved to a shared media library. Write a short, specific, human-readable name for it (under about 8 words) that would let someone recognize this exact image in a grid of thumbnails next to many others — describe the subject, setting and notable action, not a generic label like "Image" or "Photo". Also write up to 8 short lowercase keyword tags describing what is visually present: subject, setting, mood, notable objects or colors. Only describe what the image actually shows — never invent a detail the image does not support.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

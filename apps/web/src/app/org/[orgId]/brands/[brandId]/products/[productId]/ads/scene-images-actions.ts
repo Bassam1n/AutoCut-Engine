@@ -45,6 +45,7 @@ export type ReferenceTierLabel =
   | "product photo"
   | "feedback image"
   | "character reference"
+  | "style reference"
   | "angle photo";
 
 export type AssembledReferences = {
@@ -65,9 +66,10 @@ export type AssembledReferences = {
  *   a. product main photo (kind='photo'), only when scene.product_id is set
  *   b. attached feedback images for this scene (assets.kind='feedback')
  *   c. character references: ref_asset_id of every APPROVED cast member on this ad
- *   d. place/style references — NOT MODELED in the schema yet (no asset kind
- *      exists for this), so this tier is skipped entirely rather than
- *      inventing one.
+ *   d. style reference: the ad's style's reference_asset_id (migration 45),
+ *      when the editor has assigned one from the Library (spec §5.9: "set
+ *      it as... a style reference"). Previously unmodeled entirely — now a
+ *      real tier, same shape as (c).
  *   e. angle photos (product_refs kind='angle')
  * Trimmed to REFERENCE_IMAGE_CAP, dropping lowest-priority items first.
  */
@@ -146,11 +148,31 @@ export async function assembleSceneReferences(
   }
   tiers.push(castUrls.map((url) => ({ tier: "character reference" as const, url })));
 
-  // (d) place/style references — spec §5.6 names this tier, but no
-  // asset kind or table models "place or style reference" images yet
-  // (only product_refs, cast ref/sheet assets, and now feedback
-  // assets exist). Intentionally skipped rather than inventing a kind
-  // — revisit once that's modeled.
+  // (d) style reference — styles.reference_asset_id (migration 45),
+  // set via the Library's "set as style reference" action. One
+  // extra lookup for the ad's style, mirroring how resolveFinalImagePrompt
+  // reads ad.style_id/styles.masterprompt, kept local here rather than
+  // widening this function's parameters since only an ad_id is needed.
+  let styleRefUrls: string[] = [];
+  const { data: adRow } = await supabase.from("ads").select("style_id").eq("id", scene.ad_id).maybeSingle();
+  if (adRow?.style_id) {
+    const { data: styleRow } = await supabase
+      .from("styles")
+      .select("reference_asset_id")
+      .eq("id", adRow.style_id)
+      .maybeSingle();
+    if (styleRow?.reference_asset_id) {
+      const { data: styleAsset } = await service
+        .from("assets")
+        .select("storage_path")
+        .eq("id", styleRow.reference_asset_id)
+        .maybeSingle();
+      if (styleAsset?.storage_path) {
+        styleRefUrls = await signRenderPaths(service, [styleAsset.storage_path]);
+      }
+    }
+  }
+  tiers.push(styleRefUrls.map((url) => ({ tier: "style reference" as const, url })));
 
   // (e) angle photos (product_refs kind='angle') — lowest priority.
   let angleUrls: string[] = [];

@@ -19,6 +19,8 @@ import {
 import type { ModelChoice } from "../scene-videos-actions";
 import { submitVideoFeedback } from "../feedback-actions";
 import { SceneFeedbackPanel } from "./scene-feedback-panel";
+import { saveToLibrary } from "@/app/org/[orgId]/library/library-actions";
+import { DownloadAllButton } from "./download-all-button";
 import type { Ad, AdBrief } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
@@ -82,6 +84,8 @@ export function SceneVideosStep({
           makes sense from that image.
         </p>
       </div>
+
+      <DownloadAllButton orgId={orgId} adId={ad.id} adName={ad.name ?? "ad"} />
 
       <SpeakingRuleControl orgId={orgId} brandId={brandId} productId={productId} ad={ad} />
 
@@ -236,7 +240,17 @@ function SceneVideoCard({
   const [stopMessage, setStopMessage] = useState<{ reason: string; fallback: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [trimmedNote, setTrimmedNote] = useState<string | null>(null);
+  const [savingAssetId, setSavingAssetId] = useState<string | null>(null);
   const jobIdRef = useRef<string | null>(activeJob?.id ?? null);
+
+  async function onSaveToLibrary(assetId: string) {
+    setSavingAssetId(assetId);
+    try {
+      await saveToLibrary(orgId, assetId, brandId);
+    } finally {
+      setSavingAssetId(null);
+    }
+  }
 
   // Recomputes the duration slider's bounds and default whenever the
   // selected video model changes — driven by that model's real
@@ -513,6 +527,15 @@ function SceneVideoCard({
                     className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded bg-black/60 text-[10px] text-white hover:bg-black/80"
                   >
                     ⤢
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSaveToLibrary(asset.id)}
+                    disabled={savingAssetId === asset.id}
+                    title="Save to library"
+                    className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black/80 disabled:opacity-60"
+                  >
+                    {savingAssetId === asset.id ? "Saving..." : "Save"}
                   </button>
                 </div>
               ) : (

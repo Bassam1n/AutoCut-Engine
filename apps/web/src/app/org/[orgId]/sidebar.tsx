@@ -19,6 +19,12 @@ export function Sidebar({
     { href: `/org/${orgId}/brands`, label: "Brands" },
     { href: `/org/${orgId}/products`, label: "Products" },
     { href: `/org/${orgId}/creative-history`, label: "Creative history" },
+    // Visible to every member, same as the links below it — library_items
+    // has no admin-only RLS restriction (migration 10:
+    // library_items_select/_insert/_update/_delete all just check
+    // is_org_member(org_id), no role check), so there's no reason to
+    // gate this behind info.isAdmin the way Team/Provider keys are.
+    { href: `/org/${orgId}/library`, label: "Library" },
     { href: `/org/${orgId}/styles`, label: "Styles" },
     // Spend & guard is visible to every member (orgs_select_own lets
     // any member read warn/stop thresholds and paused state directly

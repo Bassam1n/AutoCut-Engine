@@ -18,6 +18,8 @@ import {
 } from "../scene-images-actions";
 import { submitImageFeedback } from "../feedback-actions";
 import { SceneFeedbackPanel } from "./scene-feedback-panel";
+import { LibraryPanel, LIBRARY_ASSET_DRAG_TYPE } from "./library-panel";
+import { saveToLibrary, addLibraryItemToScene } from "@/app/org/[orgId]/library/library-actions";
 import type { Ad } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
@@ -56,9 +58,19 @@ export function SceneImagesStep({
   const [isStaggering, setIsStaggering] = useState(false);
   const [error, setError] = useState<FriendlyError | null>(null);
   const [omittedNotes, setOmittedNotes] = useState<Record<string, { tier: ReferenceTierLabel; count: number }[]>>({});
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const router = useRouter();
 
   const returnToPath = `/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`;
+
+  async function onDropLibraryAsset(sceneId: string, assetId: string) {
+    const result = await addLibraryItemToScene(orgId, ad.id, sceneId, assetId);
+    if (!result.ok) {
+      setError({ friendly: `Could not add that library image to scene ${sceneIndexLabel(scenes, sceneId)}.`, detail: result.error });
+    } else {
+      router.refresh();
+    }
+  }
 
   function markGenerating(sceneId: string, isGenerating: boolean) {
     setGeneratingSceneIds((prev) => {
@@ -151,7 +163,16 @@ export function SceneImagesStep({
             currently-generating scenes are skipped automatically.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setIsLibraryOpen((v) => !v)}
+          className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+        >
+          {isLibraryOpen ? "Hide library" : "Browse library"}
+        </button>
       </div>
+
+      <LibraryPanel orgId={orgId} isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />
 
       {error && <FriendlyErrorNote error={error} />}
 
@@ -194,6 +215,7 @@ export function SceneImagesStep({
               onGenerate={(count) => runGenerate(scene.id, count)}
               omitted={omittedNotes[scene.id] ?? []}
               feedbackModel={imageModel}
+              onDropLibraryAsset={(assetId) => onDropLibraryAsset(scene.id, assetId)}
             />
           ))}
         </div>
@@ -299,6 +321,7 @@ function SceneImageCard({
   onGenerate,
   omitted,
   feedbackModel,
+  onDropLibraryAsset,
 }: {
   orgId: string;
   brandId: string;
@@ -314,11 +337,24 @@ function SceneImageCard({
   onGenerate: (count: number) => void;
   omitted: { tier: ReferenceTierLabel; count: number }[];
   feedbackModel: ModelOption | null;
+  /** Spec §5.9: "Drag a library item into a scene" — called with the dropped library item's underlying asset id. */
+  onDropLibraryAsset: (assetId: string) => void;
 }) {
   const [count, setCount] = useState(1);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [savingAssetId, setSavingAssetId] = useState<string | null>(null);
   const elapsedSeconds = useElapsedSeconds(isGenerating);
+
+  async function onSaveToLibrary(assetId: string) {
+    setSavingAssetId(assetId);
+    try {
+      await saveToLibrary(orgId, assetId, brandId);
+    } finally {
+      setSavingAssetId(null);
+    }
+  }
   // Mirrors scene.image_prompt_override, but updated directly by
   // PromptOverrideEditor's save/reset instead of waiting on a server
   // round-trip + revalidatePath to reflect back down through props —
@@ -368,35 +404,72 @@ function SceneImageCard({
         )}
       </p>
 
-      {images.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {images.map((asset) => {
-            const url = imageUrls[asset.storage_path];
-            return url ? (
-              <button
-                key={asset.id}
-                type="button"
-                onClick={() => setLightboxUrl(url)}
-                className="overflow-hidden rounded-lg transition-opacity hover:opacity-90"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt={`Scene ${scene.idx + 1} image v${asset.version} — click to expand`}
-                  className="aspect-square w-full object-cover"
-                />
-              </button>
-            ) : (
-              <div
-                key={asset.id}
-                className="flex aspect-square w-full items-center justify-center rounded-lg bg-border text-xs text-foreground-muted"
-              >
-                v{asset.version}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/*
+       * Drop target for "drag a library item into a scene" (spec
+       * §5.9) — wraps the whole image grid (not each individual
+       * thumbnail) since dropping onto a scene with zero images yet
+       * must still work, and onDragOver's preventDefault() is what
+       * tells the browser this element accepts a drop at all.
+       */}
+      <div
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes(LIBRARY_ASSET_DRAG_TYPE)) {
+            e.preventDefault();
+            setIsDragOver(true);
+          }
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const assetId = e.dataTransfer.getData(LIBRARY_ASSET_DRAG_TYPE);
+          if (assetId) onDropLibraryAsset(assetId);
+        }}
+        className={`rounded-lg transition-colors ${isDragOver ? "ring-2 ring-accent" : ""}`}
+      >
+        {images.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {images.map((asset) => {
+              const url = imageUrls[asset.storage_path];
+              return (
+                <div key={asset.id} className="relative">
+                  {url ? (
+                    <button
+                      type="button"
+                      onClick={() => setLightboxUrl(url)}
+                      className="block w-full overflow-hidden rounded-lg transition-opacity hover:opacity-90"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Scene ${scene.idx + 1} image v${asset.version} — click to expand`}
+                        className="aspect-square w-full object-cover"
+                      />
+                    </button>
+                  ) : (
+                    <div className="flex aspect-square w-full items-center justify-center rounded-lg bg-border text-xs text-foreground-muted">
+                      v{asset.version}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onSaveToLibrary(asset.id)}
+                    disabled={savingAssetId === asset.id}
+                    title="Save to library"
+                    className="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black/80 disabled:opacity-60"
+                  >
+                    {savingAssetId === asset.id ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-lg border border-dashed border-border-strong p-4 text-center text-xs text-foreground-muted">
+            Drop a library image here to use it for this scene.
+          </p>
+        )}
+      </div>
 
       {feedbackImages.length > 0 && (
         <div className="flex flex-col gap-1.5">
