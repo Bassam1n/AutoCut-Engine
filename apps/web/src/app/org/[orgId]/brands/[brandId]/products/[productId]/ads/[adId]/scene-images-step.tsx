@@ -16,6 +16,8 @@ import {
   type ModelChoice,
   type ReferenceTierLabel,
 } from "../scene-images-actions";
+import { submitImageFeedback } from "../feedback-actions";
+import { SceneFeedbackPanel } from "./scene-feedback-panel";
 import type { Ad } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
@@ -191,6 +193,7 @@ export function SceneImagesStep({
               onToggleSelected={() => toggleSelected(scene.id)}
               onGenerate={(count) => runGenerate(scene.id, count)}
               omitted={omittedNotes[scene.id] ?? []}
+              feedbackModel={imageModel}
             />
           ))}
         </div>
@@ -295,6 +298,7 @@ function SceneImageCard({
   onToggleSelected,
   onGenerate,
   omitted,
+  feedbackModel,
 }: {
   orgId: string;
   brandId: string;
@@ -309,6 +313,7 @@ function SceneImageCard({
   onToggleSelected: () => void;
   onGenerate: (count: number) => void;
   omitted: { tier: ReferenceTierLabel; count: number }[];
+  feedbackModel: ModelOption | null;
 }) {
   const [count, setCount] = useState(1);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -446,6 +451,33 @@ function SceneImageCard({
       )}
 
       <FeedbackUpload orgId={orgId} brandId={brandId} productId={productId} ad={ad} scene={scene} />
+
+      {images.length > 0 && (
+        <SceneFeedbackPanel
+          orgId={orgId}
+          adId={ad.id}
+          sceneId={scene.id}
+          allowReferenceAttachment
+          onSubmit={({ mode, feedbackText, remember, attachedReferenceStoragePath }) => {
+            if (!feedbackModel) {
+              return Promise.resolve({ ok: false, error: "Pick an image model first." } as const);
+            }
+            const model: ModelChoice = { provider: feedbackModel.provider as "fal" | "kie", endpoint: feedbackModel.endpoint };
+            return submitImageFeedback(
+              orgId,
+              brandId,
+              productId,
+              ad.id,
+              scene.id,
+              mode,
+              feedbackText,
+              remember,
+              model,
+              attachedReferenceStoragePath
+            );
+          }}
+        />
+      )}
 
       <div className="flex items-center gap-3">
         <CountStepper value={count} onChange={setCount} label="Count" />

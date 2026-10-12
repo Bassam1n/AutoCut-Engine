@@ -17,6 +17,8 @@ import {
   clampDurationS,
 } from "../scene-videos-actions";
 import type { ModelChoice } from "../scene-videos-actions";
+import { submitVideoFeedback } from "../feedback-actions";
+import { SceneFeedbackPanel } from "./scene-feedback-panel";
 import type { Ad, AdBrief } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
@@ -521,6 +523,23 @@ function SceneVideoCard({
             })}
           </div>
         </div>
+      )}
+
+      {videos.length > 0 && (
+        <SceneFeedbackPanel
+          orgId={orgId}
+          adId={ad.id}
+          sceneId={scene.id}
+          allowReferenceAttachment={false}
+          onSubmit={({ mode, feedbackText, remember }) => {
+            if (!videoModel) {
+              return Promise.resolve({ ok: false, error: "Pick a video model first." } as const);
+            }
+            const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie", endpoint: videoModel.endpoint };
+            return submitVideoFeedback(orgId, brandId, productId, ad.id, scene.id, mode, feedbackText, remember, model);
+          }}
+          onVideoJobStarted={(jobId) => pollJob(jobId)}
+        />
       )}
 
       {archivedVideos.length > 0 && (
