@@ -75,6 +75,42 @@ export const PINNED_MODEL_PER_TASK = {
   // prompt, plus staged shortening when it doesn't fit. Same
   // editorial-judgment shape as write_image_prompt — Opus.
   write_video_prompt: "claude-opus-5-5",
+  // Spec §5.8: "Feedback phrased as a question is rejected before
+  // spending anything." This gate runs structurally first, before any
+  // paid generation call, specifically so it has to be cheap and
+  // fast — natural-language question detection ("could you remove the
+  // mug?" is a request, not a question, despite the question mark) is
+  // still a real classification task a pure heuristic gets wrong
+  // often enough to matter, so this stays a real (if tiny) LLM call
+  // rather than a regex — pinned to Haiku, the cheap/fast tier, not
+  // Sonnet, since this is the one task in the app that must run
+  // before any spend guard check even applies.
+  classify_feedback_is_question: "claude-haiku-5-5",
+  // Tweak: "a surgical edit, everything else identical, negations
+  // rewritten as positive descriptions." Rework: "Claude rewrites the
+  // prompt so only the named things change." Both are the same shape
+  // of editorial-judgment prompt rewriting as write_image_prompt/
+  // write_video_prompt (deciding how to restate a prompt so only the
+  // named thing changes, including rewording negations positively) —
+  // pinned to Opus for the same reason those two are, not Sonnet-tier
+  // extraction.
+  rewrite_tweak_prompt: "claude-opus-5-5",
+  rewrite_rework_prompt: "claude-opus-5-5",
+  // Rework's required diff check (spec §5.8: "a diff check confirms
+  // untouched parts survived") is a structured compare-and-judge task
+  // over two prompts plus the requested change — closer in shape to
+  // extraction/classification (did X change, yes/no, list what) than
+  // to open creative judgment, so Sonnet is the right pin, same
+  // reasoning as patch_storyboard/extract_cast.
+  check_rework_diff: "claude-sonnet-5-5",
+  // Video feedback's "first analyses the current clip" step (spec
+  // §5.8) is a vision call over a single still frame (Claude has no
+  // video-input capability — see analyze-video-feedback.ts's schema
+  // doc comment) describing what that frame shows/implies about the
+  // clip. Reading and describing what's already in an image is
+  // structural extraction, the same shape as generate_product_spec's
+  // vision call, not open creative judgment — Sonnet.
+  analyze_video_feedback: "claude-sonnet-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

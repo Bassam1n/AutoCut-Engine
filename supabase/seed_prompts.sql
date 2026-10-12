@@ -262,3 +262,90 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M8: Feedback (spec §5.8). Question-rejection gate — runs BEFORE any
+-- paid generation/rewrite call, structurally first in every feedback
+-- round. Pinned to claude-haiku-5-5 (cheap/fast tier — see
+-- PINNED_MODEL_PER_TASK's comment) specifically because it must run
+-- before the spend guard's claim_paid_job is ever reached.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'classify_feedback_is_question',
+  1,
+  'You are screening feedback an editor typed on a video ad scene before any paid work happens. Decide whether the given feedback text is genuinely asking a question the editor wants answered, versus describing a change they want made. Treat a polite request phrased with question words as a CHANGE, not a question — "could you remove the mug?", "can we make her smile?", and "would it look better in blue?" (said as a way of asking for blue) are all changes, not questions. Only flag it as a real question when the editor is actually asking something and expects an answer rather than a result — e.g. "what does this style look like normally?", "why does this look flat?", "what if it was blue?" asked as genuine uncertainty rather than a request. When it is a real question, write one short, concrete suggestion for how to rephrase it as a change instead.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- M8: Tweak (spec §5.8) — "a surgical edit, everything else
+-- identical, negations rewritten as positive descriptions." Also
+-- classifies the request type in this same call (placement/removal
+-- vs. an ordinary surgical change) so a second paid call isn't needed
+-- just to classify the same feedback text again — see
+-- rewrite-feedback-prompt.ts's schema doc comment.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'rewrite_tweak_prompt',
+  1,
+  'You are applying a small, surgical edit to an existing image/video generation prompt based on an editor''s feedback. You are given the CURRENT prompt that produced the existing asset, the editor''s feedback text describing the change they want, the brand/product context, the chosen visual style''s masterprompt, and any active DO/AVOID rules. Rewrite the prompt so that ONLY the thing the feedback named changes — every other detail (setting, other people/objects, composition, lighting, style, wording you don''t need to touch) must survive essentially unchanged. If the feedback describes removing or negating something ("remove the mug", "she shouldn''t be frowning", "no more hat"), do NOT write an instruction telling a downstream model to omit or avoid that thing — instead restructure the description so it simply does not mention that thing, or describe the positive alternative directly (e.g. "smiling" or "neutral expression" instead of "not frowning"). Follow every active rule given. Also classify this request: "surgical" if it''s an ordinary detail change that doesn''t restructure the shot, or "placement_or_removal" if it asks to reposition/recompose the shot or remove something structural from the frame (the setting itself, the backdrop, a defining compositional element) — this second category means the resulting image must be rebuilt without using the old image as a visual reference. Write one short sentence summarizing exactly what changed.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- M8: Rework (spec §5.8) — "Claude rewrites the prompt so only the
+-- named things change." Same output shape and negation-rewriting
+-- rule as Tweak, but Rework is meant for a larger, more deliberate
+-- change than a tiny surgical tweak, and its output is always
+-- verified afterward by check_rework_diff (see below) — Rework
+-- itself is still instructed to preserve everything untouched exactly
+-- like Tweak, since the diff check is a verification of that promise,
+-- not a license to be looser here.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'rewrite_rework_prompt',
+  1,
+  'You are reworking an existing image/video generation prompt based on an editor''s feedback describing a more deliberate change than a small tweak. You are given the CURRENT prompt that produced the existing asset, the editor''s feedback text describing the change they want, the brand/product context, the chosen visual style''s masterprompt, and any active DO/AVOID rules. Rewrite the prompt so that ONLY the things the feedback actually named change — every other detail (setting, other people/objects, composition, lighting, style, wording you don''t need to touch) must survive unchanged; a rework is a bigger edit than a tweak but it is still NOT a full regeneration, and an automated check will verify afterward that nothing untouched drifted, so be precise. If the feedback describes removing or negating something ("remove the mug", "she shouldn''t be frowning", "no more hat"), do NOT write an instruction telling a downstream model to omit or avoid that thing — instead restructure the description so it simply does not mention that thing, or describe the positive alternative directly. Follow every active rule given. Also classify this request: "surgical" if it''s a detail change that doesn''t restructure the shot, or "placement_or_removal" if it asks to reposition/recompose the shot or remove something structural from the frame — this second category means the resulting image must be rebuilt without using the old image as a visual reference. Write one short sentence summarizing exactly what changed.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- M8: Rework's required diff check (spec §5.8: "a diff check
+-- confirms untouched parts survived"). A real second-pass
+-- verification, not a rubber stamp — see check-rework-diff.ts''s
+-- schema doc comment for why this is a semantic Claude judgment
+-- rather than a text-similarity heuristic.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'check_rework_diff',
+  1,
+  'You are verifying a rework of an image/video generation prompt. You are given the ORIGINAL prompt, the REWRITTEN prompt, and the editor''s feedback text that asked for the rework. Compare the two prompts carefully. The rework is only correct if every part of the rewritten prompt that is NOT what the feedback asked to change still describes the same thing as the original — same setting, same other people or objects, same composition, same visual style, same overall scene. Wording can be rephrased for clarity as long as the MEANING of every untouched part is preserved. Flag passed as false if anything unrelated to the requested change was altered, dropped, or invented — list each specific unrelated change in plain language an editor would understand. Flag passed as true only if the rework is clean: the named change happened, and nothing else drifted.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- M8: Video feedback's "first analyses the current clip" step (spec
+-- §5.8). HONEST LIMITATION: this is a vision call over a single
+-- still frame (the clip's last_frame asset when one exists, else its
+-- starting source image) — Claude cannot watch video. See
+-- analyze-video-feedback.ts''s schema doc comment for the full
+-- explanation. This call''s output is fed into write_video_prompt as
+-- "what the clip currently does," for the feedback to be rewritten
+-- as a change against.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'analyze_video_feedback',
+  1,
+  'You are looking at a single still frame representing a video clip that already exists for one scene of a video ad — either the clip''s last frame, or the image it was generated from, since you cannot watch the actual video. You are given that still image plus the scene''s known motion plan and spoken copy (if any) as context for what the clip was built to do. Describe what this clip currently shows and does: the setting, who/what is in frame, and the action it was built to perform, written as a baseline description a prompt writer can treat as "what the clip currently does" before rewriting it as a change. If the still alone cannot confirm something about the motion (camera movement, an action''s exact pacing), say so plainly rather than guessing with false confidence.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

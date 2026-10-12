@@ -41,6 +41,7 @@ export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
 const REFERENCE_IMAGE_CAP = 4;
 
 export type ReferenceTierLabel =
+  | "feedback round reference"
   | "product photo"
   | "feedback image"
   | "character reference"
@@ -53,7 +54,14 @@ export type AssembledReferences = {
 };
 
 /**
- * Spec §5.6 reference-assembly priority order:
+ * Spec §5.6 reference-assembly priority order, PLUS one feedback-only
+ * tier (spec §5.8: "The editor can attach a reference image to a
+ * feedback round"):
+ *   0. this feedback round's own attached reference image — spec
+ *      §5.8-only, even higher priority than (a)-(e) below, and ONLY
+ *      included for the single regeneration this round triggers (the
+ *      caller passes it in; it is never picked up automatically from
+ *      storage the way the scene-wide feedback tier (b) is).
  *   a. product main photo (kind='photo'), only when scene.product_id is set
  *   b. attached feedback images for this scene (assets.kind='feedback')
  *   c. character references: ref_asset_id of every APPROVED cast member on this ad
@@ -66,13 +74,29 @@ export type AssembledReferences = {
 export async function assembleSceneReferences(
   orgId: string,
   brandId: string,
-  scene: Scene
+  scene: Scene,
+  /**
+   * Spec §5.8: a Tweak/Rework round's own attached reference image,
+   * signed to a URL by the caller (feedback-actions.ts). Not stored
+   * or read from anywhere else — this tier exists only for the one
+   * regeneration call this feedback round triggers, which is why it's
+   * a parameter here rather than a new assets.kind query like tier
+   * (b)'s scene-wide feedback images.
+   */
+  feedbackRoundReferenceUrl?: string
 ): Promise<AssembledReferences> {
   const supabase = await createClient();
   const service = createServiceClient();
 
   type Tiered = { tier: ReferenceTierLabel; url: string };
   const tiers: Tiered[][] = [];
+
+  // (0) this feedback round's own attached reference image — spec
+  // §5.8, highest priority of all. Not queried from storage; passed
+  // straight through from the caller.
+  tiers.push(
+    feedbackRoundReferenceUrl ? [{ tier: "feedback round reference" as const, url: feedbackRoundReferenceUrl }] : []
+  );
 
   // (a) product main photo — only when this scene has product in frame.
   if (scene.product_id) {
