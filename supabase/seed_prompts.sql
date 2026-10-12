@@ -349,3 +349,25 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M8: "Feedback -> rules -> history" distillation (spec §5.8). This
+-- task's prompt is ALSO inlined directly in
+-- src/trigger/distill-feedback-rules.ts (CLUSTER_PROMPT constant),
+-- not read from prompt_versions at runtime — that Trigger.dev task
+-- can't import the server-only prompt-registry.ts module (same
+-- constraint run-provider-job.ts documents for lib/supabase/
+-- service.ts). This row exists so the prompt is still versioned data
+-- here for anyone auditing/editing it through the platform-admin
+-- prompt editor, and so the two copies are kept in sync by eye; a
+-- future refactor could extract a server-only-free prompt reader so
+-- the job reads this row instead of its own inlined copy.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'cluster_remembered_feedback',
+  1,
+  'You are distilling repeated video-ad creative feedback into durable style rules. You are given a list of feedback instances (free-form text an editor wrote when giving feedback on a generated image or video, each marked "remember"). Group instances that express the SAME underlying correction into clusters, even when worded very differently (e.g. "make her smile more", "she needs a bigger smile", and "the smile isn''t warm enough" are the same correction). Every instance must be placed into exactly one cluster, including clusters of size 1 for feedback that doesn''t match anything else. For each cluster, classify it as a "do" rule (asks for something to be present/true) or "avoid" rule (asks for something to be removed/prevented), and write a SHORT, GENERALIZED rule statement starting with "DO:" or "AVOID:" that captures the underlying pattern across every member of that cluster — never copy one instance''s exact wording verbatim.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

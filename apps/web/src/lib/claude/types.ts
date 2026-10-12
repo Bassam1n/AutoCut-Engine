@@ -111,6 +111,20 @@ export const PINNED_MODEL_PER_TASK = {
   // structural extraction, the same shape as generate_product_spec's
   // vision call, not open creative judgment — Sonnet.
   analyze_video_feedback: "claude-sonnet-5-5",
+  // Spec §5.8: "When the same kind of remembered correction appears
+  // at least twice, a daily job distils it into a short DO or AVOID
+  // rule." Grouping free-form feedback text by underlying meaning
+  // ("make her smile more" / "needs a bigger smile" / "smile isn't
+  // warm enough" are the same correction) and then writing a
+  // GENERALIZED rule statement from the cluster (not copying one
+  // instance's wording) is real semantic/editorial judgment, the same
+  // shape as write_image_prompt/rewrite_tweak_prompt's prompt-writing
+  // work — pinned to Opus for the same reason those are, not Sonnet-
+  // tier extraction (a plain clustering-by-similarity task would be
+  // Sonnet, but generalizing wording into a durable rule statement
+  // that will be injected into every future prompt for that scope is
+  // higher-stakes than that).
+  cluster_remembered_feedback: "claude-opus-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

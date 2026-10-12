@@ -26,6 +26,13 @@ export function Sidebar({
     // Resume button inside it stay admin-only, so this link isn't
     // gated behind info.isAdmin the way Team/Provider keys are.
     { href: `/org/${orgId}/settings/spend`, label: "Spend & guard" },
+    // Rules is visible to every member for the same reason Spend &
+    // guard is — rules_select (migration 10) has no admin
+    // restriction, and an editor benefits from seeing why generations
+    // look the way they do, even though editing/pausing/deleting a
+    // rule stays admin-only within the page itself (settings/rules's
+    // isOrgAdmin() check, same split as Spend & guard).
+    { href: `/org/${orgId}/settings/rules`, label: "Rules" },
     ...(info.isAdmin
       ? [
           { href: `/org/${orgId}/team`, label: "Team" },
