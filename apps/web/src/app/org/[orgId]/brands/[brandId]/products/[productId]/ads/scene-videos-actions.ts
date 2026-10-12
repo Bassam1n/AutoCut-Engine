@@ -383,6 +383,16 @@ async function startGenerationWithMotionPlan(
     endpoint: model.endpoint,
     prompt: promptResult.prompt,
     referenceImageUrls: [sourceImageUrl],
+    // 9:16 was only ever baked into the prompt TEXT (e.g. "...9:16
+    // vertical"), never sent as a real request parameter. That's a
+    // text hint, not a constraint — seedance-2-5's own aspect_ratio
+    // default is "adaptive" (picks its own ratio, commonly from the
+    // input image) when this field is omitted, which is exactly why
+    // the output wasn't actually 9:16. Every ad in this app is
+    // vertical-only per spec (every seeded style masterprompt/image
+    // prompt already assumes 9:16) — hardcoded here rather than
+    // plumbed from a setting that doesn't exist yet.
+    aspectRatio: "9:16",
     extra: { ...extra, duration: String(Math.round(durationS)) },
     priceUnit,
     spendKind: "video:scene_video",
