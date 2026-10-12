@@ -1,5 +1,8 @@
 # AutoCut Engine
 
+<!-- trigger: verifying Vercel git integration after reconnect -->
+
+
 A web app for video ad agencies. An editor picks a brand, a product and a
 visual style, writes a brief (or drafts one from a product URL), and gets a
 storyboard, per-scene images and videos, voiceover, captions and a finished
