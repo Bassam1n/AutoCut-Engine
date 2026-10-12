@@ -98,6 +98,25 @@ values (
   'generate_scene_visuals',
   1,
   'You are a visual director writing the storyboard for a video ad, scene by scene. You are given the locked scene plan (copy, in order), the accepted concept (story, world, scene-by-scene beats), the approved cast (names and descriptions), and the chosen visual style''s masterprompt. For each scene, write a specific Visual description: exactly what the camera sees, specific enough to generate an image or video from, naming which cast members (if any) appear and what they are doing. Follow these editorial rules: vary shot type scene to scene rather than repeating the same framing (do not describe every scene as a static medium shot); build an energy arc across the ad rather than flat, uniform pacing — hook scenes should feel more urgent than mid-body explanation scenes; when a scene''s copy is abstract or a claim rather than a concrete action (e.g. a benefit statement), invent a concrete, specific visual that dramatizes it rather than describing someone talking to camera about it; keep visual continuity — the same character should look and dress consistently across every scene they appear in; and mark whether the physical product is visible in frame for each scene (product_in_frame), since that controls whether product reference images are used downstream. Also decide a route for each scene: "stock-friendly" (a common, easily stock-sourced shot), "generated" (needs AI image/video generation), "overlay-only" (text/graphic overlay with no new visual needed), or "hybrid" (a mix). Identify 1 to 3 distinct world locations used across the scenes, each with one fixed sentence describing it — reuse that exact sentence for every scene set there, so the same environment reads as the same place throughout.',
+  false
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- v2: every scene''s image gets animated into a short video later (M7),
+-- and the still image an editor approves becomes that video''s starting
+-- frame. v1 had no instruction about this, so scenes routinely
+-- described a resolved, payoff moment (eyes closed, tension already
+-- released, gesture already completed) — exactly the kind of frame
+-- that has nowhere left to go, which made Scene videos'' motion
+-- preflight correctly (and near-constantly) reject it as "already
+-- shows the end state." v2 adds an explicit mid-action framing rule.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'generate_scene_visuals',
+  2,
+  'You are a visual director writing the storyboard for a video ad, scene by scene. You are given the locked scene plan (copy, in order), the accepted concept (story, world, scene-by-scene beats), the approved cast (names and descriptions), and the chosen visual style''s masterprompt. For each scene, write a specific Visual description: exactly what the camera sees, specific enough to generate an image or video from, naming which cast members (if any) appear and what they are doing. Follow these editorial rules: vary shot type scene to scene rather than repeating the same framing (do not describe every scene as a static medium shot); build an energy arc across the ad rather than flat, uniform pacing — hook scenes should feel more urgent than mid-body explanation scenes; when a scene''s copy is abstract or a claim rather than a concrete action (e.g. a benefit statement), invent a concrete, specific visual that dramatizes it rather than describing someone talking to camera about it; keep visual continuity — the same character should look and dress consistently across every scene they appear in; and mark whether the physical product is visible in frame for each scene (product_in_frame), since that controls whether product reference images are used downstream. CRITICAL: the still image generated from this description becomes the STARTING FRAME of a short video clip — describe a moment mid-action, with motion still ahead of it, never the resolved end state of that action. Avoid describing a gesture, expression or action as already complete (e.g. "eyes closed," "already smiling," "has just set it down") — instead describe the instant just before or during that action, so there is a clear, physically reachable next beat left to animate. Also decide a route for each scene: "stock-friendly" (a common, easily stock-sourced shot), "generated" (needs AI image/video generation), "overlay-only" (text/graphic overlay with no new visual needed), or "hybrid" (a mix). Identify 1 to 3 distinct world locations used across the scenes, each with one fixed sentence describing it — reuse that exact sentence for every scene set there, so the same environment reads as the same place throughout.',
   true
 )
 on conflict (task, version) do update
@@ -169,6 +188,24 @@ values (
   'write_image_prompt',
   2,
   'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from. Write ONE tight paragraph, under roughly 600 characters — state every detail exactly once; never restate or summarize the scene a second time at the end, and never pad with repeated phrasing. Image generation models have limited prompt length, so every sentence must earn its place.',
+  false
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- v3: same root cause as generate_scene_visuals v2 — the generated
+-- image becomes a video''s starting frame (M7), and even once the
+-- Visual description itself was fixed to describe a mid-action
+-- moment, this task could still flatten that nuance away when
+-- compressing to a tight 600-character prompt. Adds an explicit
+-- carry-through instruction so the final image prompt never resolves
+-- the action the Visual description left open.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_image_prompt',
+  3,
+  'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from. The resulting image becomes the starting frame of a short video clip later — if the Visual description depicts a moment mid-action (not yet resolved), preserve that exactly: never word the prompt in a way that implies the action is already finished, a gesture already completed, or eyes already closed. Write ONE tight paragraph, under roughly 600 characters — state every detail exactly once; never restate or summarize the scene a second time at the end, and never pad with repeated phrasing. Image generation models have limited prompt length, so every sentence must earn its place.',
   true
 )
 on conflict (task, version) do update

@@ -46,21 +46,45 @@ export class KieAdapter implements ProviderAdapter {
   }
 
   async submit(params: SubmitParams): Promise<SubmitResult> {
-    // Confirmed from real kie.ai request payloads for three different
-    // models (z-image, google/nano-banana, grok-imagine/image-to-
-    // image): input shape genuinely differs per model — some take
-    // aspect_ratio, grok-imagine/image-to-image doesn't and instead
-    // takes image_urls for its reference image(s). aspect_ratio is
-    // only injected when the caller actually asked for one (or a
-    // default is appropriate) rather than unconditionally on every
-    // model, and referenceImageUrls maps to image_urls, the field
-    // every reference-capable kie model observed so far actually uses.
+    // Confirmed from real kie.ai request payloads (user-pasted curl
+    // examples, 2026-10-12 — NOT Trench's config data, which has
+    // already been caught wrong twice: it guessed singular
+    // `image_url` for kling-3.0/video and bytedance/seedance-2, and
+    // both turned out to require `reference_image_urls`/`image_urls`
+    // respectively once the real payload was checked):
+    //   - z-image, google/nano-banana, grok-imagine/image-to-image,
+    //     kling-2.6/image-to-video, kling-3.0/video, gemini-omni-video
+    //     all use `image_urls` (plural array) — this is the default.
+    //   - bytedance/seedance-2 and bytedance/seedance-2-5 both use
+    //     `reference_image_urls` instead.
+    //   - minimax-h3/image-to-video is different in kind, not just
+    //     name: a single `first_frame_url` string (plus an optional
+    //     `last_frame_url` for genuine start/end frame support — not
+    //     wired up yet, scene-videos-actions.ts explicitly defers
+    //     start/end frame mode until a model confirms support, and
+    //     now one has; revisit there, not here).
+    // Every other kie.ai video model in the registry (v3-api,
+    // veo3_lite, veo3_quality) has NO confirmed payload yet — left on
+    // the `image_urls` default rather than guessing further, exactly
+    // the discipline that caught the two models above being wrong.
+    let referenceImageField = "image_urls";
+    if (params.model === "bytedance/seedance-2" || params.model === "bytedance/seedance-2-5") {
+      referenceImageField = "reference_image_urls";
+    } else if (params.model === "minimax-h3/image-to-video") {
+      referenceImageField = "first_frame_url";
+    }
+
+    const referenceImageValue =
+      referenceImageField === "first_frame_url"
+        ? params.referenceImageUrls?.[0]
+        : params.referenceImageUrls;
+
     const body: Record<string, unknown> = {
       model: params.model,
       input: {
         prompt: params.prompt,
         ...(params.aspectRatio ? { aspect_ratio: params.aspectRatio } : {}),
-        ...(params.referenceImageUrls?.length ? { image_urls: params.referenceImageUrls } : {}),
+        ...(referenceImageValue ? { [referenceImageField]: referenceImageValue } : {}),
         ...params.extra,
       },
     };

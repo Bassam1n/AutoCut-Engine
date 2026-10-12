@@ -419,10 +419,23 @@ async function startGenerationWithMotionPlan(
  * that doesn't document one.
  */
 function sceneVideoExtraParams(endpoint: string, speaks: boolean): Record<string, unknown> {
-  if (!speaks) return {};
-  if (endpoint === "kling-3.0/video") return { sound: true };
-  if (endpoint === "fal-ai/kling-video/v3/pro/image-to-video") return { generate_audio: true };
-  return {};
+  const extra: Record<string, unknown> = {};
+  if (speaks) {
+    if (endpoint === "kling-3.0/video") extra.sound = true;
+    if (endpoint === "fal-ai/kling-video/v3/pro/image-to-video") extra.generate_audio = true;
+  }
+  // bytedance/seedance-2-5's real request payload (user-confirmed
+  // 2026-10-12) has a documented return_last_frame field — kie.ai can
+  // hand back a video's last frame natively, no ffmpeg needed (the
+  // original reason last_frame asset writing was skipped in this
+  // milestone's first pass). Only enabled for this one model since
+  // it's the only one with a confirmed real payload showing the
+  // field; the RESPONSE shape when this is set hasn't been seen yet,
+  // so finalizeSceneVideoJob doesn't parse/save a last_frame asset
+  // from it yet — that's the next step once a real result comes back
+  // with this flag on (see finalizeSceneVideoJob's docblock).
+  if (endpoint === "bytedance/seedance-2-5") extra.return_last_frame = true;
+  return extra;
 }
 
 /**
@@ -526,11 +539,19 @@ export async function saveSpeakingRule(
  * it's returned as-is instead of uploading a duplicate.
  *
  * last_frame extraction (spec §5.7 "optional last_frame asset") is
- * deliberately NOT implemented here — no video-processing dependency
- * (ffmpeg or otherwise) exists anywhere in this app's package.json or
- * src tree yet, and the spec explicitly allows skipping it rather
- * than adding new infra for this pass. Revisit once a real need
- * forces that dependency in anyway.
+ * still NOT implemented here, but no longer because it would need
+ * ffmpeg — bytedance/seedance-2-5's real payload includes a
+ * return_last_frame flag (now set in sceneVideoExtraParams for that
+ * model), meaning kie.ai can hand back the last frame directly with
+ * no video-processing dependency needed at all. What's actually
+ * missing is the real RESPONSE shape when that flag is set (does it
+ * add a field to resultJson, or come back as a second resultUrls
+ * entry?) — not yet observed from a real result. Once one comes back,
+ * read job.payload.raw (or re-poll and inspect KieAdapter's raw
+ * response) to find the real field, then save it here as a second
+ * assets row (kind='last_frame') alongside the video. Every other
+ * provider/model still has no last-frame mechanism at all, so this
+ * will likely stay seedance-2-5-specific for a while.
  */
 export async function finalizeSceneVideoJob(orgId: string, jobId: string): Promise<ActionResult & { assetId?: string }> {
   await requireOrgMember(orgId);
@@ -620,6 +641,16 @@ export const getJobStatus = getJobStatusAction;
 // Start/end frame mode and the scene-to-scene transition clip
 // (spec §5.7: "Start and end frame mode for models that support it.
 // Optional short transition clip between two scenes.") are both
-// deliberately NOT implemented — no model in supabase/seed_models.sql
-// documents end-frame support today, and a transition clip is an
+// still deliberately NOT implemented — the transition clip remains an
 // explicitly separate, skippable feature per this change's scope.
+//
+// UPDATE (2026-10-12): minimax-h3/image-to-video's real payload
+// (user-confirmed) DOES support this — first_frame_url plus an
+// optional last_frame_url — so "no model documents end-frame support"
+// is no longer true. KieAdapter.submit() only maps the start frame
+// (referenceImageUrls[0] -> first_frame_url) for now; wiring an
+// actual end-frame picker into this file's generation flow (SubmitParams
+// would need a second field, e.g. endFrameImageUrl, threaded through
+// here and into the adapter) is real, scoped follow-up work, not done
+// in this pass — revisit once the UI/UX for picking a second frame is
+// designed, rather than bolting it on as an afterthought here.

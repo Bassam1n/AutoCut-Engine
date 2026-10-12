@@ -122,11 +122,17 @@ export const runProviderJob = task({
     // re-submitting (and re-paying for) a new provider task.
     await supabase.from("jobs").update({ external_task_id: externalTaskId, provider: jobPayload.provider }).eq("id", job.id);
 
-    const MAX_POLL_ATTEMPTS = 300; // 300 * 4s = up to 20 minutes, matching spec §5.7's video poll window
+    // 10s rather than 4s: Trigger.dev only treats a wait.for() as free
+    // (not billed as compute) once it's over 5 seconds — a 4s poll
+    // interval was quietly billing every single poll cycle. 10s is
+    // still frequent enough to feel responsive against a multi-minute
+    // generation and keeps every wait in the free bucket.
+    const POLL_INTERVAL_SECONDS = 10;
+    const MAX_POLL_ATTEMPTS = 120; // 120 * 10s = up to 20 minutes, matching spec §5.7's video poll window
     let resultUrls: string[] | undefined;
 
     for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-      await wait.for({ seconds: 4 });
+      await wait.for({ seconds: POLL_INTERVAL_SECONDS });
 
       const { data: current } = await supabase.from("jobs").select("cancel_requested").eq("id", job.id).maybeSingle();
       if (current?.cancel_requested) {
@@ -164,6 +170,23 @@ export const runProviderJob = task({
     // in this app — 0 if a row is ever missing rather than throwing,
     // since a pricing-table gap shouldn't block a successful
     // generation that already happened and cost real money.
+    //
+    // price_table.usd is a PER-UNIT rate, not a flat charge — for
+    // "per_second" rows (e.g. bytedance/seedance-2-5 at $0.19/sec)
+    // this must be multiplied by the actual video duration, or every
+    // video gets billed as if it were 1 second long regardless of how
+    // long it actually ran. This was missed when video pricing units
+    // were added in M7: the original (image-only) version of this
+    // code only ever dealt with "per_image" rows, where usd IS the
+    // flat charge, so `target_usd_est: price?.usd` was correct then
+    // and silently wrong the moment "per_second" rows started being
+    // used — caught from a real $2.52 kie.ai dashboard charge
+    // recording as $0.19 in spend_events (should have been ~$1.26 for
+    // a 2-generation session with real durations, still short of
+    // $2.52 exactly because kie.ai's own billed seconds don't always
+    // match the requested duration param 1:1 — this fix uses the
+    // REQUESTED duration as the best available estimate, not kie.ai's
+    // actual billed seconds, which this app has no way to read back).
     const { data: price } = await supabase
       .from("price_table")
       .select("usd")
@@ -172,12 +195,18 @@ export const runProviderJob = task({
       .eq("unit", jobPayload.priceUnit)
       .maybeSingle();
 
+    const requestedDurationSeconds = Number(jobPayload.extra?.duration ?? NaN);
+    const usdEstimate =
+      jobPayload.priceUnit === "per_second" && Number.isFinite(requestedDurationSeconds)
+        ? (price?.usd ?? 0) * requestedDurationSeconds
+        : (price?.usd ?? 0);
+
     await supabase.rpc("record_spend_event", {
       target_org_id: jobPayload.orgId,
       target_ad_id: job.ad_id,
       target_provider: jobPayload.provider,
       target_model: jobPayload.endpoint,
-      target_usd_est: price?.usd ?? 0,
+      target_usd_est: usdEstimate,
       target_kind: jobPayload.spendKind,
     });
 

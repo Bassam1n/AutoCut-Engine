@@ -72,6 +72,79 @@ describe("KieAdapter", () => {
     expect(body.input.aspect_ratio).toBeUndefined();
   });
 
+  it("submit() maps referenceImageUrls to input.reference_image_urls for bytedance/seedance-2-5 specifically, confirmed against its real request shape — regression test for the bug where a video generation silently ignored its source image because it was sent under image_urls, the field most other kie.ai models (image and video alike) actually use", async () => {
+    const fetchSpy = mockFetchOnce(createTaskSuccess);
+    global.fetch = fetchSpy;
+    const adapter = new KieAdapter("test-key");
+
+    await adapter.submit({
+      kind: "video",
+      model: "bytedance/seedance-2-5",
+      prompt: "animate this scene",
+      referenceImageUrls: ["https://example.com/scene-image.png"],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.input.reference_image_urls).toEqual(["https://example.com/scene-image.png"]);
+    expect(body.input.image_urls).toBeUndefined();
+  });
+
+  it("submit() maps referenceImageUrls to input.image_urls for a video model using the default field, confirmed against kling-2.6/image-to-video's real request shape — proves the field-name choice is per-model, not a kind==='video' rule", async () => {
+    const fetchSpy = mockFetchOnce(createTaskSuccess);
+    global.fetch = fetchSpy;
+    const adapter = new KieAdapter("test-key");
+
+    await adapter.submit({
+      kind: "video",
+      model: "kling-2.6/image-to-video",
+      prompt: "animate this scene",
+      referenceImageUrls: ["https://example.com/scene-image.png"],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.input.image_urls).toEqual(["https://example.com/scene-image.png"]);
+    expect(body.input.reference_image_urls).toBeUndefined();
+  });
+
+  it("submit() maps referenceImageUrls to input.reference_image_urls for bytedance/seedance-2 (not just 2.5), confirmed against its real request shape", async () => {
+    const fetchSpy = mockFetchOnce(createTaskSuccess);
+    global.fetch = fetchSpy;
+    const adapter = new KieAdapter("test-key");
+
+    await adapter.submit({
+      kind: "video",
+      model: "bytedance/seedance-2",
+      prompt: "animate this scene",
+      referenceImageUrls: ["https://example.com/scene-image.png"],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.input.reference_image_urls).toEqual(["https://example.com/scene-image.png"]);
+    expect(body.input.image_urls).toBeUndefined();
+  });
+
+  it("submit() maps referenceImageUrls[0] to input.first_frame_url (a single string, not an array) for minimax-h3/image-to-video, confirmed against its real request shape — this model's field is genuinely different in kind, not just name", async () => {
+    const fetchSpy = mockFetchOnce(createTaskSuccess);
+    global.fetch = fetchSpy;
+    const adapter = new KieAdapter("test-key");
+
+    await adapter.submit({
+      kind: "video",
+      model: "minimax-h3/image-to-video",
+      prompt: "animate this scene",
+      referenceImageUrls: ["https://example.com/scene-image.png", "https://example.com/second.png"],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.input.first_frame_url).toBe("https://example.com/scene-image.png");
+    expect(body.input.image_urls).toBeUndefined();
+    expect(body.input.reference_image_urls).toBeUndefined();
+  });
+
   it("poll() maps state=waiting to queued", async () => {
     global.fetch = mockFetchOnce(recordInfoQueued);
     const adapter = new KieAdapter("test-key");

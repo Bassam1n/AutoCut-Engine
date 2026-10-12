@@ -228,6 +228,7 @@ function SceneVideoCard({
   const [duration, setDuration] = useState<number>(4);
   const [durationBounds, setDurationBounds] = useState<{ min: number; max: number; step: number } | null>(null);
   const [isGenerating, setIsGenerating] = useState(Boolean(activeJob));
+  const [isAnimatingFallback, setIsAnimatingFallback] = useState(false);
   const [stopMessage, setStopMessage] = useState<{ reason: string; fallback: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [trimmedNote, setTrimmedNote] = useState<string | null>(null);
@@ -380,17 +381,25 @@ function SceneVideoCard({
     }
   }
 
-  /** "Animate this instead" — spec §5.7's "offer to animate what the moment can still do," accepted explicitly by the editor rather than auto-applied. */
+  /**
+   * "Animate this instead" — spec §5.7's "offer to animate what the
+   * moment can still do," accepted explicitly by the editor rather
+   * than auto-applied. Keeps the stop-message card (and this button)
+   * visible with its own pending state while the request is in
+   * flight — clearing it immediately on click made the whole card
+   * vanish with no visible feedback, which read as the click doing
+   * nothing.
+   */
   async function onAnimateFallback(fallbackMotionPlan: string) {
     if (!videoModel) return;
     const image = resolveSelectedImage();
     if (!image) return;
 
     setError(null);
-    setStopMessage(null);
     const clampedDuration = await clampDurationS(duration, videoModel.parameterSchema);
     const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie", endpoint: videoModel.endpoint };
 
+    setIsAnimatingFallback(true);
     setIsGenerating(true);
     try {
       const result = await generateSceneVideoWithFallbackMotion(
@@ -406,6 +415,7 @@ function SceneVideoCard({
         fallbackMotionPlan
       );
       if (result.ok) {
+        setStopMessage(null);
         if (result.trimmedNote) setTrimmedNote(result.trimmedNote);
         pollJob(result.jobId);
         return;
@@ -415,6 +425,8 @@ function SceneVideoCard({
     } catch (err) {
       setIsGenerating(false);
       setError(err instanceof Error ? err.message : "Video generation failed.");
+    } finally {
+      setIsAnimatingFallback(false);
     }
   }
 
@@ -522,13 +534,14 @@ function SceneVideoCard({
         <div className="flex flex-col gap-2 rounded-lg border border-danger/40 bg-danger/5 p-3">
           <p className="text-xs text-danger">{stopMessage.reason}</p>
           {stopMessage.fallback && (
-            <button
-              type="button"
+            <AsyncButton
               onClick={() => onAnimateFallback(stopMessage.fallback as string)}
+              isPending={isAnimatingFallback}
+              pendingLabel="Starting..."
               className="self-start rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40"
             >
               Animate this instead
-            </button>
+            </AsyncButton>
           )}
         </div>
       )}
