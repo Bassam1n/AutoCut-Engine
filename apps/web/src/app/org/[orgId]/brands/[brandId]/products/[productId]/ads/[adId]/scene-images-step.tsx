@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AsyncButton } from "@/components/async-button";
 import { ModelPicker } from "@/components/model-picker";
+import { MediaLightbox } from "@/components/media-lightbox";
 import {
   generateSceneImages,
   getScenesWithoutImages,
@@ -310,6 +311,7 @@ function SceneImageCard({
   omitted: { tier: ReferenceTierLabel; count: number }[];
 }) {
   const [count, setCount] = useState(1);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const elapsedSeconds = useElapsedSeconds(isGenerating);
   // Mirrors scene.image_prompt_override, but updated directly by
@@ -366,13 +368,19 @@ function SceneImageCard({
           {images.map((asset) => {
             const url = imageUrls[asset.storage_path];
             return url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <button
                 key={asset.id}
-                src={url}
-                alt={`Scene ${scene.idx + 1} image v${asset.version}`}
-                className="aspect-square w-full rounded-lg object-cover"
-              />
+                type="button"
+                onClick={() => setLightboxUrl(url)}
+                className="overflow-hidden rounded-lg transition-opacity hover:opacity-90"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Scene ${scene.idx + 1} image v${asset.version} — click to expand`}
+                  className="aspect-square w-full object-cover"
+                />
+              </button>
             ) : (
               <div
                 key={asset.id}
@@ -392,13 +400,19 @@ function SceneImageCard({
             {feedbackImages.map((asset) => {
               const url = imageUrls[asset.storage_path];
               return url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <button
                   key={asset.id}
-                  src={url}
-                  alt={`Scene ${scene.idx + 1} attached feedback image`}
-                  className="h-16 w-16 rounded-lg object-cover"
-                />
+                  type="button"
+                  onClick={() => setLightboxUrl(url)}
+                  className="overflow-hidden rounded-lg transition-opacity hover:opacity-90"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Scene ${scene.idx + 1} attached feedback image — click to expand`}
+                    className="h-16 w-16 object-cover"
+                  />
+                </button>
               ) : (
                 <div
                   key={asset.id}
@@ -444,6 +458,15 @@ function SceneImageCard({
           {images.length > 0 ? "Regenerate" : "Generate"}
         </AsyncButton>
       </div>
+
+      {lightboxUrl && (
+        <MediaLightbox
+          kind="image"
+          url={lightboxUrl}
+          alt={`Scene ${scene.idx + 1} image`}
+          onClose={() => setLightboxUrl(null)}
+        />
+      )}
     </div>
   );
 }

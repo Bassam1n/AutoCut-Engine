@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AsyncButton } from "@/components/async-button";
 import { ModelPicker } from "@/components/model-picker";
+import { MediaLightbox } from "@/components/media-lightbox";
 import {
   generateSceneVideo,
   generateSceneVideoWithFallbackMotion,
@@ -224,6 +225,7 @@ function SceneVideoCard({
 }) {
   const router = useRouter();
   const [selectedImageId, setSelectedImageId] = useState<string | null>(images[images.length - 1]?.id ?? null);
+  const [lightbox, setLightbox] = useState<{ kind: "image" | "video"; url: string } | null>(null);
   const [videoIdea, setVideoIdea] = useState(scene.video_idea ?? "");
   const [duration, setDuration] = useState<number>(4);
   const [durationBounds, setDurationBounds] = useState<{ min: number; max: number; step: number } | null>(null);
@@ -443,30 +445,53 @@ function SceneVideoCard({
           Generate a scene image first — Scene videos animates an existing image.
         </p>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {images.map((asset) => {
-            const url = assetUrls[asset.storage_path];
-            const isSelected = asset.id === selectedImageId;
-            return (
-              <button
-                key={asset.id}
-                type="button"
-                onClick={() => setSelectedImageId(asset.id)}
-                className={`overflow-hidden rounded-lg border-2 transition-colors ${
-                  isSelected ? "border-accent" : "border-transparent hover:border-border-strong"
-                }`}
-              >
-                {url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={url} alt={`Scene ${scene.idx + 1} image v${asset.version}`} className="h-20 w-20 object-cover" />
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center bg-border text-xs text-foreground-muted">
-                    v{asset.version}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+        <div className="flex flex-col gap-1.5">
+          {images.length > 1 && (
+            <span className="text-xs text-foreground-muted">
+              {images.length} images — pick which one to animate:
+            </span>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {images.map((asset) => {
+              const url = assetUrls[asset.storage_path];
+              const isSelected = asset.id === selectedImageId;
+              return (
+                <div key={asset.id} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedImageId(asset.id)}
+                    className={`overflow-hidden rounded-lg border-2 transition-colors ${
+                      isSelected ? "border-accent" : "border-transparent hover:border-border-strong"
+                    }`}
+                  >
+                    {url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt={`Scene ${scene.idx + 1} image v${asset.version}`} className="h-20 w-20 object-cover" />
+                    ) : (
+                      <div className="flex h-20 w-20 items-center justify-center bg-border text-xs text-foreground-muted">
+                        v{asset.version}
+                      </div>
+                    )}
+                  </button>
+                  {isSelected && (
+                    <span className="pointer-events-none absolute left-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] text-accent-ink">
+                      ✓
+                    </span>
+                  )}
+                  {url && (
+                    <button
+                      type="button"
+                      onClick={() => setLightbox({ kind: "image", url })}
+                      title="Expand to review"
+                      className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded bg-black/60 text-[10px] text-white hover:bg-black/80"
+                    >
+                      ⤢
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -477,7 +502,17 @@ function SceneVideoCard({
             {videos.map((asset) => {
               const url = assetUrls[asset.storage_path];
               return url ? (
-                <video key={asset.id} src={url} controls className="h-28 w-48 rounded-lg bg-black object-cover" />
+                <div key={asset.id} className="relative">
+                  <video src={url} controls className="h-28 w-48 rounded-lg bg-black object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setLightbox({ kind: "video", url })}
+                    title="Expand to review"
+                    className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded bg-black/60 text-[10px] text-white hover:bg-black/80"
+                  >
+                    ⤢
+                  </button>
+                </div>
               ) : (
                 <div key={asset.id} className="flex h-28 w-48 items-center justify-center rounded-lg bg-border text-xs text-foreground-muted">
                   v{asset.version}
@@ -557,6 +592,15 @@ function SceneVideoCard({
           {videos.length > 0 ? "Regenerate" : "Generate"}
         </AsyncButton>
       </div>
+
+      {lightbox && (
+        <MediaLightbox
+          kind={lightbox.kind}
+          url={lightbox.url}
+          alt={`Scene ${scene.idx + 1} ${lightbox.kind}`}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </div>
   );
 }
