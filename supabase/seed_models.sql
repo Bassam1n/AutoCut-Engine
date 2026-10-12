@@ -13,29 +13,42 @@
 -- 00000000000032_model_providers_unique.sql (run that migration
 -- before this script).
 
-insert into public.models (name, capability, active, prompt_guide)
+-- z-image removed (2026-10-12): real generations kept failing with
+-- kie.ai's "text length cannot exceed the maximum limit" — its prompt
+-- limit is undocumented and tighter than every other model in this
+-- registry, and it was only ever picker-default by accident (first
+-- row in an unordered query, not a deliberate choice). nano-banana is
+-- now the explicit default (models.is_default) instead.
+insert into public.models (name, capability, active, prompt_guide, is_default)
 values
-  ('z-image', 'image', true, 'Fast text-to-image. Max prompt length not documented by kie.ai; keep prompts concise and concrete.'),
-  ('flux-dev', 'image', true, 'FLUX.1 [dev] via fal.ai. Strong prompt adherence at default guidance_scale 3.5; raise for stricter prompt-following, lower for more creative variation.'),
-  ('kling-v2-1-pro', 'video', true, 'Image-to-video. Requires a starting image_url — this model cannot generate video from text alone. Max prompt 5000 characters.'),
-  ('kling-v3-pro-i2v', 'video', true, 'Image-to-video via fal.ai. Requires start_image_url. Supports multi-shot generation via multi_prompt as an alternative to a single prompt.'),
-  ('nano-banana', 'image', true, 'Google Nano Banana via kie.ai. Text-to-image; no reference image input confirmed for this entry point.'),
-  ('grok-imagine-i2i', 'image', true, 'Grok Imagine image-to-image via kie.ai. Takes one or more reference images (image_urls) the model edits/recreates from — the model this org''s cast reference generation should use once a kie key is saved.'),
-  ('gpt-image-2-5-flare', 'image', true, 'GPT Image 2.5 Flare via kie.ai. Text-to-image. Live-tested against kie.ai''s real /jobs/createTask endpoint before adding — submits and starts generating correctly.'),
-  ('gpt-image-2-5-sunburst', 'image', true, 'GPT Image 2.5 Sunburst via kie.ai. Text-to-image, same family as Flare with a different style bias.'),
-  ('nano-banana-2', 'image', true, 'Google Nano Banana 2 via kie.ai.'),
-  ('gemini-omni-video', 'video', true, 'Gemini Omni video via kie.ai.'),
-  ('kling-3', 'video', true, 'Kling 3.0 via kie.ai. Supports multi-shot generation and audio.'),
-  ('minimax-h3', 'video', true, 'MiniMax H3 image-to-video via kie.ai.'),
-  ('seedance-2', 'video', true, 'ByteDance Seedance 2.0 via kie.ai.'),
-  ('seedance-2-5', 'video', true, 'ByteDance Seedance 2.5 via kie.ai.'),
-  ('veo3-fast', 'video', true, 'Google Veo 3.1 Fast via kie.ai.'),
-  ('veo3-lite', 'video', true, 'Google Veo 3.1 Lite via kie.ai. Live-tested against kie.ai''s real /jobs/createTask endpoint before adding — submits correctly.'),
-  ('veo3-quality', 'video', true, 'Google Veo 3.1 Quality via kie.ai.')
+  ('flux-dev', 'image', true, 'FLUX.1 [dev] via fal.ai. Strong prompt adherence at default guidance_scale 3.5; raise for stricter prompt-following, lower for more creative variation.', false),
+  ('kling-v2-1-pro', 'video', true, 'Image-to-video. Requires a starting image_url — this model cannot generate video from text alone. Max prompt 5000 characters.', false),
+  ('kling-v3-pro-i2v', 'video', true, 'Image-to-video via fal.ai. Requires start_image_url. Supports multi-shot generation via multi_prompt as an alternative to a single prompt.', false),
+  ('nano-banana', 'image', true, 'Google Nano Banana via kie.ai. Text-to-image; no reference image input confirmed for this entry point.', true),
+  ('grok-imagine-i2i', 'image', true, 'Grok Imagine image-to-image via kie.ai. Takes one or more reference images (image_urls) the model edits/recreates from — the model this org''s cast reference generation should use once a kie key is saved.', false),
+  ('gpt-image-2-5-flare', 'image', true, 'GPT Image 2.5 Flare via kie.ai. Text-to-image. Live-tested against kie.ai''s real /jobs/createTask endpoint before adding — submits and starts generating correctly.', false),
+  ('gpt-image-2-5-sunburst', 'image', true, 'GPT Image 2.5 Sunburst via kie.ai. Text-to-image, same family as Flare with a different style bias.', false),
+  ('nano-banana-2', 'image', true, 'Google Nano Banana 2 via kie.ai.', false),
+  ('gemini-omni-video', 'video', true, 'Gemini Omni video via kie.ai.', false),
+  ('kling-3', 'video', true, 'Kling 3.0 via kie.ai. Supports multi-shot generation and audio.', false),
+  ('minimax-h3', 'video', true, 'MiniMax H3 image-to-video via kie.ai.', false),
+  ('seedance-2', 'video', true, 'ByteDance Seedance 2.0 via kie.ai.', false),
+  ('seedance-2-5', 'video', true, 'ByteDance Seedance 2.5 via kie.ai.', false),
+  ('veo3-fast', 'video', true, 'Google Veo 3.1 Fast via kie.ai.', false),
+  ('veo3-lite', 'video', true, 'Google Veo 3.1 Lite via kie.ai. Live-tested against kie.ai''s real /jobs/createTask endpoint before adding — submits correctly.', true),
+  ('veo3-quality', 'video', true, 'Google Veo 3.1 Quality via kie.ai.', false)
 on conflict (name) do update
   set capability = excluded.capability,
       active = excluded.active,
-      prompt_guide = excluded.prompt_guide;
+      prompt_guide = excluded.prompt_guide,
+      is_default = excluded.is_default;
+
+-- z-image itself is deactivated (not deleted) rather than removed
+-- from the models table outright — archive, never delete, per the
+-- project's standing data rule, and it keeps any historical
+-- spend_events/assets referencing it intact. active=false hides it
+-- from getModelOptions(), which already filters on models.active.
+update public.models set active = false, is_default = false where name = 'z-image';
 
 -- model_providers: parameter_schema is an array of field descriptors
 -- — {key, label, type, options?, min?, max?, step?, default?,

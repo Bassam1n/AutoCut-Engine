@@ -49,7 +49,7 @@ export function SceneImagesStep({
   const [generatingSceneIds, setGeneratingSceneIds] = useState<Set<string>>(new Set());
   const [selectedSceneIds, setSelectedSceneIds] = useState<Set<string>>(new Set());
   const [isStaggering, setIsStaggering] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<FriendlyError | null>(null);
   const [omittedNotes, setOmittedNotes] = useState<Record<string, { tier: ReferenceTierLabel; count: number }[]>>({});
   const router = useRouter();
 
@@ -66,7 +66,7 @@ export function SceneImagesStep({
 
   async function runGenerate(sceneId: string, count: number) {
     if (!imageModel) {
-      setError("Pick an image model first.");
+      setError({ friendly: "Pick an image model first." });
       return;
     }
     const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie", endpoint: imageModel.endpoint };
@@ -77,7 +77,7 @@ export function SceneImagesStep({
         setOmittedNotes((prev) => ({ ...prev, [sceneId]: result.omitted }));
         router.refresh();
       } else {
-        setError(`Scene ${sceneIndexLabel(scenes, sceneId)}: ${result.error}`);
+        setError(friendlyGenerationError(sceneIndexLabel(scenes, sceneId), result.error));
       }
     } finally {
       markGenerating(sceneId, false);
@@ -148,7 +148,7 @@ export function SceneImagesStep({
         </div>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <FriendlyErrorNote error={error} />}
 
       {imageModelOptions.length > 0 && (
         <ModelPicker
@@ -300,6 +300,16 @@ function SceneImageCard({
   const [count, setCount] = useState(1);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const elapsedSeconds = useElapsedSeconds(isGenerating);
+  // Mirrors scene.image_prompt_override, but updated directly by
+  // PromptOverrideEditor's save/reset instead of waiting on a server
+  // round-trip + revalidatePath to reflect back down through props —
+  // that round-trip is what made a save feel like the whole page
+  // reloaded (every other bit of local UI state resets when the
+  // server component tree re-renders), and it also meant the "Prompt
+  // overridden" badge could go true while the text actually shown
+  // below it was still the untouched scene.visual, never the override
+  // itself.
+  const [override, setOverride] = useState(scene.image_prompt_override);
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
@@ -313,7 +323,7 @@ function SceneImageCard({
             aria-label={`Select scene ${scene.idx + 1} for Generate Selected`}
           />
           <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
-          {scene.image_prompt_override && (
+          {override && (
             <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
               Prompt overridden
             </span>
@@ -328,7 +338,16 @@ function SceneImageCard({
         </button>
       </div>
 
-      <p className="text-xs text-foreground-muted">{scene.visual || "No visual yet."}</p>
+      <p className="text-xs text-foreground-muted">
+        {override ? (
+          <>
+            <span className="font-medium text-accent">Using overridden prompt: </span>
+            {override}
+          </>
+        ) : (
+          scene.visual || "No visual yet."
+        )}
+      </p>
 
       {images.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -395,6 +414,8 @@ function SceneImageCard({
           productId={productId}
           ad={ad}
           scene={scene}
+          override={override}
+          onOverrideSaved={setOverride}
         />
       )}
 
@@ -421,18 +442,22 @@ function PromptOverrideEditor({
   productId,
   ad,
   scene,
+  override,
+  onOverrideSaved,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   ad: Ad;
   scene: Scene;
+  override: string | null;
+  onOverrideSaved: (override: string | null) => void;
 }) {
-  const [text, setText] = useState(scene.image_prompt_override ?? "");
+  const [text, setText] = useState(override ?? "");
   const [isComputing, startComputing] = useTransition();
   const [isSaving, startSaving] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [hasComputed, setHasComputed] = useState(Boolean(scene.image_prompt_override));
+  const [hasComputed, setHasComputed] = useState(Boolean(override));
 
   function onComputePrompt() {
     setError(null);
@@ -451,7 +476,11 @@ function PromptOverrideEditor({
     setError(null);
     startSaving(async () => {
       const result = await saveImagePromptOverride(orgId, brandId, productId, ad.id, scene.id, text || null);
-      if (!result.ok) setError(result.error);
+      if (result.ok) {
+        onOverrideSaved(text || null);
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -460,7 +489,11 @@ function PromptOverrideEditor({
     setText("");
     startSaving(async () => {
       const result = await saveImagePromptOverride(orgId, brandId, productId, ad.id, scene.id, null);
-      if (!result.ok) setError(result.error);
+      if (result.ok) {
+        onOverrideSaved(null);
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -496,7 +529,7 @@ function PromptOverrideEditor({
         >
           Save override
         </AsyncButton>
-        {scene.image_prompt_override && (
+        {override && (
           <button
             type="button"
             onClick={onReset}
@@ -589,6 +622,42 @@ function FeedbackUpload({
 function sceneIndexLabel(scenes: Scene[], sceneId: string): number {
   const scene = scenes.find((s) => s.id === sceneId);
   return (scene?.idx ?? 0) + 1;
+}
+
+type FriendlyError = { friendly: string; detail?: string };
+
+/**
+ * generateSceneImages()'s error is often a raw provider message
+ * passed through verbatim (e.g. kie.ai's own "This field is required"
+ * with no field name) — accurate, but meaningless to an editor with
+ * no API background. Wraps it in a plain-language line and keeps the
+ * raw text available behind "show details" rather than translating
+ * specific phrases: the exact set of kie.ai/fal.ai error strings isn't
+ * documented anywhere confirmed for this app, so guessing a mapping
+ * risks showing confidently wrong guidance instead of an honest "it
+ * failed, here's exactly why" escape hatch.
+ */
+function friendlyGenerationError(sceneNumber: number, rawError: string): FriendlyError {
+  return {
+    friendly: `Scene ${sceneNumber}: image generation failed. Try a different model, or check the prompt for anything the model might be rejecting.`,
+    detail: rawError,
+  };
+}
+
+function FriendlyErrorNote({ error }: { error: FriendlyError }) {
+  return (
+    <div className="text-sm text-danger">
+      <p>{error.friendly}</p>
+      {error.detail && (
+        <details className="mt-1 text-xs">
+          <summary className="cursor-pointer text-foreground-muted hover:text-foreground">
+            Show technical details
+          </summary>
+          <p className="mt-1 text-foreground-muted">{error.detail}</p>
+        </details>
+      )}
+    </div>
+  );
 }
 
 function sleep(ms: number): Promise<void> {
