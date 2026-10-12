@@ -109,6 +109,26 @@ export async function requireOrgAdmin(orgId: string): Promise<CurrentUser> {
 }
 
 /**
+ * Same is_org_admin() check as requireOrgAdmin(), but returns a plain
+ * boolean instead of redirecting — for a page that's visible to every
+ * member but shows extra admin-only sections within itself (e.g.
+ * Settings → Spend: every member sees the 24h spend/thresholds,
+ * only an admin also sees the audit log and Resume button). Call
+ * requireOrgMember() first for the page-level gate, then this for the
+ * in-page admin check.
+ */
+export async function isOrgAdmin(orgId: string): Promise<boolean> {
+  "use cache: private";
+
+  const supabase = await createClient();
+  const { data: isAdmin } = await supabase.rpc("is_org_admin", {
+    check_org_id: orgId,
+  });
+
+  return Boolean(isAdmin);
+}
+
+/**
  * Requires the signed-in user to be an active member (any role) of the
  * given org. Gate for org-scoped editor content — brands, customers,
  * products — that every role can read and write per spec §4 ("browser

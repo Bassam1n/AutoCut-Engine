@@ -109,7 +109,8 @@ export class LlmCallError extends Error {
       | "TIMEOUT"
       | "PROVIDER_ERROR"
       | "VALIDATION"
-      | "NEEDS_HUMAN",
+      | "NEEDS_HUMAN"
+      | "SPEND_LIMIT",
     public readonly raw?: unknown
   ) {
     super(message);

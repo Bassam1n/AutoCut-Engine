@@ -3,11 +3,13 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { FalAdapter } from "./fal";
 import { KieAdapter } from "./kie";
 import { ProviderAdapterError, type ProviderAdapter } from "./types";
+import { spendLimitMessage } from "@/lib/spend-limit-message";
 
 export type GenerateReferenceImageResult =
   | { ok: true; assetId: string; signedUrl: string }
   | { ok: false; error: string }
-  | { ok: false; error: string; code: "KEY_MISSING"; provider: string };
+  | { ok: false; error: string; code: "KEY_MISSING"; provider: string }
+  | { ok: false; error: string; code: "SPEND_LIMIT" };
 
 /**
  * Synchronous inline submit-then-poll for a single reference image.
@@ -47,12 +49,15 @@ export async function generateReferenceImage(params: {
   // Same guard llm.call() uses before spending anything — image
   // generation was missing this entirely until the previous pass,
   // meaning a paused org could still generate images even though it
-  // couldn't run a Claude call.
+  // couldn't run a Claude call. claim_paid_job()'s raw "org_paused:
+  // ..." exception string is translated to plain language here
+  // rather than passed straight through — see spend-limit-message.ts
+  // for why.
   const { error: claimError } = await service.rpc("claim_paid_job", {
     target_org_id: params.orgId,
   });
   if (claimError) {
-    return { ok: false, error: claimError.message };
+    return { ok: false, error: spendLimitMessage(claimError.message), code: "SPEND_LIMIT" };
   }
 
   const { data: apiKey, error: keyError } = await service.rpc("get_org_secret_value", {

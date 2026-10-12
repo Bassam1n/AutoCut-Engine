@@ -20,6 +20,12 @@ export function Sidebar({
     { href: `/org/${orgId}/products`, label: "Products" },
     { href: `/org/${orgId}/creative-history`, label: "Creative history" },
     { href: `/org/${orgId}/styles`, label: "Styles" },
+    // Spend & guard is visible to every member (orgs_select_own lets
+    // any member read warn/stop thresholds and paused state directly
+    // — see settings/spend/page.tsx) even though the audit log and
+    // Resume button inside it stay admin-only, so this link isn't
+    // gated behind info.isAdmin the way Team/Provider keys are.
+    { href: `/org/${orgId}/settings/spend`, label: "Spend & guard" },
     ...(info.isAdmin
       ? [
           { href: `/org/${orgId}/team`, label: "Team" },

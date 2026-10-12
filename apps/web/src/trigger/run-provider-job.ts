@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { KieAdapter } from "@/lib/providers/kie";
 import { FalAdapter } from "@/lib/providers/fal";
 import { ProviderAdapterError, type ProviderAdapter, type SubmitParams } from "@/lib/providers/types";
+import { spendLimitMessage } from "@/lib/spend-limit-message";
 
 /**
  * The minimal durable job runner spec §3/§6 (M7 "done when: a job
@@ -80,7 +81,7 @@ export const runProviderJob = task({
     // async runner instead of the inline path.
     const { error: claimError } = await supabase.rpc("claim_paid_job", { target_org_id: jobPayload.orgId });
     if (claimError) {
-      await failJob(supabase, job.id, "SPEND_LIMIT", claimError.message);
+      await failJob(supabase, job.id, "SPEND_LIMIT", spendLimitMessage(claimError.message));
       return { ok: false };
     }
 

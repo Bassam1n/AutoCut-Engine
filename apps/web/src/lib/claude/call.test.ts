@@ -149,14 +149,22 @@ describe("llmCall", () => {
     const fetchSpy = vi.fn();
     global.fetch = fetchSpy;
 
-    await expect(
-      llmCall({
-        task: "example_extraction",
-        schema: ExampleExtractionSchema,
-        input: { description: "A product." },
-        orgId: "org-1",
-      })
-    ).rejects.toThrow(/org_paused/);
+    // claim_paid_job's raw "org_paused: ..." exception is translated
+    // into a plain-language message (spend-limit-message.ts) rather
+    // than leaked verbatim to the end user — this asserts both the
+    // translated message and the SPEND_LIMIT error code land on the
+    // thrown LlmCallError.
+    const call = llmCall({
+      task: "example_extraction",
+      schema: ExampleExtractionSchema,
+      input: { description: "A product." },
+      orgId: "org-1",
+    });
+
+    await expect(call).rejects.toThrow(/spend guard has paused this org/);
+    await expect(call).rejects.toMatchObject({
+      code: "SPEND_LIMIT",
+    });
 
     expect(fetchSpy).not.toHaveBeenCalled();
   });

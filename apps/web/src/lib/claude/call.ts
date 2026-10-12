@@ -7,6 +7,7 @@ import { getActivePrompt } from "./prompt-registry";
 import { hashInput, redactedInputSummary } from "./redact";
 import { PINNED_MODEL_PER_TASK, LlmCallError } from "./types";
 import type { LlmCallParams, LlmCallResult } from "./types";
+import { spendLimitMessage } from "@/lib/spend-limit-message";
 
 /**
  * llm.call({ task, schema, input }), spec §4 M4's own naming. One
@@ -29,12 +30,17 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
   const supabase = createServiceClient();
 
   // Spend guard: refuse before spending anything, per spec §5.10
-  // ("paid jobs refused when paused").
+  // ("paid jobs refused when paused"). claim_paid_job() raises a raw
+  // Postgres exception shaped like "org_paused: Spend guard: 24h
+  // spend $X crossed the $Y stop threshold" — plain-language-ify it
+  // here rather than letting that string reach an end user with no
+  // context for what "org_paused" means (spec §5.10's error
+  // vocabulary names SPEND_LIMIT as the code for exactly this case).
   const { error: claimError } = await supabase.rpc("claim_paid_job", {
     target_org_id: orgId,
   });
   if (claimError) {
-    throw new LlmCallError(claimError.message, "PROVIDER_ERROR", claimError);
+    throw new LlmCallError(spendLimitMessage(claimError.message), "SPEND_LIMIT", claimError);
   }
 
   const apiKey = await getOrgAnthropicKey(orgId);
