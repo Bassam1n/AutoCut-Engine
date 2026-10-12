@@ -13,6 +13,7 @@
     "@anthropic-ai/sdk": "^0.133.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
+    "@trigger.dev/sdk": "^4.7.3",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@trigger.dev/build": "^4.7.3",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",

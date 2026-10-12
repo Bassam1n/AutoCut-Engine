@@ -1,4 +1,8 @@
-import "server-only";
+// No "server-only" guard: this file is pure provider-adapter logic
+// (no secrets read directly — the API key is a constructor param from
+// the caller) and is imported from both Next.js server code and
+// Trigger.dev tasks (src/trigger/), which run outside Next's
+// bundler and can't resolve the Next-specific "server-only" package.
 import type {
   ProviderAdapter,
   SubmitParams,
