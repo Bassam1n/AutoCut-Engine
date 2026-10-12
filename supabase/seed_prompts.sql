@@ -190,3 +190,38 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- M7: Scene videos, spec §5.7. Motion preflight — a vision call run
+-- BEFORE any paid provider call, over the chosen scene image plus the
+-- scene's Visual/copy, an optional per-scene video idea, and whether
+-- this scene is spoken. Decides whether the requested motion is
+-- physically plausible from this exact image, and if not, offers a
+-- fallback motion plan unless truly nothing in frame is animatable.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'plan_video_motion',
+  1,
+  'You are looking at one still image that is about to be animated into a short video clip for an ad. You are given the scene''s Visual description (what the camera should see), the scene''s spoken copy if this scene speaks (may be absent), and an optional free-text video idea the editor typed for this scene (may be absent). Decide whether the requested motion is physically plausible to animate from THIS EXACT image: every visible person, hand, object and product detail must stay locked and consistent (no inventing a different pose, angle, or missing limb), the motion must be one continuous action, and it must have a reachable end state within a few seconds. Say no if the image already shows the requested end state (nothing left to animate toward), or if the image contradicts what is being asked (e.g. the product is not actually in frame, or the asked-for action is not something a person/object visible in the image could do from its current pose). When plausible, write a concrete, literal motion_plan describing the one continuous action to animate. When NOT plausible, write a short plain-language reason an ad editor with no technical background would understand, and ALSO offer a fallback_motion_plan — some other concrete motion this same image can still support — unless you genuinely cannot find anything in the frame worth animating, in which case leave the fallback null.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- M7: Scene videos, spec §5.7. Writes the final video generation
+-- prompt from the scene's Visual, the approved motion plan (from
+-- plan_video_motion), style/rules context, and the spoken copy the
+-- speaking rule allows for this scene (may be explicitly withheld —
+-- see scene-videos-actions.ts's hard "nobody speaks" enforcement,
+-- which never even includes copy in this task''s input when it
+-- applies, rather than relying on the prompt text to withhold it).
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_video_prompt',
+  1,
+  'You are writing the final video generation prompt for one scene of a video ad, to animate a specific starting image into a short clip. You are given: the approved motion_plan (the one continuous action to animate — follow this exactly, it has already been checked against the image for physical plausibility), the scene''s Visual description for additional context, spoken copy ONLY if this scene is allowed to speak (if spoken_copy is absent or null, do not invent any speech or mouth movement), the chosen visual style''s masterprompt (may be absent), and any active DO/AVOID rules (may be empty — follow every one given). Combine these into ONE self-contained, ready-to-send video generation prompt — describe the motion concretely and specifically (camera movement if any, the subject''s action, pacing), mention spoken copy only if it was actually given to you, and do not restate the full visual description the starting image already carries; focus on what moves and changes. Do not refer to the inputs by name, just write the prompt itself.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

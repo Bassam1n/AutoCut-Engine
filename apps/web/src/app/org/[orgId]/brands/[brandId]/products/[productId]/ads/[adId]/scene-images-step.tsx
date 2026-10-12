@@ -33,6 +33,7 @@ export function SceneImagesStep({
   imageUrls,
   imageModelOptions,
   providersWithKeys,
+  onContinue,
 }: {
   orgId: string;
   brandId: string;
@@ -44,6 +45,7 @@ export function SceneImagesStep({
   imageUrls: Record<string, string>;
   imageModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
+  onContinue: () => void;
 }) {
   const [imageModel, setImageModel] = useState<ModelOption | null>(imageModelOptions[0] ?? null);
   const [generatingSceneIds, setGeneratingSceneIds] = useState<Set<string>>(new Set());
@@ -192,6 +194,16 @@ export function SceneImagesStep({
           ))}
         </div>
       )}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onContinue}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+        >
+          Continue to scene videos →
+        </button>
+      </div>
     </div>
   );
 }

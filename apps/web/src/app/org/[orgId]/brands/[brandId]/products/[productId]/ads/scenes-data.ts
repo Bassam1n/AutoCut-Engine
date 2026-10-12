@@ -19,6 +19,8 @@ export type Scene = {
   status: string;
   /** Spec §5.6 "sticky prompt override" — set once the editor saves an exact final prompt; sticks across regenerations until explicitly reset (null). */
   image_prompt_override: string | null;
+  /** Spec §5.7 "Optional video idea text per scene" — free text that steers this scene's motion/animation, independent of Visual/copy. Nullable (migration 42). */
+  video_idea: string | null;
   created_at: string;
   updated_at: string;
 };

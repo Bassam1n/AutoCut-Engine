@@ -426,6 +426,15 @@ export async function generateSceneImages(
     return { ok: false, error: lastError ?? "Image generation failed." };
   }
 
+  // Spec §5.8: "Regenerating images archives that scene's videos (an
+  // 'archived videos' strip lets the editor restore them)." A new
+  // image for this scene means any video made from the OLD image is
+  // now stale — archived (never deleted, per the project's standing
+  // data rule) rather than left looking current. Scene videos' own
+  // "archived videos" strip (scene-videos-step.tsx) is where the
+  // editor restores one if the new image turns out worse.
+  await service.from("assets").update({ archived: true }).eq("org_id", orgId).eq("scene_id", sceneId).eq("kind", "video").eq("archived", false);
+
   revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${adId}`);
   return { ok: true, generatedCount: generated, omitted: references.omitted };
 }

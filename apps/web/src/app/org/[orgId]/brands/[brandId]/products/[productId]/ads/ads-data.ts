@@ -6,6 +6,18 @@ export type AdBrief = {
   body?: string;
   cta?: string;
   idea?: string;
+  /**
+   * Spec §5.4 "whether anyone speaks on camera" / §5.7 "the brief
+   * records who speaks (everyone, nobody, some scenes)". Added as a
+   * real structured field now that Scene videos actually reads it
+   * (ADR 002 item 29 folded earlier ad-topic Dial-in answers into
+   * brief.idea as free text specifically because nothing downstream
+   * read a dedicated field yet — that's no longer true for this one).
+   * "some_scenes" defers to each scene's own scenes.speaker column
+   * (non-null = this scene speaks) rather than needing a separate
+   * per-scene flag here.
+   */
+  speaking?: "everyone" | "nobody" | "some_scenes";
 };
 
 export type Ad = {
@@ -29,6 +41,7 @@ export type Ad = {
     | "concept"
     | "storyboard"
     | "scene_images"
+    | "scene_videos"
     | null;
   created_at: string;
   updated_at: string;

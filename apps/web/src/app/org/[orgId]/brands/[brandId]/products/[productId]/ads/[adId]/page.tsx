@@ -8,6 +8,7 @@ import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data
 import { getModelOptions } from "@/lib/providers/models-data";
 import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
 import { getSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
+import { getSceneVideos, getArchivedSceneVideos, getActiveSceneVideoJobs } from "../scene-videos-data";
 import { StudioCanvas } from "./studio-canvas";
 import { CostBreakdown } from "./cost-breakdown";
 
@@ -63,16 +64,34 @@ async function GatedCanvas({
   const assetUrls = await getAssetSignedUrls(orgId, assetIds);
 
   const imageModelOptions = await getModelOptions("image");
+  const videoModelOptions = await getModelOptions("video");
   const secrets = await getOrgSecrets(orgId);
   const providersWithKeys = secrets.map((s) => s.provider);
 
   const sceneImagesBySceneId = await getSceneImages(orgId, adId);
   const sceneFeedbackImagesBySceneId = await getSceneFeedbackImages(orgId, adId);
+  const sceneVideosBySceneId = await getSceneVideos(orgId, adId);
+  const archivedSceneVideosBySceneId = await getArchivedSceneVideos(orgId, adId);
+  const activeSceneVideoJobsBySceneId = await getActiveSceneVideoJobs(orgId, adId);
+
   const sceneImagePaths = [
     ...Object.values(sceneImagesBySceneId).flat(),
     ...Object.values(sceneFeedbackImagesBySceneId).flat(),
   ].map((a) => a.storage_path);
   const sceneImageUrls = await getAssetSignedUrlsByPath(sceneImagePaths);
+
+  const sceneVideoPaths = [
+    ...Object.values(sceneVideosBySceneId).flat(),
+    ...Object.values(archivedSceneVideosBySceneId).flat(),
+  ].map((a) => a.storage_path);
+  // Scene videos needs both its own video asset URLs AND every scene
+  // image URL (the "pick which image to animate" picker) — merged
+  // into one signed-URL map so scene-videos-step.tsx can look either
+  // kind of asset's storage_path up through a single prop.
+  const sceneVideoUrls = {
+    ...sceneImageUrls,
+    ...(await getAssetSignedUrlsByPath(sceneVideoPaths)),
+  };
 
   return (
     <StudioCanvas
@@ -91,6 +110,11 @@ async function GatedCanvas({
       sceneImagesBySceneId={sceneImagesBySceneId}
       sceneFeedbackImagesBySceneId={sceneFeedbackImagesBySceneId}
       sceneImageUrls={sceneImageUrls}
+      videoModelOptions={videoModelOptions}
+      sceneVideosBySceneId={sceneVideosBySceneId}
+      archivedSceneVideosBySceneId={archivedSceneVideosBySceneId}
+      activeSceneVideoJobsBySceneId={activeSceneVideoJobsBySceneId}
+      sceneVideoUrls={sceneVideoUrls}
     />
   );
 }

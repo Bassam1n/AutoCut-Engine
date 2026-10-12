@@ -1,0 +1,16 @@
+-- M7: Scene videos. Spec §5.7.
+--
+-- video_idea: optional per-scene free text ("Optional video idea text
+-- per scene") the editor can give to steer the motion/animation this
+-- scene's video should have, independent of the scene's existing
+-- Visual/copy. Nullable, lives on scenes since it's per-scene, same
+-- shape as image_prompt_override (migration 39).
+--
+-- No RLS changes needed: scenes policies (migration 8) are row-level
+-- ("is a member of this org"), not column-level, so an existing
+-- scenes_update policy already covers writes to this new column with
+-- no extra grant. assets.kind already includes 'last_frame' and
+-- 'video' (migration 8's original check), so no assets constraint
+-- change is needed for Scene videos either — only scenes gets a new
+-- column here.
+alter table public.scenes add column video_idea text;

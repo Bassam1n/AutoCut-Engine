@@ -15,7 +15,8 @@ export type StudioStepValue =
   | "plan"
   | "concept"
   | "storyboard"
-  | "scene_images";
+  | "scene_images"
+  | "scene_videos";
 
 /**
  * Persists which Studio step the editor is actually on, so reopening

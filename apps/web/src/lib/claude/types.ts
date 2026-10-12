@@ -57,6 +57,24 @@ export const PINNED_MODEL_PER_TASK = {
   // from images, not open creative judgment — same shape as
   // extract_cast, just with vision input instead of text. Sonnet.
   generate_product_spec: "claude-sonnet-5-5",
+  // Motion preflight (spec §5.7): a vision call judging whether a
+  // still image can physically perform a requested motion — locks on
+  // visible people/hands/objects/product details, reasons about a
+  // continuous action with a reachable end state, and when it can't,
+  // has to invent a workable fallback motion plan rather than just
+  // refusing. This is physical/compositional judgment under vision
+  // input, the same shape and stakes as generate_scene_visuals'
+  // Visual Director reasoning and write_image_prompt's editorial
+  // judgment (both pinned to Opus) — not mechanical extraction like
+  // generate_product_spec, which only describes what's already
+  // there. Pinned to Opus for the same reason those two are.
+  plan_video_motion: "claude-opus-5-5",
+  // Writing the final video prompt (spec §5.7) is the video-side
+  // sibling of write_image_prompt — turning Visual/copy, the motion
+  // plan, speaking rules and style/rules context into one coherent
+  // prompt, plus staged shortening when it doesn't fit. Same
+  // editorial-judgment shape as write_image_prompt — Opus.
+  write_video_prompt: "claude-opus-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

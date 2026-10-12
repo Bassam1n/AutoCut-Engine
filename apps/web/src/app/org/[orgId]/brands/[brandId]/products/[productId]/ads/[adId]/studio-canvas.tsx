@@ -9,6 +9,7 @@ import { ConceptCastStep } from "./concept-cast-step";
 import { StoryboardStep } from "./storyboard-step";
 import { DialInStep } from "./dial-in-step";
 import { SceneImagesStep } from "./scene-images-step";
+import { SceneVideosStep } from "./scene-videos-step";
 import { saveCurrentStep } from "../ads-actions";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
@@ -16,6 +17,7 @@ import type { Scene } from "../scenes-data";
 import type { Concept, CastMember } from "../concepts-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 import type { SceneImageAsset } from "../scene-images-data";
+import type { SceneVideoJob } from "../scene-videos-data";
 
 export function StudioCanvas({
   orgId,
@@ -33,6 +35,11 @@ export function StudioCanvas({
   sceneImagesBySceneId,
   sceneFeedbackImagesBySceneId,
   sceneImageUrls,
+  videoModelOptions,
+  sceneVideosBySceneId,
+  archivedSceneVideosBySceneId,
+  activeSceneVideoJobsBySceneId,
+  sceneVideoUrls,
 }: {
   orgId: string;
   brandId: string;
@@ -50,6 +57,11 @@ export function StudioCanvas({
   sceneImagesBySceneId: Record<string, SceneImageAsset[]>;
   sceneFeedbackImagesBySceneId: Record<string, SceneImageAsset[]>;
   sceneImageUrls: Record<string, string>;
+  videoModelOptions: ModelOption[];
+  sceneVideosBySceneId: Record<string, SceneImageAsset[]>;
+  archivedSceneVideosBySceneId: Record<string, SceneImageAsset[]>;
+  activeSceneVideoJobsBySceneId: Record<string, SceneVideoJob>;
+  sceneVideoUrls: Record<string, string>;
 }) {
   const [step, setStep] = useState<StudioStep>(() => ad.current_step ?? initialStep(ad, scripts, scenes));
   const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
@@ -151,6 +163,23 @@ export function StudioCanvas({
             imageUrls={sceneImageUrls}
             imageModelOptions={imageModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
+            onContinue={() => goToStep("scene_videos")}
+          />
+        )}
+        {step === "scene_videos" && (
+          <SceneVideosStep
+            orgId={orgId}
+            brandId={brandId}
+            productId={productId}
+            ad={ad}
+            scenes={scenes}
+            imagesBySceneId={sceneImagesBySceneId}
+            videosBySceneId={sceneVideosBySceneId}
+            archivedVideosBySceneId={archivedSceneVideosBySceneId}
+            activeJobsBySceneId={activeSceneVideoJobsBySceneId}
+            assetUrls={sceneVideoUrls}
+            videoModelOptions={videoModelOptions}
+            providersWithKeys={new Set(providersWithKeys)}
           />
         )}
       </div>
@@ -181,6 +210,8 @@ function previousStepFor(step: StudioStep): StudioStep | undefined {
       return "concept";
     case "scene_images":
       return "storyboard";
+    case "scene_videos":
+      return "scene_images";
   }
 }
 
