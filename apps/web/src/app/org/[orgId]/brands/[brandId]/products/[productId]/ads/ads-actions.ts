@@ -8,6 +8,43 @@ import type { AdBrief } from "./ads-data";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+export type StudioStepValue =
+  | "scripts"
+  | "brief"
+  | "dial_in"
+  | "plan"
+  | "concept"
+  | "storyboard"
+  | "scene_images";
+
+/**
+ * Persists which Studio step the editor is actually on, so reopening
+ * the ad later (new tab, different device, closed laptop) resumes
+ * exactly there instead of re-guessing from scene/script state —
+ * initialStep()'s old heuristic in studio-canvas.tsx had a hard
+ * ceiling at "concept" and never recognized real progress into
+ * Storyboard or Scene images. Fired on every step change, so this
+ * deliberately skips revalidatePath — it's a background write for the
+ * next page load, not something the current render needs to reflect.
+ */
+export async function saveCurrentStep(
+  orgId: string,
+  adId: string,
+  step: StudioStepValue
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("ads")
+    .update({ current_step: step })
+    .eq("org_id", orgId)
+    .eq("id", adId);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export async function createAd(
   orgId: string,
   brandId: string,

@@ -21,6 +21,15 @@ export type Ad = {
   target_length_seconds: number | null;
   plan_locked: boolean;
   status: string;
+  current_step:
+    | "scripts"
+    | "brief"
+    | "dial_in"
+    | "plan"
+    | "concept"
+    | "storyboard"
+    | "scene_images"
+    | null;
   created_at: string;
   updated_at: string;
 };

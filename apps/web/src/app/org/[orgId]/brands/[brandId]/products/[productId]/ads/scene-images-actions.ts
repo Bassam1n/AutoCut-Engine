@@ -304,11 +304,28 @@ export async function resolveFinalImagePrompt(
         product_spec: productSpec?.spec ?? null,
       },
     });
-    return { ok: true, prompt: result.output.final_prompt, wasOverride: false };
+    return { ok: true, prompt: clampPromptLength(result.output.final_prompt), wasOverride: false };
   } catch (err) {
     if (err instanceof LlmCallError) return { ok: false, error: err.message };
     throw err;
   }
+}
+
+/**
+ * Safety net, not the real fix — write_image_prompt v2 already
+ * instructs Claude to stay under ~600 chars, but no kie.ai model's
+ * real prompt-length limit is documented anywhere confirmed for this
+ * adapter, and a manual sticky override (resolveFinalImagePrompt's
+ * other return path) isn't bounded by that prompt at all. Clamps at a
+ * conservative length, cutting at the last sentence boundary before
+ * the limit so the prompt stays coherent rather than cut mid-word.
+ */
+const MAX_PROMPT_CHARS = 900;
+function clampPromptLength(prompt: string): string {
+  if (prompt.length <= MAX_PROMPT_CHARS) return prompt;
+  const truncated = prompt.slice(0, MAX_PROMPT_CHARS);
+  const lastSentenceEnd = Math.max(truncated.lastIndexOf(". "), truncated.lastIndexOf(", "));
+  return lastSentenceEnd > MAX_PROMPT_CHARS * 0.5 ? truncated.slice(0, lastSentenceEnd + 1) : truncated;
 }
 
 export type GenerateSceneImagesResult =

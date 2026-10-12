@@ -9,6 +9,7 @@ import { ConceptCastStep } from "./concept-cast-step";
 import { StoryboardStep } from "./storyboard-step";
 import { DialInStep } from "./dial-in-step";
 import { SceneImagesStep } from "./scene-images-step";
+import { saveCurrentStep } from "../ads-actions";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 import type { Scene } from "../scenes-data";
@@ -50,16 +51,26 @@ export function StudioCanvas({
   sceneFeedbackImagesBySceneId: Record<string, SceneImageAsset[]>;
   sceneImageUrls: Record<string, string>;
 }) {
-  const [step, setStep] = useState<StudioStep>(() => initialStep(ad, scripts, scenes));
+  const [step, setStep] = useState<StudioStep>(() => ad.current_step ?? initialStep(ad, scripts, scenes));
   const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
   const previousStep = previousStepFor(step);
+
+  // Wraps setStep so every navigation (stepper click, "Previous step",
+  // or a step's own "Continue") also persists ad.current_step — see
+  // saveCurrentStep's doc comment for why. Fire-and-forget: a failed
+  // write just means the old heuristic kicks in again next reload,
+  // which is a harmless fallback, not worth blocking navigation on.
+  function goToStep(next: StudioStep) {
+    setStep(next);
+    void saveCurrentStep(orgId, ad.id, next);
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
       <Stepper
         currentStep={step}
-        onStepClick={setStep}
-        onPreviousStep={previousStep ? () => setStep(previousStep) : undefined}
+        onStepClick={goToStep}
+        onPreviousStep={previousStep ? () => goToStep(previousStep) : undefined}
         adsListHref={adsListHref}
       />
 
@@ -72,8 +83,8 @@ export function StudioCanvas({
             productId={productId}
             ad={ad}
             scripts={scripts}
-            onContinue={() => setStep("dial_in")}
-            onUseBriefInstead={() => setStep("brief")}
+            onContinue={() => goToStep("dial_in")}
+            onUseBriefInstead={() => goToStep("brief")}
           />
         )}
         {step === "brief" && (
@@ -82,7 +93,7 @@ export function StudioCanvas({
             brandId={brandId}
             productId={productId}
             ad={ad}
-            onContinue={() => setStep("dial_in")}
+            onContinue={() => goToStep("dial_in")}
           />
         )}
         {step === "dial_in" && (
@@ -91,7 +102,7 @@ export function StudioCanvas({
             brandId={brandId}
             productId={productId}
             ad={ad}
-            onContinue={() => setStep("plan")}
+            onContinue={() => goToStep("plan")}
           />
         )}
         {step === "plan" && (
@@ -101,7 +112,7 @@ export function StudioCanvas({
             productId={productId}
             ad={ad}
             scenes={scenes}
-            onContinue={() => setStep("concept")}
+            onContinue={() => goToStep("concept")}
           />
         )}
         {step === "concept" && (
@@ -115,7 +126,7 @@ export function StudioCanvas({
             assetUrls={assetUrls}
             imageModelOptions={imageModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
-            onContinue={() => setStep("storyboard")}
+            onContinue={() => goToStep("storyboard")}
           />
         )}
         {step === "storyboard" && (
@@ -125,7 +136,7 @@ export function StudioCanvas({
             productId={productId}
             ad={ad}
             scenes={scenes}
-            onContinue={() => setStep("scene_images")}
+            onContinue={() => goToStep("scene_images")}
           />
         )}
         {step === "scene_images" && (

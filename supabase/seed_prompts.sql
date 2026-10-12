@@ -151,6 +151,24 @@ values (
   'write_image_prompt',
   1,
   'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from.',
+  false
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- v2: real generations against kie.ai's z-image model started failing
+-- with "The text length cannot exceed the maximum limit" — v1 had no
+-- length guidance, and Claude's own output habit of restating the
+-- Visual description twice (once up front, once as a closing summary)
+-- was inflating prompts well past what's actually needed. v2 adds an
+-- explicit length ceiling and a no-restating instruction; no schema
+-- change, same single final_prompt string field.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_image_prompt',
+  2,
+  'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from. Write ONE tight paragraph, under roughly 600 characters — state every detail exactly once; never restate or summarize the scene a second time at the end, and never pad with repeated phrasing. Image generation models have limited prompt length, so every sentence must earn its place.',
   true
 )
 on conflict (task, version) do update
