@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { Brand } from "./brands-data";
 import type { ActionResult } from "./brands-actions";
 import { buttonVariants } from "@/components/button";
+import type { AssignableUser } from "./assignment-data";
 
 const CONTEXT_FIELDS = [
   { key: "audience", label: "Audience", placeholder: "Who this brand speaks to" },
@@ -18,10 +19,13 @@ export function BrandForm({
   brand,
   onSubmit,
   submitLabel,
+  assignees,
 }: {
   brand?: Brand;
   onSubmit: (formData: FormData) => Promise<ActionResult>;
   submitLabel: string;
+  /** Owners/admins only: users who can be assigned, and who already are. */
+  assignees?: { users: AssignableUser[]; selectedIds: string[] };
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +90,41 @@ export function BrandForm({
           </div>
         ))}
       </div>
+
+      {assignees && (
+        <fieldset className="card-inset flex flex-col gap-2 p-4">
+          <legend className="sr-only">Assigned users</legend>
+          <input type="hidden" name="assignees_present" value="1" />
+          <p className="text-sm font-medium">Assigned users</p>
+          <p className="text-xs text-foreground-muted">
+            Users only see the brands assigned to them. Owners and admins see every brand.
+          </p>
+          {assignees.users.length === 0 ? (
+            <p className="text-sm text-foreground-muted">
+              No users on the team yet. Invite one from the Team page.
+            </p>
+          ) : (
+            <div className="mt-1 flex flex-col gap-1.5">
+              {assignees.users.map((u) => (
+                <label key={u.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="assignee_ids"
+                    value={u.id}
+                    defaultChecked={assignees.selectedIds.includes(u.id)}
+                    disabled={isPending}
+                    className="h-4 w-4 accent-[var(--accent)]"
+                  />
+                  <span>{u.name?.trim() || u.email}</span>
+                  {u.name?.trim() && (
+                    <span className="text-xs text-foreground-muted">{u.email}</span>
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+        </fieldset>
+      )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

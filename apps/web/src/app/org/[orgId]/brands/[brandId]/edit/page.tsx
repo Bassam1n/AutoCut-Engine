@@ -6,6 +6,7 @@ import { BrandForm } from "../../brand-form";
 import { updateBrand, archiveBrand } from "../../brands-actions";
 import { ArchiveBrandButton } from "./archive-brand-button";
 import { BackButton } from "../../../back-button";
+import { getAssignableUsers, getAssigneeIdsByBrand } from "../../assignment-data";
 
 export default function EditBrandPage({
   params,
@@ -53,12 +54,20 @@ async function GatedForm({
   const brand = await getBrand(orgId, brandId);
   if (!brand) notFound();
 
+  // Only owners/admins assign brands; users with edit access don't see the picker.
+  const assignees = canArchive
+    ? await Promise.all([getAssignableUsers(orgId), getAssigneeIdsByBrand(orgId)]).then(
+        ([users, byBrand]) => ({ users, selectedIds: byBrand.get(brandId) ?? [] })
+      )
+    : undefined;
+
   return (
     <div className="flex flex-col gap-6">
       <BrandForm
         brand={brand}
         submitLabel="Save changes"
         onSubmit={updateBrand.bind(null, orgId, brandId)}
+        assignees={assignees}
       />
 
       {canArchive && (

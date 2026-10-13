@@ -5,6 +5,7 @@ import { getBrands } from "./brands-data";
 import { getSetupChecklist } from "../setup-checklist/checklist-data";
 import { ChecklistCard } from "../setup-checklist/checklist-card";
 import { buttonVariants } from "@/components/button";
+import { getAssignableUsers, getAssigneeIdsByBrand } from "./assignment-data";
 
 export default function BrandsPage({
   params,
@@ -69,6 +70,19 @@ async function GatedBrandsList({
   await requireOrgMember(orgId);
   const [brands, canCreateBrand] = await Promise.all([getBrands(orgId), isOrgAdmin(orgId)]);
 
+  // Owners/admins see who each brand is assigned to.
+  let assigneeLabels = new Map<string, string>();
+  if (canCreateBrand) {
+    const [users, byBrand] = await Promise.all([getAssignableUsers(orgId), getAssigneeIdsByBrand(orgId)]);
+    const nameById = new Map(users.map((u) => [u.id, u.name?.trim() || u.email]));
+    assigneeLabels = new Map(
+      Array.from(byBrand, ([brandId, ids]) => [
+        brandId,
+        ids.map((id) => nameById.get(id)).filter(Boolean).join(", "),
+      ])
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {canCreateBrand && (
@@ -82,8 +96,9 @@ async function GatedBrandsList({
 
       {brands.length === 0 ? (
         <p className="text-sm text-foreground-muted">
-          No brands yet. Create your first one to start building products
-          and ads.
+          {canCreateBrand
+            ? "No brands yet. Create your first one to start building products and ads."
+            : "No brands are assigned to you yet. Ask an admin to assign you one."}
         </p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -105,7 +120,14 @@ async function GatedBrandsList({
                   brand.name.slice(0, 2).toUpperCase()
                 )}
               </div>
-              <span className="font-medium">{brand.name}</span>
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-medium">{brand.name}</span>
+                {canCreateBrand && (
+                  <span className="truncate text-xs text-foreground-muted">
+                    {assigneeLabels.get(brand.id) || "Not assigned to any user"}
+                  </span>
+                )}
+              </span>
             </Link>
           ))}
         </div>

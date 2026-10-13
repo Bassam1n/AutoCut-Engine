@@ -3,6 +3,7 @@ import { requireOrgAdmin } from "@/lib/auth";
 import { BrandForm } from "../brand-form";
 import { createBrand } from "../brands-actions";
 import { BackButton } from "../../back-button";
+import { getAssignableUsers } from "../assignment-data";
 
 export default function NewBrandPage({
   params,
@@ -45,11 +46,13 @@ async function GatedForm({
 }) {
   const { orgId } = await params;
   await requireOrgAdmin(orgId);
+  const users = await getAssignableUsers(orgId);
 
   return (
     <BrandForm
       submitLabel="Create brand"
       onSubmit={createBrand.bind(null, orgId)}
+      assignees={{ users, selectedIds: [] }}
     />
   );
 }
