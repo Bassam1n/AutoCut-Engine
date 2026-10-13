@@ -8,12 +8,13 @@ export function BrandNav({
 }: {
   orgId: string;
   brandId: string;
-  active: "customers" | "products" | "cast";
+  active: "customers" | "products" | "cast" | "settings";
 }) {
   const tabs = [
     { id: "customers" as const, label: "Customers", href: `/org/${orgId}/brands/${brandId}/customers` },
     { id: "products" as const, label: "Products", href: `/org/${orgId}/brands/${brandId}/products` },
     { id: "cast" as const, label: "Cast library", href: `/org/${orgId}/brands/${brandId}/cast` },
+    { id: "settings" as const, label: "Settings", href: `/org/${orgId}/brands/${brandId}/settings/keys` },
   ];
 
   return (
