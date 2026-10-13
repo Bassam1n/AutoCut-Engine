@@ -3,6 +3,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireOrgMember } from "@/lib/auth";
+import { canAccessBrand } from "@/lib/access";
 import { llmCall } from "@/lib/claude/call";
 import { LlmCallError } from "@/lib/claude/types";
 import { VoiceoverDeliverySchema, type VoiceoverDelivery } from "@/lib/claude/schemas/voiceover-delivery";
@@ -89,6 +90,10 @@ async function getElevenLabsKey(
   orgId: string,
   brandId: string
 ): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
+  // The key is fetched with the service role, so the brand must be one
+  // the caller can see (own org, and assigned to them if they're a user).
+  if (!(await canAccessBrand(orgId, brandId))) return { ok: false, error: "Brand not found." };
+
   const service = createServiceClient();
   const { data: apiKey, error: keyError } = await service.rpc("get_brand_secret_value", {
     target_org_id: orgId,

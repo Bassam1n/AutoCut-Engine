@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireOrgMember } from "@/lib/auth";
+import { getAccessibleAd } from "@/lib/access";
 import { llmCall } from "@/lib/claude/call";
 import { LlmCallError } from "@/lib/claude/types";
 import { AdScriptsSchema } from "@/lib/claude/schemas/ad-scripts";
@@ -43,6 +44,10 @@ export async function generateScripts(
 
   if (!brand || !product) {
     return { ok: false, error: "Brand or product not found." };
+  }
+  // The ad_scripts rewrite below uses the service role, keyed by adId.
+  if (!(await getAccessibleAd(orgId, adId, brandId))) {
+    return { ok: false, error: "Ad not found." };
   }
 
   const toneNotes = await getCategoryToneNotes(product.category);

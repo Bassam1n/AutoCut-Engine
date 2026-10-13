@@ -15,6 +15,7 @@ import { getBrand } from "@/app/org/[orgId]/brands/brands-data";
 import { getProduct } from "../../products-data";
 import { getCustomers } from "@/app/org/[orgId]/brands/[brandId]/customers/customers-data";
 import { getBrandCastMembers } from "./concepts-data";
+import { getAccessibleAd, isPathUnder } from "@/lib/access";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -196,6 +197,9 @@ export async function extractCast(
   model: ModelChoice = DEFAULT_IMAGE_MODEL
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  // brandId picks the provider key and is stamped on new assets, so it
+  // must be this ad's brand, and the ad one the caller can see.
+  if (!(await getAccessibleAd(orgId, adId, brandId))) return { ok: false, error: "Ad not found." };
 
   const supabase = await createClient();
 
@@ -334,6 +338,9 @@ export async function regenerateCastReference(
   model: ModelChoice = DEFAULT_IMAGE_MODEL
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  // brandId picks the provider key and is stamped on new assets, so it
+  // must be this ad's brand, and the ad one the caller can see.
+  if (!(await getAccessibleAd(orgId, adId, brandId))) return { ok: false, error: "Ad not found." };
 
   const supabase = await createClient();
   const ad = await getAd(orgId, productId, adId);
@@ -342,6 +349,7 @@ export async function regenerateCastReference(
     .from("cast_members")
     .select("description")
     .eq("org_id", orgId)
+    .eq("ad_id", adId)
     .eq("id", castMemberId)
     .maybeSingle();
   if (fetchError) return { ok: false, error: fetchError.message };
@@ -409,8 +417,25 @@ export async function recordUploadedCastReference(
   storagePath: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  // brandId picks the provider key and is stamped on new assets, so it
+  // must be this ad's brand, and the ad one the caller can see.
+  if (!(await getAccessibleAd(orgId, adId, brandId))) return { ok: false, error: "Ad not found." };
 
   const supabase = await createClient();
+
+  // Checked through RLS before the service-role insert below.
+  const { data: castMember } = await supabase
+    .from("cast_members")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("ad_id", adId)
+    .eq("id", castMemberId)
+    .maybeSingle();
+  if (!castMember) return { ok: false, error: "Cast member not found." };
+  if (!isPathUnder(storagePath, `${orgId}/brand_cast/${brandId}/`)) {
+    return { ok: false, error: "Invalid upload path." };
+  }
+
   const service = createServiceClient();
 
   const { data: assetRow, error: assetError } = await service
@@ -447,6 +472,9 @@ export async function generateCharacterSheet(
   model: ModelChoice = DEFAULT_IMAGE_MODEL
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  // brandId picks the provider key and is stamped on new assets, so it
+  // must be this ad's brand, and the ad one the caller can see.
+  if (!(await getAccessibleAd(orgId, adId, brandId))) return { ok: false, error: "Ad not found." };
 
   const supabase = await createClient();
   const ad = await getAd(orgId, productId, adId);
@@ -455,6 +483,7 @@ export async function generateCharacterSheet(
     .from("cast_members")
     .select("description, ref_asset_id")
     .eq("org_id", orgId)
+    .eq("ad_id", adId)
     .eq("id", castMemberId)
     .maybeSingle();
   if (fetchError) return { ok: false, error: fetchError.message };
@@ -476,6 +505,7 @@ export async function generateCharacterSheet(
     const { data: asset } = await service
       .from("assets")
       .select("storage_path")
+      .eq("org_id", orgId)
       .eq("id", castMember.ref_asset_id)
       .maybeSingle();
     if (asset) {

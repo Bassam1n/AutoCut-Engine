@@ -20,6 +20,7 @@ import { getActiveRulesForAd } from "./scene-images-data";
 import { assembleSceneReferences, resolveFinalImagePrompt, type ModelChoice } from "./scene-images-actions";
 import { getBrand } from "@/app/org/[orgId]/brands/brands-data";
 import { getProduct } from "../../products-data";
+import { isPathUnder } from "@/lib/access";
 
 // Spec §5.8 ("Feedback, rules, history"). Server Actions for Tweak,
 // Rework, and video feedback, following scene-images-actions.ts/
@@ -60,6 +61,8 @@ export type FeedbackGateResult =
  * but it is structurally first and far cheaper than what it guards.
  */
 export async function runQuestionGate(orgId: string, feedbackText: string): Promise<FeedbackGateResult> {
+  // Exported server action that spends on the org's LLM key.
+  await requireOrgMember(orgId);
   try {
     const result = await llmCall({
       task: "classify_feedback_is_question",
@@ -271,6 +274,11 @@ export async function submitImageFeedback(
   // still included even on a placement/removal rebuild.
   let feedbackRoundReferenceUrl: string | undefined;
   if (attachedReferenceStoragePath) {
+    // Signed with the service role, so it must be the folder
+    // reserveFeedbackRoundReferenceUploadPath() handed out for this scene.
+    if (!isPathUnder(attachedReferenceStoragePath, `${orgId}/feedback_round/${adId}/${sceneId}/`)) {
+      return { ok: false, error: "Invalid reference image path." };
+    }
     feedbackRoundReferenceUrl = (await signFeedbackRoundReference(attachedReferenceStoragePath)) ?? undefined;
   }
 

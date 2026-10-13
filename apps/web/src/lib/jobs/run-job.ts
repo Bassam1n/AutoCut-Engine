@@ -1,7 +1,7 @@
 "use server";
 
 import "server-only";
-import { tasks, runs } from "@trigger.dev/sdk";
+import { tasks } from "@trigger.dev/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { requireOrgMember } from "@/lib/auth";
 import type { runProviderJob } from "@/trigger/run-provider-job";
@@ -93,9 +93,4 @@ export async function getJobStatus(orgId: string, jobId: string): Promise<JobSta
     error: job.error ?? undefined,
     errorCode: job.error_code ?? undefined,
   };
-}
-
-/** Exposed for completeness/debugging parity with the spec's "runs.retrieve" pattern — not on the critical path, since getJobStatus reads the same data straight from Postgres (faster, and works even if Trigger.dev's own API is briefly unreachable). */
-export async function getTriggerRunStatus(runId: string) {
-  return runs.retrieve(runId);
 }

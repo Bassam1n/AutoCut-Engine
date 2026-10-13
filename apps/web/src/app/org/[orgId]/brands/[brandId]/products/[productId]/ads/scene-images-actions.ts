@@ -17,6 +17,7 @@ import { getActiveRulesForAd, getLatestProductSpec } from "./scene-images-data";
 import { getBrand } from "@/app/org/[orgId]/brands/brands-data";
 import { getProduct, getProductRefs, getProductRefSignedUrls } from "../../products-data";
 import type { ProductRef } from "../../products-data";
+import { getAccessibleAd, getAccessibleAsset, isPathUnder, sceneBelongsToAd } from "@/lib/access";
 
 // Scene-image generation polls a provider synchronously (no async job
 // runner yet — M9) and can take well over Vercel's default function
@@ -76,7 +77,7 @@ export type AssembledReferences = {
 export async function assembleSceneReferences(
   orgId: string,
   brandId: string,
-  scene: Scene,
+  sceneInput: Scene,
   /**
    * Spec §5.8: a Tweak/Rework round's own attached reference image,
    * signed to a URL by the caller (feedback-actions.ts). Not stored
@@ -87,8 +88,21 @@ export async function assembleSceneReferences(
    */
   feedbackRoundReferenceUrl?: string
 ): Promise<AssembledReferences> {
+  await requireOrgMember(orgId);
   const supabase = await createClient();
   const service = createServiceClient();
+
+  // This is a callable server action, so never trust the scene object
+  // the caller sent: reload it through RLS (org + brand scoped) and use
+  // only that copy's ids below.
+  const { data: trustedScene } = await supabase
+    .from("scenes")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("id", sceneInput.id)
+    .maybeSingle();
+  if (!trustedScene) throw new Error("Scene not found.");
+  const scene = trustedScene as Scene;
 
   type Tiered = { tier: ReferenceTierLabel; url: string };
   const tiers: Tiered[][] = [];
@@ -142,6 +156,7 @@ export async function assembleSceneReferences(
     const { data: castAssets } = await service
       .from("assets")
       .select("storage_path")
+      .eq("org_id", orgId)
       .in("id", approvedRefAssetIds);
     const castPaths = (castAssets ?? []).map((a) => a.storage_path);
     castUrls = await signRenderPaths(service, castPaths);
@@ -165,6 +180,7 @@ export async function assembleSceneReferences(
       const { data: styleAsset } = await service
         .from("assets")
         .select("storage_path")
+        .eq("org_id", orgId)
         .eq("id", styleRow.reference_asset_id)
         .maybeSingle();
       if (styleAsset?.storage_path) {
@@ -304,6 +320,8 @@ export async function resolveFinalImagePrompt(
   productId: string,
   scene: Scene
 ): Promise<{ ok: true; prompt: string; wasOverride: boolean } | { ok: false; error: string }> {
+  // Exported server action that spends on the org's LLM key.
+  await requireOrgMember(orgId);
   if (scene.image_prompt_override) {
     return { ok: true, prompt: scene.image_prompt_override, wasOverride: true };
   }
@@ -410,6 +428,10 @@ export async function generateSceneImages(
   const scenes = await getScenes(orgId, adId);
   const scene = scenes.find((s) => s.id === sceneId);
   if (!scene) return { ok: false, error: "Scene not found." };
+  // brandId picks the provider key and is stamped on the new assets, so
+  // it must be this ad's brand (the override path below skips the
+  // ad/brand lookups resolveFinalImagePrompt otherwise does).
+  if (!(await getAccessibleAd(orgId, adId, brandId))) return { ok: false, error: "Ad not found." };
 
   const promptResult = await resolveFinalImagePrompt(orgId, brandId, productId, scene);
   if (!promptResult.ok) return { ok: false, error: promptResult.error };
@@ -492,6 +514,7 @@ export async function generateSceneImages(
 
 /** Scenes eligible for "Generate All" — spec §5.6: skips scenes that already have (non-archived) images. In-flight/generating scenes are tracked client-side, not here. */
 export async function getScenesWithoutImages(orgId: string, adId: string): Promise<string[]> {
+  await requireOrgMember(orgId);
   const scenes = await getScenes(orgId, adId);
   const service = createServiceClient();
   const { data: existing } = await service
@@ -556,6 +579,8 @@ export async function restoreArchivedImage(
   assetId: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  const asset = await getAccessibleAsset(orgId, assetId);
+  if (!asset || asset.ad_id !== adId) return { ok: false, error: "Image not found." };
 
   const service = createServiceClient();
   const { error } = await service.from("assets").update({ archived: false }).eq("id", assetId).eq("org_id", orgId);
@@ -575,6 +600,15 @@ export async function recordFeedbackImage(
   storagePath: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  // Service-role insert keyed by browser-supplied ids and path: the
+  // scene must be the caller's, and the path the folder
+  // reserveFeedbackImageUploadPath() handed out for it.
+  if (!(await getAccessibleAd(orgId, adId, brandId)) || !(await sceneBelongsToAd(orgId, adId, sceneId))) {
+    return { ok: false, error: "Scene not found." };
+  }
+  if (!isPathUnder(storagePath, `${orgId}/feedback/${adId}/${sceneId}/`)) {
+    return { ok: false, error: "Invalid upload path." };
+  }
 
   const service = createServiceClient();
   const { error } = await service.from("assets").insert({

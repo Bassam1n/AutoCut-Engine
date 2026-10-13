@@ -24,6 +24,7 @@ import { getScenes, type Scene } from "./scenes-data";
 import { getActiveRulesForAd } from "./scene-images-data";
 import { getCurrentSceneVoiceoverAsset } from "./scene-videos-data";
 import { getProduct } from "../../products-data";
+import { canAccessJob, getAccessibleAsset } from "@/lib/access";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
@@ -51,6 +52,8 @@ export async function runMotionPreflight(
   speaks: boolean,
   productRealWorldSize?: string | null
 ): Promise<MotionPreflightResult> {
+  // Exported server action that spends on the org's LLM key.
+  await requireOrgMember(orgId);
   try {
     const result = await llmCall({
       task: "plan_video_motion",
@@ -113,6 +116,8 @@ export async function resolveFinalVideoPrompt(
   endpoint: string,
   productRealWorldSize?: string | null
 ): Promise<ResolveVideoPromptResult> {
+  // Exported server action that spends on the org's LLM key.
+  await requireOrgMember(orgId);
   const charLimit = videoPromptCharLimitFor(endpoint);
 
   async function writeOnce(shortenInstruction: string | null): Promise<string> {
@@ -238,7 +243,7 @@ export async function generateSceneVideo(
   await requireOrgMember(orgId);
 
   const ad = await getAd(orgId, productId, adId);
-  if (!ad) return { ok: false, error: "Ad not found." };
+  if (!ad || ad.brand_id !== brandId) return { ok: false, error: "Ad not found." };
 
   const scenes = await getScenes(orgId, adId);
   const scene = scenes.find((s) => s.id === sceneId);
@@ -307,7 +312,7 @@ export async function generateSceneVideoWithFallbackMotion(
   await requireOrgMember(orgId);
 
   const ad = await getAd(orgId, productId, adId);
-  if (!ad) return { ok: false, error: "Ad not found." };
+  if (!ad || ad.brand_id !== brandId) return { ok: false, error: "Ad not found." };
 
   const scenes = await getScenes(orgId, adId);
   const scene = scenes.find((s) => s.id === sceneId);
@@ -595,6 +600,8 @@ export async function saveSpeakingRule(
  */
 export async function finalizeSceneVideoJob(orgId: string, jobId: string): Promise<ActionResult & { assetId?: string }> {
   await requireOrgMember(orgId);
+  // jobs_select is ad-scoped: only finalize jobs on ads the caller can see.
+  if (!(await canAccessJob(orgId, jobId))) return { ok: false, error: "Job not found." };
 
   const service = createServiceClient();
   const { data: job, error: jobError } = await service
@@ -664,6 +671,8 @@ export async function restoreArchivedVideo(
   assetId: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  const asset = await getAccessibleAsset(orgId, assetId);
+  if (!asset || asset.ad_id !== adId) return { ok: false, error: "Video not found." };
 
   const service = createServiceClient();
   const { error } = await service.from("assets").update({ archived: false }).eq("id", assetId).eq("org_id", orgId);

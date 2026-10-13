@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireOrgMember } from "@/lib/auth";
+import { isPathUnder } from "@/lib/access";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -113,6 +114,22 @@ export async function recordBrandCastUpload(
   await requireOrgMember(orgId);
 
   const supabase = await createClient();
+
+  // Check through RLS before the service-role insert: the member must be
+  // in a brand the caller can see, and the path must be the folder
+  // reserveBrandCastUploadPath() handed out for that brand.
+  const { data: member } = await supabase
+    .from("brand_cast_members")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("brand_id", brandId)
+    .eq("id", memberId)
+    .maybeSingle();
+  if (!member) return { ok: false, error: "Cast member not found." };
+  if (!isPathUnder(storagePath, `${orgId}/brand_cast/${brandId}/`)) {
+    return { ok: false, error: "Invalid upload path." };
+  }
+
   const service = createServiceClient();
 
   const { data: assetRow, error: assetError } = await service

@@ -3,6 +3,7 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireOrgMember } from "@/lib/auth";
+import { getAccessibleAd } from "@/lib/access";
 import type { DownloadableAsset } from "@/lib/download/zip-naming";
 
 export type ExportManifestEntry = DownloadableAsset & { signedUrl: string | null };
@@ -22,6 +23,9 @@ export type ExportManifestEntry = DownloadableAsset & { signedUrl: string | null
  */
 export async function getExportManifest(orgId: string, adId: string): Promise<ExportManifestEntry[]> {
   await requireOrgMember(orgId);
+  // Callable from the browser and signs every file of the ad with the
+  // service role, so the ad must be one the caller can see.
+  if (!(await getAccessibleAd(orgId, adId))) throw new Error("Ad not found.");
 
   const service = createServiceClient();
   const { data: assets, error } = await service

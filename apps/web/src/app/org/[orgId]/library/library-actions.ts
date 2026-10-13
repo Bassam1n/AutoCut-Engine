@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireOrgMember } from "@/lib/auth";
+import { canAccessBrand, getAccessibleAd, getAccessibleAsset, sceneBelongsToAd } from "@/lib/access";
 import { llmCall } from "@/lib/claude/call";
 import { LlmCallError } from "@/lib/claude/types";
 import { GenerateLibraryTagsSchema } from "@/lib/claude/schemas/generate-library-tags";
@@ -80,6 +81,10 @@ export async function saveToLibrary(
   brandId: string | null
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+
+  // Through RLS, so the asset must be in a brand/ad the caller can see.
+  if (!(await getAccessibleAsset(orgId, assetId))) return { ok: false, error: "Asset not found." };
+  if (brandId && !(await canAccessBrand(orgId, brandId))) return { ok: false, error: "Brand not found." };
 
   const service = createServiceClient();
   const { data: asset, error: assetError } = await service
@@ -206,6 +211,9 @@ export async function setCharacterReference(
   assetId: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  // The reference is later signed with the service role, so it must be
+  // an asset the caller can actually see.
+  if (!(await getAccessibleAsset(orgId, assetId))) return { ok: false, error: "Asset not found." };
   const supabase = await createClient();
   const { error } = await supabase
     .from("cast_members")
@@ -236,6 +244,7 @@ export async function setStyleReference(
   assetId: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  if (!(await getAccessibleAsset(orgId, assetId))) return { ok: false, error: "Asset not found." };
   const supabase = await createClient();
   const { data: updated, error } = await supabase
     .from("styles")
@@ -283,6 +292,13 @@ export async function addLibraryItemToScene(
   assetId: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+
+  // The service-role writes below are keyed by adId/sceneId from the
+  // browser: both must be visible to the caller, and so must the asset.
+  if (!(await getAccessibleAd(orgId, adId)) || !(await sceneBelongsToAd(orgId, adId, sceneId))) {
+    return { ok: false, error: "Scene not found." };
+  }
+  if (!(await getAccessibleAsset(orgId, assetId))) return { ok: false, error: "Library asset not found." };
 
   const service = createServiceClient();
   const { data: sourceAsset, error: sourceError } = await service
