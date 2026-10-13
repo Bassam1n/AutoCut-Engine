@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { Avatar } from "@/components/avatar";
 import type { BoardData, Task, TaskColumn } from "./board-data";
@@ -35,6 +36,8 @@ export function TaskBoard({
   viewer: { id: string; email: string; name: string | null; avatarPath: string | null };
 }) {
   const manage = mode === "manage";
+  const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
   const [tasks, setTasks] = useState<Task[]>(data.tasks);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -109,35 +112,64 @@ export function TaskBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      {manage && (
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="Filter by assignee"
-            value={assigneeFilter}
-            onChange={(e) => setAssigneeFilter(e.target.value)}
-            className="field field-sm"
+      <div className="flex flex-wrap items-center gap-2">
+        {manage && (
+          <>
+            <select
+              aria-label="Filter by assignee"
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+              className="field field-sm"
+            >
+              <option value="">Everyone</option>
+              <option value="none">Unassigned</option>
+              {data.people.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name?.trim() || p.email}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by brand"
+              value={brandFilter}
+              onChange={(e) => setBrandFilter(e.target.value)}
+              className="field field-sm"
+            >
+              <option value="">All brands</option>
+              {data.brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        {/* The board doesn't update live: this pulls everyone's latest changes. */}
+        <button
+          type="button"
+          onClick={() => startRefresh(() => router.refresh())}
+          disabled={isRefreshing}
+          title="Refresh board"
+          aria-label="Refresh board"
+          className="btn-secondary btn-sm h-8 w-8 p-0"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className={isRefreshing ? "motion-safe:animate-spin" : ""}
           >
-            <option value="">Everyone</option>
-            <option value="none">Unassigned</option>
-            {data.people.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name?.trim() || p.email}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filter by brand"
-            value={brandFilter}
-            onChange={(e) => setBrandFilter(e.target.value)}
-            className="field field-sm"
-          >
-            <option value="">All brands</option>
-            {data.brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <path d="M21 3v6h-6" />
+          </svg>
+        </button>
+        {manage && (
           <button
             type="button"
             onClick={() => setNewTaskColumn(data.columns[0]?.id ?? null)}
@@ -146,8 +178,8 @@ export function TaskBoard({
           >
             New task
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {error && <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
 
