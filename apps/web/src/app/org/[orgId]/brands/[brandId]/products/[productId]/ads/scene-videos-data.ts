@@ -98,44 +98,97 @@ export async function getSceneVideoSignedUrls(storagePaths: string[]): Promise<R
   return result;
 }
 
-export type AdVoiceover = { voAsset: SceneImageAsset; captionAsset: SceneImageAsset | null };
-
 /**
- * The ad's current whole-ad voiceover (spec §5.4 bullet 5) — the
- * latest non-archived kind='vo' asset for this ad (scene_id is always
- * null for these, since generate-voiceover.ts writes one continuous
- * voiceover per ad, not per scene), plus the matching kind='caption'
- * asset if one exists. Both assets are ad-scoped, not scene-scoped,
- * unlike every other getter in this file.
+ * Per-scene voiceover (spec §5.4 bullet 5 / §5.11 bullet 5, redone to
+ * be scene-scoped — see voiceover-step.tsx). Each entry is the
+ * latest non-archived kind='vo' asset for that scene plus its
+ * matching kind='caption' asset if one exists, grouped by scene_id.
+ * Replaces the old getLatestAdVoiceover (which read scene_id IS NULL
+ * — the whole-ad shape this redo replaces).
  */
-export async function getLatestAdVoiceover(orgId: string, adId: string): Promise<AdVoiceover | null> {
+export type SceneVoiceover = { voAsset: SceneImageAsset; captionAsset: SceneImageAsset | null };
+
+export async function getSceneVoiceovers(orgId: string, adId: string): Promise<Record<string, SceneVoiceover>> {
   const service = createServiceClient();
   const { data: voAssets, error: voError } = await service
     .from("assets")
     .select("*")
     .eq("org_id", orgId)
     .eq("ad_id", adId)
-    .is("scene_id", null)
     .eq("kind", "vo")
     .eq("archived", false)
-    .order("version", { ascending: false })
-    .limit(1);
+    .not("scene_id", "is", null)
+    .order("version", { ascending: false });
   if (voError) throw new Error(voError.message);
-
-  const voAsset = voAssets?.[0];
-  if (!voAsset) return null;
 
   const { data: captionAssets, error: captionError } = await service
     .from("assets")
     .select("*")
     .eq("org_id", orgId)
     .eq("ad_id", adId)
-    .is("scene_id", null)
     .eq("kind", "caption")
     .eq("archived", false)
-    .order("version", { ascending: false })
-    .limit(1);
+    .not("scene_id", "is", null)
+    .order("version", { ascending: false });
   if (captionError) throw new Error(captionError.message);
 
-  return { voAsset, captionAsset: captionAssets?.[0] ?? null };
+  const latestCaptionBySceneId = new Map<string, SceneImageAsset>();
+  for (const asset of captionAssets ?? []) {
+    if (!asset.scene_id) continue;
+    if (!latestCaptionBySceneId.has(asset.scene_id)) latestCaptionBySceneId.set(asset.scene_id, asset);
+  }
+
+  const result: Record<string, SceneVoiceover> = {};
+  for (const asset of voAssets ?? []) {
+    if (!asset.scene_id) continue;
+    if (result[asset.scene_id]) continue; // voAssets is ordered newest-first per overall query; first hit per scene is the latest
+    result[asset.scene_id] = { voAsset: asset, captionAsset: latestCaptionBySceneId.get(asset.scene_id) ?? null };
+  }
+  return result;
+}
+
+/**
+ * The current (non-archived) `vo` asset for ONE scene, if any — used
+ * by scene-videos-actions.ts to resolve `referenceAudioUrls` for video
+ * generation. Optional by design: scene video generation must keep
+ * working with no voiceover at all (spec: "no new hard dependency").
+ */
+export async function getCurrentSceneVoiceoverAsset(orgId: string, sceneId: string): Promise<SceneImageAsset | null> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("assets")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("scene_id", sceneId)
+    .eq("kind", "vo")
+    .eq("archived", false)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+/** Jobs rows relevant to per-scene voiceover generation for this ad — same "survive reload" pattern as getActiveSceneVideoJobs. */
+export type SceneVoiceoverJob = { id: string; scene_id: string; status: string; created_at: string };
+
+export async function getActiveSceneVoiceoverJobs(orgId: string, adId: string): Promise<Record<string, SceneVoiceoverJob>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("id, scene_id, status, created_at")
+    .eq("org_id", orgId)
+    .eq("ad_id", adId)
+    .eq("kind", "generate_scene_voiceover")
+    .in("status", ["queued", "running"])
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const bySceneId: Record<string, SceneVoiceoverJob> = {};
+  for (const job of data ?? []) {
+    if (!job.scene_id) continue;
+    if (!bySceneId[job.scene_id]) bySceneId[job.scene_id] = job;
+  }
+  return bySceneId;
 }

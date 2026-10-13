@@ -41,6 +41,7 @@ export type Ad = {
     | "concept"
     | "storyboard"
     | "scene_images"
+    | "voiceover"
     | "scene_videos"
     | null;
   created_at: string;

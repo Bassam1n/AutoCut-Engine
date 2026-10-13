@@ -1,0 +1,360 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AsyncButton } from "@/components/async-button";
+import { startSceneVoiceoverJob, getVoiceoverJobStatus } from "@/lib/jobs/run-voiceover-job";
+import { listElevenLabsVoices, type ElevenLabsVoice } from "./voiceover-data";
+import { resolveSceneSpeaks } from "@/lib/video/duration";
+import type { Ad } from "../ads-data";
+import type { Scene } from "../scenes-data";
+import type { SceneVoiceover, SceneVoiceoverJob } from "../scene-videos-data";
+
+const POLL_INTERVAL_MS = 4000;
+
+/**
+ * Voiceover Studio step — a real step of its own (not a panel bolted
+ * onto Scene videos), modeled on an ElevenLabs-style text-to-speech
+ * UI: pick a voice from a real list with audio preview, edit the
+ * script that will actually be sent, generate PER SCENE.
+ *
+ * Why per-scene, not whole-ad (user-confirmed requirement): each
+ * speaking scene gets its own ElevenLabs TTS call and its own `vo`
+ * asset scoped with scene_id — this is what makes the per-scene
+ * reference-audio wiring into video generation possible at all (a
+ * single whole-ad clip has no way to line up with one scene's video
+ * generation call).
+ *
+ * The voice list and preview audio are fetched ONCE for the whole
+ * step (every scene uses the same org-wide voice catalog), while the
+ * picked voice and editable script are tracked per scene, since
+ * different scenes legitimately want different delivery/emotion.
+ */
+export function VoiceoverStep({
+  orgId,
+  brandId,
+  productId,
+  ad,
+  scenes,
+  voiceoversBySceneId,
+  activeJobsBySceneId,
+  assetUrls,
+  onContinue,
+}: {
+  orgId: string;
+  brandId: string;
+  productId: string;
+  ad: Ad;
+  scenes: Scene[];
+  voiceoversBySceneId: Record<string, SceneVoiceover>;
+  activeJobsBySceneId: Record<string, SceneVoiceoverJob>;
+  assetUrls: Record<string, string>;
+  onContinue: () => void;
+}) {
+  const [voices, setVoices] = useState<ElevenLabsVoice[] | null>(null);
+  const [voicesError, setVoicesError] = useState<string | null>(null);
+  const [isLoadingVoices, setIsLoadingVoices] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const result = await listElevenLabsVoices(orgId);
+      if (cancelled) return;
+      setIsLoadingVoices(false);
+      if (result.ok) setVoices(result.voices);
+      else setVoicesError(result.error);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
+  // brandId/productId aren't needed by this step's own actions (voice
+  // listing and voiceover generation only need orgId/sceneId), but
+  // kept in the signature for the same reason every sibling step
+  // (SceneImagesStep, SceneVideosStep) takes them — a consistent prop
+  // shape from studio-canvas.tsx, in case a future addition here
+  // (e.g. a "view in library" link) needs them.
+  void brandId;
+  void productId;
+
+  const speakingScenes = scenes.filter((scene) => resolveSceneSpeaks(ad.brief.speaking, scene));
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight">Voiceover</h2>
+        <p className="mt-1 text-sm text-foreground-muted">
+          Pick a voice, edit the line each scene will actually say, and generate a
+          separate ElevenLabs voiceover clip per speaking scene. Optional — Scene
+          videos works fine with no voiceover at all, but when a scene has one, its
+          clip is automatically used as reference audio for that scene&apos;s video.
+        </p>
+      </div>
+
+      {isLoadingVoices && <p className="text-sm text-foreground-muted">Loading voices…</p>}
+      {voicesError && (
+        <p className="rounded-lg border border-danger/40 bg-danger/5 p-3 text-sm text-danger">
+          {voicesError}
+        </p>
+      )}
+
+      {speakingScenes.length === 0 ? (
+        <p className="text-sm text-foreground-muted">
+          No speaking scenes yet — nothing to voice. Set &quot;who speaks on camera&quot;
+          in Scene videos, or add copy to a scene, then come back here.
+        </p>
+      ) : (
+        voices && (
+          <div className="flex flex-col gap-4">
+            {speakingScenes.map((scene) => (
+              <SceneVoiceoverCard
+                key={scene.id}
+                orgId={orgId}
+                scene={scene}
+                voices={voices}
+                existing={voiceoversBySceneId[scene.id] ?? null}
+                activeJob={activeJobsBySceneId[scene.id] ?? null}
+                assetUrls={assetUrls}
+              />
+            ))}
+          </div>
+        )
+      )}
+
+      <div className="flex justify-end border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={onContinue}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+        >
+          Continue to Scene videos
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SceneVoiceoverCard({
+  orgId,
+  scene,
+  voices,
+  existing,
+  activeJob,
+  assetUrls,
+}: {
+  orgId: string;
+  scene: Scene;
+  voices: ElevenLabsVoice[];
+  existing: SceneVoiceover | null;
+  activeJob: SceneVoiceoverJob | null;
+  assetUrls: Record<string, string>;
+}) {
+  const router = useRouter();
+  // Script auto-assembles from scene.copy as a starting default, but
+  // is fully editable — whatever text sits in the textarea at submit
+  // time is what's sent to ElevenLabs, not necessarily raw scene.copy
+  // (the user's #2 requirement: emotion tags, rephrasing, etc). Once
+  // a voiceover already exists, re-opening this step shows the script
+  // that was actually used last time (asset.meta.script), not
+  // scene.copy again, so an editor's prior edit isn't silently lost
+  // on reload.
+  const [script, setScript] = useState<string>(
+    (existing?.voAsset.meta?.script as string | undefined) ?? scene.copy
+  );
+  const [voiceId, setVoiceId] = useState<string>(
+    (existing?.voAsset.meta?.voiceId as string | undefined) ?? voices[0]?.voiceId ?? ""
+  );
+  const [isGenerating, setIsGenerating] = useState(Boolean(activeJob));
+  const [error, setError] = useState<string | null>(null);
+  const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(null);
+  const jobIdRef = useRef<string | null>(activeJob?.id ?? null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (!activeJob) return;
+    jobIdRef.current = activeJob.id;
+    const interval = setInterval(async () => {
+      const jobId = jobIdRef.current;
+      if (!jobId) return;
+      const status = await getVoiceoverJobStatus(orgId, jobId);
+      if (!status.ok) return;
+      if (status.status === "succeeded") {
+        clearInterval(interval);
+        setIsGenerating(false);
+        jobIdRef.current = null;
+        router.refresh();
+      } else if (status.status === "failed" || status.status === "cancelled") {
+        clearInterval(interval);
+        setIsGenerating(false);
+        jobIdRef.current = null;
+        setError(status.error ?? "Voiceover generation failed.");
+      }
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-arms only on a fresh mount/reload against an already-known active job
+  }, [activeJob?.id]);
+
+  function pollJob(jobId: string) {
+    jobIdRef.current = jobId;
+    setIsGenerating(true);
+    const interval = setInterval(async () => {
+      const currentJobId = jobIdRef.current;
+      if (!currentJobId) {
+        clearInterval(interval);
+        return;
+      }
+      const status = await getVoiceoverJobStatus(orgId, currentJobId);
+      if (!status.ok) return;
+      if (status.status === "succeeded") {
+        clearInterval(interval);
+        setIsGenerating(false);
+        jobIdRef.current = null;
+        router.refresh();
+      } else if (status.status === "failed" || status.status === "cancelled") {
+        clearInterval(interval);
+        setIsGenerating(false);
+        jobIdRef.current = null;
+        setError(status.error ?? "Voiceover generation failed.");
+      }
+    }, POLL_INTERVAL_MS);
+  }
+
+  async function onGenerate() {
+    setError(null);
+    if (!voiceId) {
+      setError("Pick a voice first.");
+      return;
+    }
+    if (!script.trim()) {
+      setError("Script is empty.");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      // Regenerating (editing the script and/or voice, then
+      // generating again) creates a NEW version of this scene's `vo`
+      // asset — never overwrites — exactly like every other asset
+      // type in this app (scene images/videos). The old version stays
+      // readable; nothing is lost.
+      const result = await startSceneVoiceoverJob(orgId, scene.id, voiceId, script);
+      if (!result.ok) {
+        setIsGenerating(false);
+        setError(result.error);
+        return;
+      }
+      pollJob(result.jobId);
+    } catch (err) {
+      setIsGenerating(false);
+      setError(err instanceof Error ? err.message : "Voiceover generation failed.");
+    }
+  }
+
+  function onPreviewVoice(voice: ElevenLabsVoice) {
+    if (!voice.previewUrl) return;
+    // Plain <audio> element playback of ElevenLabs's own preview_url —
+    // no extra API call needed, per the confirmed voice-list response
+    // shape already carrying a ready-to-play preview URL.
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+    }
+    const audio = new Audio(voice.previewUrl);
+    previewAudioRef.current = audio;
+    setPreviewingVoiceId(voice.voiceId);
+    audio.play().catch(() => {});
+    audio.onended = () => setPreviewingVoiceId((current) => (current === voice.voiceId ? null : current));
+  }
+
+  const voAudioUrl = existing ? assetUrls[existing.voAsset.storage_path] ?? null : null;
+  const srtUrl = existing?.captionAsset ? assetUrls[existing.captionAsset.storage_path] ?? null : null;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
+        {existing && <span className="text-xs text-foreground-muted">v{existing.voAsset.version}</span>}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium">Voice</label>
+        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-border-strong p-1">
+          {voices.length === 0 && (
+            <p className="p-2 text-xs text-foreground-muted">No voices available.</p>
+          )}
+          {voices.map((voice) => {
+            const isSelected = voice.voiceId === voiceId;
+            return (
+              <div
+                key={voice.voiceId}
+                className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                  isSelected ? "bg-accent-soft text-accent" : "hover:bg-border/40"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setVoiceId(voice.voiceId)}
+                  className="flex-1 text-left"
+                >
+                  <span className="font-medium">{voice.name}</span>
+                  {(voice.accent || voice.gender) && (
+                    <span className="ml-1.5 text-foreground-muted">
+                      {[voice.gender, voice.accent].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </button>
+                {voice.previewUrl && (
+                  <button
+                    type="button"
+                    onClick={() => onPreviewVoice(voice)}
+                    title="Preview this voice"
+                    className="shrink-0 rounded-full border border-border-strong px-2 py-0.5 text-[10px] font-medium transition-colors hover:bg-border/40"
+                  >
+                    {previewingVoiceId === voice.voiceId ? "▶ Playing" : "▶ Preview"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium">Script</label>
+        <p className="text-xs text-foreground-muted">
+          Pre-filled from this scene&apos;s copy — edit freely (add emotion tags,
+          rephrase, etc). Whatever is here is exactly what gets sent to ElevenLabs.
+        </p>
+        <textarea
+          value={script}
+          onChange={(e) => setScript(e.target.value)}
+          rows={3}
+          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        />
+      </div>
+
+      {error && <p className="text-xs text-danger">{error}</p>}
+
+      {voAudioUrl && (
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <audio src={voAudioUrl} controls className="w-full" />
+          {srtUrl && (
+            <a href={srtUrl} download className="self-start text-xs font-medium text-accent hover:underline">
+              Download SRT
+            </a>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <AsyncButton
+          onClick={onGenerate}
+          isPending={isGenerating}
+          pendingLabel="Generating..."
+          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+        >
+          {existing ? "Regenerate" : "Generate voiceover"}
+        </AsyncButton>
+      </div>
+    </div>
+  );
+}

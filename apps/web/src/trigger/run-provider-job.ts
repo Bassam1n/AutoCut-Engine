@@ -69,6 +69,7 @@ export const runProviderJob = task({
       endpoint: string;
       prompt: string;
       referenceImageUrls?: string[];
+      referenceAudioUrls?: string[];
       aspectRatio?: string;
       extra?: Record<string, unknown>;
       priceUnit: "per_image" | "per_video" | "per_second";
@@ -103,6 +104,7 @@ export const runProviderJob = task({
       model: jobPayload.endpoint,
       prompt: jobPayload.prompt,
       referenceImageUrls: jobPayload.referenceImageUrls,
+      referenceAudioUrls: jobPayload.referenceAudioUrls,
       aspectRatio: jobPayload.aspectRatio,
       extra: jobPayload.extra,
     };

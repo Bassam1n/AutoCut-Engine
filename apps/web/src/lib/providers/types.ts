@@ -14,6 +14,16 @@ export type SubmitParams = {
   prompt: string;
   /** Reference image URLs, in priority order (spec §5.6). */
   referenceImageUrls?: string[];
+  /**
+   * Reference audio URL(s) for models that can use a voiceover clip to
+   * drive lip-sync/pacing during video generation — the "use reference
+   * audio while creating the video" requirement. Only a few kie.ai
+   * video models document a `reference_audio_urls` field
+   * (bytedance/seedance-2, bytedance/seedance-2-5, kling-3.0/video);
+   * every other model's adapter mapping treats this as a no-op
+   * (omitted entirely), never guessed as universal. See KieAdapter.submit().
+   */
+  referenceAudioUrls?: string[];
   aspectRatio?: string;
   /** Provider- and model-specific extras, validated against the model's parameter_schema before this call. */
   extra?: Record<string, unknown>;

@@ -145,6 +145,61 @@ describe("KieAdapter", () => {
     expect(body.input.reference_image_urls).toBeUndefined();
   });
 
+  it("submit() maps referenceAudioUrls to input.reference_audio_urls for the 3 confirmed models (bytedance/seedance-2, bytedance/seedance-2-5, kling-3.0/video)", async () => {
+    for (const model of ["bytedance/seedance-2", "bytedance/seedance-2-5", "kling-3.0/video"]) {
+      const fetchSpy = mockFetchOnce(createTaskSuccess);
+      global.fetch = fetchSpy;
+      const adapter = new KieAdapter("test-key");
+
+      await adapter.submit({
+        kind: "video",
+        model,
+        prompt: "animate this scene",
+        referenceAudioUrls: ["https://example.com/scene-vo.mp3"],
+      });
+
+      const [, init] = fetchSpy.mock.calls[0];
+      const body = JSON.parse(init.body);
+      expect(body.input.reference_audio_urls).toEqual(["https://example.com/scene-vo.mp3"]);
+    }
+  });
+
+  it("submit() omits reference_audio_urls entirely for a model not in the confirmed list, even when referenceAudioUrls is passed — never guessed as universal", async () => {
+    const fetchSpy = mockFetchOnce(createTaskSuccess);
+    global.fetch = fetchSpy;
+    const adapter = new KieAdapter("test-key");
+
+    await adapter.submit({
+      kind: "video",
+      model: "kling-2.6/image-to-video",
+      prompt: "animate this scene",
+      referenceAudioUrls: ["https://example.com/scene-vo.mp3"],
+      referenceImageUrls: ["https://example.com/scene-image.png"],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.input.reference_audio_urls).toBeUndefined();
+    expect(body.input.image_urls).toEqual(["https://example.com/scene-image.png"]);
+  });
+
+  it("submit() omits reference_audio_urls for a confirmed model when referenceAudioUrls is not passed at all (optional, no hard dependency)", async () => {
+    const fetchSpy = mockFetchOnce(createTaskSuccess);
+    global.fetch = fetchSpy;
+    const adapter = new KieAdapter("test-key");
+
+    await adapter.submit({
+      kind: "video",
+      model: "kling-3.0/video",
+      prompt: "animate this scene",
+      referenceImageUrls: ["https://example.com/scene-image.png"],
+    });
+
+    const [, init] = fetchSpy.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.input.reference_audio_urls).toBeUndefined();
+  });
+
   it("poll() maps state=waiting to queued", async () => {
     global.fetch = mockFetchOnce(recordInfoQueued);
     const adapter = new KieAdapter("test-key");

@@ -10,6 +10,7 @@ export type StudioStep =
   | "concept"
   | "storyboard"
   | "scene_images"
+  | "voiceover"
   | "scene_videos";
 
 // "brief" is deliberately not in this list — it's the manual fallback
@@ -22,6 +23,20 @@ export type StudioStep =
 // The spec goes straight from the storyboard table into Scene images
 // (M6) and then Scene videos (M7, now built too) — "scene_videos" is
 // positioned right after "scene_images" below, matching spec order.
+//
+// "voiceover" sits BETWEEN scene_images and scene_videos, not after
+// scene_videos. Reasoning (user-confirmed requirement: a real,
+// per-scene ElevenLabs text-to-speech step of its own, used as
+// reference audio for video generation): scene video generation can
+// optionally pull a scene's current voiceover clip in as
+// reference_audio_urls (see scene-videos-actions.ts/kie.ts). For that
+// wiring to actually have something to pick up on a normal first pass
+// through the Studio, voiceover needs to exist before video
+// generation runs, not after. It stays fully optional either way —
+// Scene videos works with no voiceover at all — but positioning it
+// first means the common path (generate voiceover, then generate
+// video) gets the reference-audio benefit without the editor having
+// to double back a step.
 const STEPS: { id: Exclude<StudioStep, "brief">; label: string }[] = [
   { id: "scripts", label: "Scripts" },
   { id: "dial_in", label: "Fine-tune the brief" },
@@ -29,6 +44,7 @@ const STEPS: { id: Exclude<StudioStep, "brief">; label: string }[] = [
   { id: "concept", label: "Concept & cast" },
   { id: "storyboard", label: "Storyboard" },
   { id: "scene_images", label: "Scene images" },
+  { id: "voiceover", label: "Voiceover" },
   { id: "scene_videos", label: "Scene videos" },
 ];
 

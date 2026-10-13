@@ -79,12 +79,34 @@ export class KieAdapter implements ProviderAdapter {
         ? params.referenceImageUrls?.[0]
         : params.referenceImageUrls;
 
+    // Reference audio ("use reference audio while creating the
+    // video" — per-scene ElevenLabs voiceover clip fed into video
+    // generation). Confirmed in this project's own payload testing
+    // for exactly these 3 kie.ai video models under the field name
+    // `reference_audio_urls` (plural array, same shape as
+    // reference_image_urls): bytedance/seedance-2,
+    // bytedance/seedance-2-5, kling-3.0/video. Every other model —
+    // image models included — has no confirmed reference-audio field
+    // at all, so this is a no-op for them: the field is simply never
+    // added to the body, never guessed as a universal parameter the
+    // way referenceImageUrls's own `image_urls` default behaves.
+    const REFERENCE_AUDIO_MODELS = new Set([
+      "bytedance/seedance-2",
+      "bytedance/seedance-2-5",
+      "kling-3.0/video",
+    ]);
+    const referenceAudioValue =
+      REFERENCE_AUDIO_MODELS.has(params.model) && params.referenceAudioUrls?.length
+        ? params.referenceAudioUrls
+        : undefined;
+
     const body: Record<string, unknown> = {
       model: params.model,
       input: {
         prompt: params.prompt,
         ...(params.aspectRatio ? { aspect_ratio: params.aspectRatio } : {}),
         ...(referenceImageValue ? { [referenceImageField]: referenceImageValue } : {}),
+        ...(referenceAudioValue ? { reference_audio_urls: referenceAudioValue } : {}),
         ...params.extra,
       },
     };

@@ -16,6 +16,7 @@ export type StudioStepValue =
   | "concept"
   | "storyboard"
   | "scene_images"
+  | "voiceover"
   | "scene_videos";
 
 /**

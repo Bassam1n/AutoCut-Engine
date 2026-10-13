@@ -29,6 +29,8 @@ export type RunJobPayload = {
   endpoint: string;
   prompt: string;
   referenceImageUrls?: string[];
+  /** Per-scene voiceover clip's signed URL, fed to kie.ai as `reference_audio_urls` for the 3 confirmed models only (see KieAdapter.submit()) — optional, never a hard dependency on video generation. */
+  referenceAudioUrls?: string[];
   aspectRatio?: string;
   extra?: Record<string, unknown>;
   priceUnit: "per_image" | "per_video" | "per_second";

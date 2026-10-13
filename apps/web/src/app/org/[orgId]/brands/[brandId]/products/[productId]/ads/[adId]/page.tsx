@@ -8,7 +8,13 @@ import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data
 import { getModelOptions } from "@/lib/providers/models-data";
 import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
 import { getSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
-import { getSceneVideos, getArchivedSceneVideos, getActiveSceneVideoJobs, getLatestAdVoiceover } from "../scene-videos-data";
+import {
+  getSceneVideos,
+  getArchivedSceneVideos,
+  getActiveSceneVideoJobs,
+  getSceneVoiceovers,
+  getActiveSceneVoiceoverJobs,
+} from "../scene-videos-data";
 import { StudioCanvas } from "./studio-canvas";
 import { CostBreakdown } from "./cost-breakdown";
 
@@ -73,6 +79,8 @@ async function GatedCanvas({
   const sceneVideosBySceneId = await getSceneVideos(orgId, adId);
   const archivedSceneVideosBySceneId = await getArchivedSceneVideos(orgId, adId);
   const activeSceneVideoJobsBySceneId = await getActiveSceneVideoJobs(orgId, adId);
+  const sceneVoiceoversBySceneId = await getSceneVoiceovers(orgId, adId);
+  const activeSceneVoiceoverJobsBySceneId = await getActiveSceneVoiceoverJobs(orgId, adId);
 
   const sceneImagePaths = [
     ...Object.values(sceneImagesBySceneId).flat(),
@@ -80,23 +88,25 @@ async function GatedCanvas({
   ].map((a) => a.storage_path);
   const sceneImageUrls = await getAssetSignedUrlsByPath(sceneImagePaths);
 
-  const adVoiceover = await getLatestAdVoiceover(orgId, adId);
+  const voiceoverAssetPaths = Object.values(sceneVoiceoversBySceneId).flatMap((vo) => [
+    vo.voAsset.storage_path,
+    ...(vo.captionAsset ? [vo.captionAsset.storage_path] : []),
+  ]);
 
   const sceneVideoPaths = [
     ...Object.values(sceneVideosBySceneId).flat(),
     ...Object.values(archivedSceneVideosBySceneId).flat(),
-    ...(adVoiceover ? [adVoiceover.voAsset, ...(adVoiceover.captionAsset ? [adVoiceover.captionAsset] : [])] : []),
   ].map((a) => a.storage_path);
   // Scene videos needs both its own video asset URLs AND every scene
   // image URL (the "pick which image to animate" picker) — merged
   // into one signed-URL map so scene-videos-step.tsx can look either
   // kind of asset's storage_path up through a single prop. The
-  // voiceover audio/SRT paths ride along in the same map rather than
-  // a separate one, since VoiceoverPanel is rendered from within
-  // scene-videos-step.tsx and already receives this prop.
+  // per-scene voiceover audio/SRT paths ride along in the same map
+  // too, since the Voiceover step is rendered from studio-canvas.tsx
+  // alongside Scene videos and both read from assetUrls.
   const sceneVideoUrls = {
     ...sceneImageUrls,
-    ...(await getAssetSignedUrlsByPath(sceneVideoPaths)),
+    ...(await getAssetSignedUrlsByPath([...sceneVideoPaths, ...voiceoverAssetPaths])),
   };
 
   return (
@@ -121,7 +131,8 @@ async function GatedCanvas({
       archivedSceneVideosBySceneId={archivedSceneVideosBySceneId}
       activeSceneVideoJobsBySceneId={activeSceneVideoJobsBySceneId}
       sceneVideoUrls={sceneVideoUrls}
-      adVoiceover={adVoiceover}
+      sceneVoiceoversBySceneId={sceneVoiceoversBySceneId}
+      activeSceneVoiceoverJobsBySceneId={activeSceneVoiceoverJobsBySceneId}
     />
   );
 }

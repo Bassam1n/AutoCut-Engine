@@ -7,28 +7,49 @@ import { requireOrgMember } from "@/lib/auth";
 import type { generateVoiceover } from "@/trigger/generate-voiceover";
 
 /**
- * Entry point for whole-ad voiceover generation (spec §5.4 bullet 5 /
- * §6 M10). Mirrors lib/jobs/run-job.ts's startProviderJob/getJobStatus
- * pattern exactly, but calls request_ad_voiceover() (migration 46)
- * instead of request_scene_regen() — that RPC requires a scene id and
- * can't represent a whole-ad, not-scene-scoped voiceover job — and
- * triggers the separate generate-voiceover task (not run-provider-job,
- * which is built for kie/fal's submit-then-poll shape that ElevenLabs's
- * synchronous TTS/STT calls don't fit).
+ * Entry point for PER-SCENE voiceover generation (spec §5.4 bullet 5 /
+ * §5.11 bullet 5). Reuses request_scene_regen() (migration 14) — the
+ * same scene-scoped job-creation RPC Scene images and Scene videos
+ * already use — rather than adding a new RPC.
+ *
+ * Why reuse, not a new RPC: request_scene_regen's signature is
+ * (target_scene_id, regen_kind, regen_payload jsonb). regen_payload is
+ * arbitrary jsonb with no schema constraint on its shape, so
+ * {voiceId, script} fits exactly the same way {orgId, provider,
+ * endpoint, prompt, ...} already does for generate_scene_video. The
+ * RPC's only real job — verify org membership from the scene id,
+ * resolve org_id/ad_id, insert a jobs row with a fresh idempotency
+ * key — is identical for a voiceover request. The one thing checked
+ * for a genuine gap: does it carry scene_id? Yes — target_scene_id is
+ * the RPC's own first argument, and it writes jobs.scene_id directly.
+ * There is no concrete gap request_scene_regen can't cover, so no new
+ * migration was added (migration 46's now-unused request_ad_voiceover
+ * stays in place, untouched, as dead-but-harmless schema per the
+ * task's own instruction not to edit a shipped migration).
  */
 export type StartVoiceoverJobResult = { ok: true; jobId: string } | { ok: false; error: string };
 
-export async function startAdVoiceoverJob(
+export async function startSceneVoiceoverJob(
   orgId: string,
-  adId: string,
-  voiceId?: string
+  sceneId: string,
+  voiceId: string,
+  script: string
 ): Promise<StartVoiceoverJobResult> {
   await requireOrgMember(orgId);
 
+  const trimmedScript = script.trim();
+  if (!trimmedScript) {
+    return { ok: false, error: "Script is empty." };
+  }
+  if (!voiceId) {
+    return { ok: false, error: "Pick a voice first." };
+  }
+
   const supabase = await createClient();
-  const { data: job, error } = await supabase.rpc("request_ad_voiceover", {
-    target_ad_id: adId,
-    regen_payload: voiceId ? { voiceId } : {},
+  const { data: job, error } = await supabase.rpc("request_scene_regen", {
+    target_scene_id: sceneId,
+    regen_kind: "generate_scene_voiceover",
+    regen_payload: { voiceId, script: trimmedScript },
   });
 
   if (error || !job) {

@@ -1,67 +1,58 @@
 import { task, logger } from "@trigger.dev/sdk";
 import { createClient } from "@supabase/supabase-js";
-import { resolveSceneSpeaks } from "@/lib/video/duration";
 import { groupWordsIntoCues, cuesToSrt, type TimestampedWord } from "@/lib/captions/srt";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
 
 /**
- * M10 voiceover slice (spec §5.4 bullet 5 / §6 M10) — "ElevenLabs
- * voiceover... word-level timestamps from speech-to-text drive
- * caption timing... a downloadable SRT." Scope for THIS task is
- * exactly: one whole-ad voiceover audio file + word-level timestamps
- * + an SRT file, saved as real `assets` rows. No ffmpeg, no video
- * compositing, no burned-in captions, no render/assembly service —
- * those are explicitly out of scope for this pass (see the task
- * brief); this task stops the moment the SRT asset is written.
+ * Voiceover redo (spec §5.4 bullet 5 / §5.11 bullet 5 — "Voiceover and
+ * captions"). This is now PER-SCENE, not whole-ad: one ElevenLabs TTS
+ * call per speaking scene, each producing its own `vo` asset and its
+ * own `caption` asset, both scoped with a real `scene_id` (the prior
+ * pass left scene_id null — a whole-ad job that could never feed
+ * per-scene reference audio into video generation, which is exactly
+ * what the user asked for and the prior pass didn't build).
  *
- * Deliberately NOT built on run-provider-job.ts's ProviderAdapter/
- * SubmitParams/PollResult shape. That shape exists for kie/fal's
- * submit-an-external-job-then-poll-for-completion pattern (spec
- * §5.3). ElevenLabs's TTS and STT endpoints are both plain synchronous
- * HTTP calls — the result comes back directly in the response body,
- * no external task id, nothing to poll — so forcing them through
- * submit()/poll() would mean inventing a fake external id and a fake
- * poll loop for an API that was never asynchronous in the first
- * place. This is a separate, plain task() (not schedules.task() —
- * triggered on demand per ad, never on a cron) that calls both
- * ElevenLabs endpoints inline in one run.
+ * The job this task runs against is created by request_scene_regen()
+ * (migration 14) — the same scene-scoped RPC Scene images/videos
+ * already use — with kind='generate_scene_voiceover' and a payload of
+ * {voiceId, script}. No new RPC: request_scene_regen already takes an
+ * arbitrary jsonb payload and already resolves org_id/ad_id from the
+ * scene id, which is everything a per-scene voiceover job needs. See
+ * run-voiceover-job.ts's docblock for the fuller "why not a new RPC"
+ * reasoning.
+ *
+ * `script` is whatever the editor submitted from the voiceover step's
+ * editable textarea — NOT necessarily scene.copy verbatim (the editor
+ * can add emotion tags, rephrase, etc). This task trusts the payload's
+ * script exactly as given; it never re-reads or substitutes
+ * scene.copy itself.
+ *
+ * Still deliberately NOT built on run-provider-job.ts's ProviderAdapter/
+ * SubmitParams/PollResult shape — see the prior version of this
+ * docblock's reasoning, unchanged: ElevenLabs's TTS and STT endpoints
+ * are both plain synchronous HTTP calls with no external task id to
+ * poll, so forcing them through submit()/poll() would mean inventing a
+ * fake poll loop for an API that was never asynchronous.
  *
  * Service-role Supabase client constructed the same way
- * run-provider-job.ts does (see getServiceClient() below) — not via
- * lib/supabase/service.ts, which is guarded by `import "server-only"`
- * (a Next.js-bundler-only package that doesn't resolve inside a
- * Trigger.dev task process).
+ * run-provider-job.ts does — not via lib/supabase/service.ts, which is
+ * guarded by `import "server-only"` and doesn't resolve inside a
+ * Trigger.dev task process.
  */
 
 type GenerateVoiceoverPayload = {
   jobId: string;
 };
 
-// ElevenLabs voice selection (spec leaves this as this build's call —
-// "your call whether to add an optional per-ad chosen voice_id field
-// to AdBrief, or just hardcode a documented default"). Hardcoded for
-// v1: no voice-picker UI exists anywhere in this app yet (Settings >
-// Keys only stores/verifies the API key itself), and adding one is a
-// real UI surface — a model/voice picker, previewing voices, etc —
-// that's out of scope for this pass, which is "voiceover audio +
-// timestamps + SRT," not "a voice-selection feature." "Rachel" is
-// ElevenLabs's own long-standing default/example voice id, documented
-// across their own API examples — picked as a safe, known-good
-// default rather than inventing an arbitrary id. If/when a voice
-// picker is built, this becomes AdBrief.voiceId (optional, same
-// pattern as `speaking`) with this constant as the fallback when unset.
-const DEFAULT_ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // "Rachel"
-
 const ELEVENLABS_TTS_MODEL = "eleven_multilingual_v2";
 const ELEVENLABS_STT_MODEL = "scribe_v2";
 
 export const generateVoiceover = task({
   id: "generate-voiceover",
-  // TTS + STT run sequentially, each a real external HTTP call against
-  // a sentence- to paragraph-length ad script — generous ceiling, not
-  // a target, matching run-provider-job.ts's own "ceiling well above
-  // any real job" reasoning.
-  maxDuration: 300,
+  // TTS + STT run sequentially against one scene's line — generous
+  // ceiling, not a target, matching run-provider-job.ts's own
+  // reasoning for its maxDuration.
+  maxDuration: 180,
   run: async (payload: GenerateVoiceoverPayload) => {
     const supabase = getServiceClient();
 
@@ -80,8 +71,8 @@ export const generateVoiceover = task({
       return { skipped: true, status: job.status };
     }
 
-    if (!job.ad_id) {
-      await failJob(supabase, job.id, "VALIDATION", "Voiceover job has no ad association.");
+    if (!job.ad_id || !job.scene_id) {
+      await failJob(supabase, job.id, "VALIDATION", "Voiceover job has no scene association.");
       return { ok: false };
     }
 
@@ -89,7 +80,7 @@ export const generateVoiceover = task({
 
     const { data: ad, error: adError } = await supabase
       .from("ads")
-      .select("id, org_id, brief")
+      .select("id, org_id")
       .eq("id", job.ad_id)
       .maybeSingle();
     if (adError || !ad) {
@@ -97,45 +88,21 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
-    const { data: scenes, error: scenesError } = await supabase
-      .from("scenes")
-      .select("id, copy, speaker, idx")
-      .eq("ad_id", job.ad_id)
-      .order("idx");
-    if (scenesError) {
-      await failJob(supabase, job.id, "VALIDATION", scenesError.message);
+    const jobPayload = (job.payload ?? {}) as { voiceId?: unknown; script?: unknown };
+    const voiceId = typeof jobPayload.voiceId === "string" ? jobPayload.voiceId : null;
+    const script = typeof jobPayload.script === "string" ? jobPayload.script.trim() : "";
+
+    if (!voiceId) {
+      await failJob(supabase, job.id, "VALIDATION", "No voice selected for this voiceover job.");
+      return { ok: false };
+    }
+    if (!script) {
+      await failJob(supabase, job.id, "VALIDATION", "No script text to voice.");
       return { ok: false };
     }
 
-    const brief = (ad.brief ?? {}) as { speaking?: "everyone" | "nobody" | "some_scenes" };
-
-    // Whole-ad voiceover text: every speaking scene's copy, in scene
-    // order, joined into one continuous script (spec: "ONE continuous
-    // voiceover per ad"). resolveSceneSpeaks() is the same tested
-    // logic Scene videos already uses — reused exactly, not
-    // reimplemented, so "does this scene speak" can never drift
-        // between the two features.
-    const speakingLines = (scenes ?? [])
-      .filter((scene) => resolveSceneSpeaks(brief.speaking, scene))
-      .map((scene) => scene.copy.trim())
-      .filter((line) => line.length > 0);
-
-    if (speakingLines.length === 0) {
-      await failJob(supabase, job.id, "VALIDATION", "No speaking scenes — nothing to voice.");
-      return { ok: false };
-    }
-
-    const fullScript = speakingLines.join(" ");
-
-    const voiceId = job.payload && typeof job.payload === "object" && "voiceId" in job.payload
-      ? String((job.payload as { voiceId?: unknown }).voiceId ?? DEFAULT_ELEVENLABS_VOICE_ID)
-      : DEFAULT_ELEVENLABS_VOICE_ID;
-
-    // Same spend guard every other paid call in this app goes
-    // through (claim_paid_job) before any real provider cost is
-    // incurred — a paused org must not be able to reach ElevenLabs
-    // just because the request came in through this task instead of
-    // the inline generate-reference-image.ts path.
+    // Same spend guard every other paid call in this app goes through
+    // (claim_paid_job) before any real provider cost is incurred.
     const { error: claimError } = await supabase.rpc("claim_paid_job", { target_org_id: ad.org_id });
     if (claimError) {
       await failJob(supabase, job.id, "SPEND_LIMIT", spendLimitMessage(claimError.message));
@@ -151,7 +118,7 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
-    // --- 1. TTS: one call for the whole ad's script. ---
+    // --- 1. TTS: one call for this scene's (editor-edited) script. ---
     let audioBytes: ArrayBuffer;
     try {
       const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -161,7 +128,7 @@ export const generateVoiceover = task({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: fullScript,
+          text: script,
           model_id: ELEVENLABS_TTS_MODEL,
         }),
       });
@@ -178,7 +145,7 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
-    const audioStoragePath = `${ad.org_id}/renders/${job.ad_id}/voiceover/${Date.now()}.mp3`;
+    const audioStoragePath = `${ad.org_id}/renders/${job.ad_id}/${job.scene_id}/vo/${Date.now()}.mp3`;
     const { error: audioUploadError } = await supabase.storage
       .from("renders")
       .upload(audioStoragePath, audioBytes, { contentType: "audio/mpeg" });
@@ -187,16 +154,32 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
+    // Versioned asset, same pattern finalizeSceneVideoJob/generate-
+    // reference-image.ts use for images and videos: compute the next
+    // version from this scene+kind's existing rows, never overwrite —
+    // editing the script and regenerating creates a NEW version, the
+    // old one stays (archived, never deleted).
+    const { data: existingVoVersions } = await supabase
+      .from("assets")
+      .select("version")
+      .eq("org_id", ad.org_id)
+      .eq("scene_id", job.scene_id)
+      .eq("kind", "vo")
+      .order("version", { ascending: false })
+      .limit(1);
+    const nextVoVersion = (existingVoVersions?.[0]?.version ?? 0) + 1;
+
     const { data: voAssetRow, error: voAssetError } = await supabase
       .from("assets")
       .insert({
         org_id: ad.org_id,
         ad_id: job.ad_id,
-        scene_id: null, // whole-ad voiceover, not scene-scoped.
+        scene_id: job.scene_id,
         kind: "vo",
+        version: nextVoVersion,
         storage_path: audioStoragePath,
         source: `elevenlabs:${ELEVENLABS_TTS_MODEL}`,
-        meta: { voiceId, script: fullScript },
+        meta: { voiceId, script },
       })
       .select("id")
       .single();
@@ -205,16 +188,24 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
-    // price_table has no confirmed elevenlabs row (checked
-    // supabase/seed_price_table.sql — no elevenlabs entry exists, and
-    // no genuinely documented ElevenLabs per-character TTS / per-minute
-    // STT price was found anywhere in this repo to seed one from). Per
-    // this project's own precedent for z-image (seed_price_table.sql's
-    // comment: "has no confirmed price yet... no number was invented
-    // for it"), this is left as an honest gap rather than a guessed
-    // number — record_spend_event still runs (so the real event is
-    // durably logged for the spend guard and the cost breakdown UI),
-    // just at $0 until a real price is confirmed and seeded.
+    // Mirrors scene-images-actions.ts's own rule (spec §5.8): a new
+    // voiceover take means any video built from the OLD reference
+    // audio is now stale — archived (never deleted) rather than left
+    // looking current. Restorable via the same "archived videos"
+    // strip (scene-videos-step.tsx) the image-regen rule already uses.
+    await supabase
+      .from("assets")
+      .update({ archived: true })
+      .eq("org_id", ad.org_id)
+      .eq("scene_id", job.scene_id)
+      .eq("kind", "video")
+      .eq("archived", false);
+
+    // price_table has no confirmed elevenlabs row (same honest gap as
+    // the prior pass — no documented per-character TTS price was
+    // found to seed one from). record_spend_event still runs so the
+    // real event is durably logged, just at $0 until a real price is
+    // confirmed and seeded.
     const { data: ttsPrice } = await supabase
       .from("price_table")
       .select("usd")
@@ -228,7 +219,7 @@ export const generateVoiceover = task({
       target_ad_id: job.ad_id,
       target_provider: "elevenlabs",
       target_model: ELEVENLABS_TTS_MODEL,
-      target_usd_est: (ttsPrice?.usd ?? 0) * fullScript.length,
+      target_usd_est: (ttsPrice?.usd ?? 0) * script.length,
       target_kind: "voiceover:tts",
     });
 
@@ -274,7 +265,7 @@ export const generateVoiceover = task({
     const cues = groupWordsIntoCues(timestampedWords);
     const srtText = cuesToSrt(cues);
 
-    const srtStoragePath = `${ad.org_id}/renders/${job.ad_id}/voiceover/${Date.now()}.srt`;
+    const srtStoragePath = `${ad.org_id}/renders/${job.ad_id}/${job.scene_id}/vo/${Date.now()}.srt`;
     const { error: srtUploadError } = await supabase.storage
       .from("renders")
       .upload(srtStoragePath, srtText, { contentType: "text/plain" });
@@ -283,13 +274,24 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
+    const { data: existingCaptionVersions } = await supabase
+      .from("assets")
+      .select("version")
+      .eq("org_id", ad.org_id)
+      .eq("scene_id", job.scene_id)
+      .eq("kind", "caption")
+      .order("version", { ascending: false })
+      .limit(1);
+    const nextCaptionVersion = (existingCaptionVersions?.[0]?.version ?? 0) + 1;
+
     const { data: captionAssetRow, error: captionAssetError } = await supabase
       .from("assets")
       .insert({
         org_id: ad.org_id,
         ad_id: job.ad_id,
-        scene_id: null,
+        scene_id: job.scene_id,
         kind: "caption",
+        version: nextCaptionVersion,
         storage_path: srtStoragePath,
         source: `elevenlabs:${ELEVENLABS_STT_MODEL}`,
         meta: { words: timestampedWords, cues, voAssetId: voAssetRow.id },
@@ -301,9 +303,7 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
-    // STT per-minute pricing is the same honest gap as TTS above — no
-    // confirmed ElevenLabs STT price exists anywhere in this repo, so
-    // this records the real event at $0 rather than inventing a number.
+    // STT per-minute pricing is the same honest gap as TTS above.
     const { data: sttPrice } = await supabase
       .from("price_table")
       .select("usd")

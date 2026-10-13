@@ -22,6 +22,7 @@ import { getAd } from "./ads-data";
 import type { AdBrief } from "./ads-data";
 import { getScenes, type Scene } from "./scenes-data";
 import { getActiveRulesForAd } from "./scene-images-data";
+import { getCurrentSceneVoiceoverAsset } from "./scene-videos-data";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
@@ -377,12 +378,32 @@ async function startGenerationWithMotionPlan(
 
   const priceUnit = priceUnitForVideoEndpoint(model.endpoint);
 
+  // Per-scene reference audio (user-confirmed requirement: "use
+  // reference audio while creating the video"), OPTIONAL — a scene
+  // with no current voiceover generates its video exactly as before,
+  // no hard dependency. When this scene has a current (non-archived)
+  // kind='vo' asset, its signed URL is fetched the same way
+  // sourceImageUrl already is for images, and passed through as
+  // referenceAudioUrls — KieAdapter.submit() is the only place that
+  // decides whether a given model's payload actually uses it (see
+  // kie.ts: only bytedance/seedance-2, bytedance/seedance-2-5 and
+  // kling-3.0/video map it to a real field; every other model is a
+  // no-op for this parameter, not a guess).
+  let referenceAudioUrls: string[] | undefined;
+  const voAsset = await getCurrentSceneVoiceoverAsset(orgId, scene.id);
+  if (voAsset) {
+    const service = createServiceClient();
+    const { data: signed } = await service.storage.from("renders").createSignedUrl(voAsset.storage_path, 3600);
+    if (signed?.signedUrl) referenceAudioUrls = [signed.signedUrl];
+  }
+
   const jobResult = await startProviderJob(orgId, scene.id, "generate_scene_video", {
     orgId,
     provider: model.provider,
     endpoint: model.endpoint,
     prompt: promptResult.prompt,
     referenceImageUrls: [sourceImageUrl],
+    referenceAudioUrls,
     // 9:16 was only ever baked into the prompt TEXT (e.g. "...9:16
     // vertical"), never sent as a real request parameter. That's a
     // text hint, not a constraint — seedance-2-5's own aspect_ratio
