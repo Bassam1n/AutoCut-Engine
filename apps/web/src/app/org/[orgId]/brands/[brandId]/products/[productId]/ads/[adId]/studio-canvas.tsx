@@ -21,6 +21,7 @@ import type { ModelOption } from "@/lib/providers/models-data";
 import type { SceneImageAsset } from "../scene-images-data";
 import type { SceneVideoJob, SceneVoiceover, SceneVoiceoverJob } from "../scene-videos-data";
 import type { SceneSpendTotal } from "../spend-data";
+import type { ActiveRevision } from "./revision-data";
 
 export function StudioCanvas({
   orgId,
@@ -48,6 +49,7 @@ export function StudioCanvas({
   sceneVoiceoversBySceneId,
   activeSceneVoiceoverJobsBySceneId,
   sceneSpendBySceneId,
+  revision,
 }: {
   orgId: string;
   brandId: string;
@@ -75,6 +77,8 @@ export function StudioCanvas({
   sceneVoiceoversBySceneId: Record<string, SceneVoiceover>;
   activeSceneVoiceoverJobsBySceneId: Record<string, SceneVoiceoverJob>;
   sceneSpendBySceneId: Record<string, SceneSpendTotal>;
+  /** Reviewer's requested changes from the latest review round, if any. */
+  revision: ActiveRevision | null;
 }) {
   const [step, setStep] = useState<StudioStep>(() => ad.current_step ?? initialStep(ad, scripts, scenes));
   const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
@@ -114,6 +118,28 @@ export function StudioCanvas({
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-8">
         {costBreakdown}
+        {revision && (
+          <div className="card flex flex-col gap-2 border-danger/40 p-4">
+            <p className="text-sm font-semibold text-danger">Changes requested (review round {revision.roundNo})</p>
+            {revision.overallNote && <p className="text-sm">{revision.overallNote}</p>}
+            <p className="text-xs text-foreground-muted">
+              {Object.keys(revision.notes).length > 0
+                ? `${Object.keys(revision.notes).length} scene${Object.keys(revision.notes).length === 1 ? "" : "s"} flagged. Each one is highlighted with the reviewer's note, already filled into its feedback box.`
+                : "No individual scenes were flagged."}{" "}
+              When you&apos;re done, move the task back to In review.
+            </p>
+            {Object.keys(revision.notes).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => goToStep("scene_images")} className="btn-secondary btn-sm">
+                  Scene images
+                </button>
+                <button type="button" onClick={() => goToStep("scene_videos")} className="btn-secondary btn-sm">
+                  Scene videos
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {step === "scripts" && (
           <ScriptsStep
             orgId={orgId}
@@ -192,6 +218,7 @@ export function StudioCanvas({
             imageModelOptions={imageModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
             sceneSpendBySceneId={sceneSpendBySceneId}
+            revisionNotes={revision?.notes ?? {}}
             onContinue={() => goToStep("voiceover")}
           />
         )}
@@ -223,6 +250,7 @@ export function StudioCanvas({
             videoModelOptions={videoModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
             sceneSpendBySceneId={sceneSpendBySceneId}
+            revisionNotes={revision?.notes ?? {}}
             onContinue={() => goToStep("export")}
           />
         )}

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireOrgAdmin, requireOrgMember } from "@/lib/auth";
+import { notifySlackOfStage } from "./stage-notify";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type CreateTaskResult = { ok: true; taskId: string } | { ok: false; error: string };
@@ -14,6 +15,7 @@ export type TaskInput = {
   assigneeId: string | null;
   dueDate: string | null;
   columnId: string;
+  adId: string | null;
 };
 
 function refresh(orgId: string) {
@@ -34,6 +36,7 @@ function cleanInput(input: TaskInput) {
       assignee_id: input.assigneeId || null,
       due_date: input.dueDate || null,
       column_id: input.columnId,
+      ad_id: input.adId || null,
     },
   } as const;
 }
@@ -54,6 +57,7 @@ export async function createTask(orgId: string, input: TaskInput, position: numb
     .single();
   if (error) return { ok: false, error: error.message };
 
+  await notifySlackOfStage(orgId, data.id);
   refresh(orgId);
   return { ok: true, taskId: data.id };
 }
@@ -64,9 +68,11 @@ export async function updateTask(orgId: string, taskId: string, input: TaskInput
   if ("error" in cleaned) return { ok: false, error: cleaned.error! };
 
   const supabase = await createClient();
+  const { data: before } = await supabase.from("tasks").select("column_id").eq("org_id", orgId).eq("id", taskId).maybeSingle();
   const { error } = await supabase.from("tasks").update(cleaned.row).eq("org_id", orgId).eq("id", taskId);
   if (error) return { ok: false, error: error.message };
 
+  if (before && before.column_id !== cleaned.row.column_id) await notifySlackOfStage(orgId, taskId);
   refresh(orgId);
   return { ok: true };
 }
@@ -92,6 +98,7 @@ export async function moveTask(orgId: string, taskId: string, columnId: string, 
   });
   if (error) return { ok: false, error: error.message };
 
+  await notifySlackOfStage(orgId, taskId);
   refresh(orgId);
   return { ok: true };
 }
@@ -176,6 +183,17 @@ export async function removeColumn(orgId: string, columnId: string): Promise<Act
   await requireOrgAdmin(orgId);
   const supabase = await createClient();
   const { error } = await supabase.rpc("archive_task_column", { target_column_id: columnId });
+  if (error) return { ok: false, error: error.message };
+
+  refresh(orgId);
+  return { ok: true };
+}
+
+/** The assignee or an owner/admin links (or, with null, unlinks) the ad a task produces. */
+export async function linkTaskAd(orgId: string, taskId: string, adId: string | null): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("link_task_ad", { target_task_id: taskId, target_ad_id: adId });
   if (error) return { ok: false, error: error.message };
 
   refresh(orgId);

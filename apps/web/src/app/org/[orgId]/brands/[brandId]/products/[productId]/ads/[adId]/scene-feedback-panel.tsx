@@ -33,6 +33,7 @@ export function SceneFeedbackPanel({
   orgId,
   adId,
   sceneId,
+  initialFeedbackText,
   allowReferenceAttachment,
   onSubmit,
   onVideoJobStarted,
@@ -40,6 +41,8 @@ export function SceneFeedbackPanel({
   orgId: string;
   adId: string;
   sceneId: string;
+  /** A reviewer's requested change (review round): prefills the box and opens the panel. */
+  initialFeedbackText?: string;
   /** Image feedback only — submitVideoFeedback has no attachment param. */
   allowReferenceAttachment: boolean;
   onSubmit: (args: {
@@ -51,9 +54,9 @@ export function SceneFeedbackPanel({
   /** Video feedback only — called with the returned jobId so the card's own poller can take over. */
   onVideoJobStarted?: (jobId: string) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(Boolean(initialFeedbackText));
   const [mode, setMode] = useState<FeedbackMode>("tweak");
-  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackText, setFeedbackText] = useState(initialFeedbackText ?? "");
   const [remember, setRemember] = useState(false);
   const [attachedPath, setAttachedPath] = useState<string | null>(null);
   const [isUploadingRef, setIsUploadingRef] = useState(false);

@@ -43,6 +43,7 @@ export function SceneImagesStep({
   imageModelOptions,
   providersWithKeys,
   sceneSpendBySceneId,
+  revisionNotes,
   onContinue,
 }: {
   orgId: string;
@@ -57,6 +58,8 @@ export function SceneImagesStep({
   imageModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
   sceneSpendBySceneId?: Record<string, SceneSpendTotal>;
+  /** scene_id -> reviewer's requested change, from the latest review round. */
+  revisionNotes: Record<string, string>;
   onContinue: () => void;
 }) {
   const [imageModel, setImageModel] = useState<ModelOption | null>(imageModelOptions[0] ?? null);
@@ -226,6 +229,7 @@ export function SceneImagesStep({
               omitted={omittedNotes[scene.id] ?? []}
               feedbackModel={imageModel}
               onDropLibraryAsset={(assetId) => onDropLibraryAsset(scene.id, assetId)}
+              revisionNote={revisionNotes[scene.id]}
             />
           ))}
         </div>
@@ -334,6 +338,7 @@ function SceneImageCard({
   omitted,
   feedbackModel,
   onDropLibraryAsset,
+  revisionNote,
 }: {
   orgId: string;
   brandId: string;
@@ -353,6 +358,7 @@ function SceneImageCard({
   feedbackModel: ModelOption | null;
   /** Spec §5.9: "Drag a library item into a scene" — called with the dropped library item's underlying asset id. */
   onDropLibraryAsset: (assetId: string) => void;
+  revisionNote?: string;
 }) {
   const [count, setCount] = useState(1);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -381,7 +387,7 @@ function SceneImageCard({
   const [override, setOverride] = useState(scene.image_prompt_override);
 
   return (
-    <div className="card-inset flex flex-col gap-3 p-4">
+    <div className={`card-inset flex flex-col gap-3 p-4 ${revisionNote ? "border-danger/50" : ""}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <input
@@ -545,6 +551,11 @@ function SceneImageCard({
         />
       )}
 
+      {revisionNote && (
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+          <span className="font-semibold">Reviewer:</span> {revisionNote}
+        </p>
+      )}
       <FeedbackUpload orgId={orgId} brandId={brandId} productId={productId} ad={ad} scene={scene} />
 
       {images.length > 0 && (
@@ -552,6 +563,7 @@ function SceneImageCard({
           orgId={orgId}
           adId={ad.id}
           sceneId={scene.id}
+          initialFeedbackText={revisionNote}
           allowReferenceAttachment
           onSubmit={({ mode, feedbackText, remember, attachedReferenceStoragePath }) => {
             if (!feedbackModel) {

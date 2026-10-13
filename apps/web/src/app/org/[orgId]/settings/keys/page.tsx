@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { requireOrgOwner } from "@/lib/auth";
 import { getOrgSecrets } from "./keys-data";
 import { KeysScreen } from "./keys-screen";
+import { SlackSettings } from "./slack-settings";
+import { createClient } from "@/lib/supabase/server";
 
 export default function KeysPage({
   params,
@@ -48,7 +50,16 @@ async function GatedKeysScreen({
   const { orgId } = await params;
   await requireOrgOwner(orgId);
 
-  const secrets = await getOrgSecrets(orgId);
+  const supabase = await createClient();
+  const [secrets, { data: slackConnected }] = await Promise.all([
+    getOrgSecrets(orgId),
+    supabase.rpc("slack_connected", { target_org_id: orgId }),
+  ]);
 
-  return <KeysScreen orgId={orgId} secrets={secrets} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <KeysScreen orgId={orgId} secrets={secrets} />
+      <SlackSettings orgId={orgId} connected={Boolean(slackConnected)} />
+    </div>
+  );
 }

@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { Avatar } from "@/components/avatar";
-import type { BoardData, Task, TaskColumn } from "./board-data";
+import type { BoardAd, BoardData, Task, TaskColumn, TaskRound } from "./board-data";
 import {
   addColumn,
   archiveTask,
   createTask,
+  linkTaskAd,
   moveTask,
   removeColumn,
   renameColumn,
@@ -206,6 +208,7 @@ export function TaskBoard({
                 brandName={task.brand_id ? brandName.get(task.brand_id) : undefined}
                 assignee={task.assignee_id ? personById.get(task.assignee_id) : undefined}
                 showAssignee={manage}
+                round={data.latestRounds[task.id]}
                 finished={column.stage === "done" || column.stage === "delivered"}
                 isDragging={dragTaskId === task.id}
                 onDragStart={() => setDragTaskId(task.id)}
@@ -233,6 +236,7 @@ export function TaskBoard({
           manage={manage}
           data={data}
           brandName={openTask.brand_id ? brandName.get(openTask.brand_id) : undefined}
+          round={data.latestRounds[openTask.id]}
           onMove={(columnId) => {
             move(openTask.id, columnId, null);
             setOpenTask(null);
@@ -428,6 +432,7 @@ function TaskCard({
   brandName,
   assignee,
   showAssignee,
+  round,
   finished,
   isDragging,
   onDragStart,
@@ -439,6 +444,7 @@ function TaskCard({
   brandName?: string;
   assignee?: { id: string; email: string; name: string | null; avatarPath?: string | null };
   showAssignee: boolean;
+  round?: TaskRound;
   finished: boolean;
   isDragging: boolean;
   onDragStart: () => void;
@@ -469,8 +475,11 @@ function TaskCard({
       className={`card card-interactive flex flex-col gap-2 p-3 text-left ${isDragging ? "opacity-40" : ""}`}
     >
       <span className="text-sm font-medium leading-snug">{task.title}</span>
-      {(brandName || task.due_date || (showAssignee && assignee)) && (
+      {(brandName || task.due_date || (showAssignee && assignee) || round?.status === "changes_requested") && (
         <span className="flex flex-wrap items-center gap-1.5 text-xs">
+          {round?.status === "changes_requested" && (
+            <span className="rounded-full bg-danger-soft px-2 py-0.5 font-medium text-danger">Changes requested</span>
+          )}
           {brandName && (
             <span className="rounded-full bg-accent-soft px-2 py-0.5 font-medium text-accent">{brandName}</span>
           )}
@@ -502,6 +511,7 @@ function TaskSheet({
   manage,
   data,
   brandName,
+  round,
   newPosition,
   onMove,
   onClose,
@@ -512,6 +522,7 @@ function TaskSheet({
   manage: boolean;
   data: BoardData;
   brandName?: string;
+  round?: TaskRound;
   newPosition?: number;
   onMove: (columnId: string) => void;
   onClose: () => void;
@@ -524,6 +535,12 @@ function TaskSheet({
   const [assigneeId, setAssigneeId] = useState(task?.assignee_id ?? "");
   const [dueDate, setDueDate] = useState(task?.due_date ?? "");
   const [columnId, setColumnId] = useState(task?.column_id ?? defaultColumnId ?? data.columns[0]?.id ?? "");
+  const [adId, setAdId] = useState(task?.ad_id ?? "");
+
+  // Only ads from the task's brand (any brand when the task has none).
+  const brandForAds = brandId || task?.brand_id || "";
+  const adOptions = brandForAds ? data.ads.filter((a) => a.brand_id === brandForAds) : data.ads;
+  const linkedAd = data.ads.find((a) => a.id === (task?.ad_id ?? adId));
 
   // With a brand picked, only users assigned to that brand can take the task.
   const eligiblePeople = brandId
@@ -540,6 +557,7 @@ function TaskSheet({
       assigneeId: assigneeId || null,
       dueDate: dueDate || null,
       columnId,
+      adId: adId || null,
     };
     startTransition(async () => {
       const result = task
@@ -582,6 +600,19 @@ function TaskSheet({
               </>
             )}
           </dl>
+          <AdLinkField
+            orgId={orgId}
+            taskId={task.id}
+            ads={adOptions}
+            linkedAd={linkedAd}
+            onError={setError}
+          />
+          {round?.status === "changes_requested" && (
+            <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger">
+              Changes requested in round {round.round_no}. Open the ad to see the reviewer&apos;s notes on each scene.
+            </p>
+          )}
+          {error && <p className="text-xs text-danger">{error}</p>}
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium">Move to</span>
             <select
@@ -692,6 +723,26 @@ function TaskSheet({
             </select>
           </label>
         </div>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium">Ad</span>
+          <select value={adId} onChange={(e) => setAdId(e.target.value)} disabled={isPending} className="field">
+            <option value="">No ad linked</option>
+            {adOptions.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {task && round && (
+          <p className="flex flex-wrap items-center gap-2 text-xs text-foreground-muted">
+            Review round {round.round_no}:{" "}
+            {round.status === "open" ? "waiting for review" : round.status === "approved" ? "approved" : "changes requested"}
+            <Link href={`/org/${orgId}/review/${round.id}`} className="font-medium text-accent hover:underline">
+              {round.status === "open" ? "Review now" : "View review"}
+            </Link>
+          </p>
+        )}
         {brandId && eligiblePeople.length === 0 && (
           <p className="text-xs text-foreground-muted">
             No users are assigned to this brand yet. Assign one from the brand&apos;s edit page.
@@ -764,5 +815,67 @@ function AddColumn({ orgId, onError }: { orgId: string; onError: (error: string 
         </button>
       </div>
     </form>
+  );
+}
+
+function adHref(orgId: string, ad: BoardAd): string {
+  return `/org/${orgId}/brands/${ad.brand_id}/products/${ad.product_id}/ads/${ad.id}`;
+}
+
+/** Users link the ad they're working on to their task (link_task_ad allows the assignee). */
+function AdLinkField({
+  orgId,
+  taskId,
+  ads,
+  linkedAd,
+  onError,
+}: {
+  orgId: string;
+  taskId: string;
+  ads: BoardAd[];
+  linkedAd: BoardAd | undefined;
+  onError: (error: string | null) => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [value, setValue] = useState(linkedAd?.id ?? "");
+  const current = ads.find((a) => a.id === value) ?? (linkedAd?.id === value ? linkedAd : undefined);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium">Ad</span>
+      <div className="flex gap-2">
+        <select
+          aria-label="Linked ad"
+          value={value}
+          disabled={isPending}
+          onChange={(e) => {
+            const next = e.target.value;
+            const previous = value;
+            setValue(next);
+            onError(null);
+            startTransition(async () => {
+              const result = await linkTaskAd(orgId, taskId, next || null);
+              if (!result.ok) {
+                setValue(previous);
+                onError(result.error);
+              }
+            });
+          }}
+          className="field min-w-0 flex-1"
+        >
+          <option value="">No ad linked</option>
+          {ads.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        {current && (
+          <Link href={adHref(orgId, current)} className="btn-secondary btn-sm shrink-0">
+            Open ad
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }

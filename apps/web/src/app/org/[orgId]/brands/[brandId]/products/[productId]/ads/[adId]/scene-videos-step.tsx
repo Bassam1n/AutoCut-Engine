@@ -64,6 +64,7 @@ export function SceneVideosStep({
   videoModelOptions,
   providersWithKeys,
   sceneSpendBySceneId,
+  revisionNotes,
   onContinue,
 }: {
   orgId: string;
@@ -79,6 +80,8 @@ export function SceneVideosStep({
   videoModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
   sceneSpendBySceneId?: Record<string, SceneSpendTotal>;
+  /** scene_id -> reviewer's requested change, from the latest review round. */
+  revisionNotes: Record<string, string>;
   onContinue: () => void;
 }) {
   const [videoModel, setVideoModel] = useState<ModelOption | null>(videoModelOptions[0] ?? null);
@@ -199,6 +202,7 @@ export function SceneVideosStep({
               onRegisterTrigger={registerTrigger}
               isSelected={selectedSceneIds.has(scene.id)}
               onToggleSelected={() => toggleSelected(scene.id)}
+              revisionNote={revisionNotes[scene.id]}
             />
           ))}
         </div>
@@ -349,6 +353,7 @@ function SceneVideoCard({
   onRegisterTrigger,
   isSelected,
   onToggleSelected,
+  revisionNote,
 }: {
   orgId: string;
   brandId: string;
@@ -366,6 +371,7 @@ function SceneVideoCard({
   onRegisterTrigger?: (sceneId: string, trigger: () => void) => void;
   isSelected?: boolean;
   onToggleSelected?: () => void;
+  revisionNote?: string;
 }) {
   const router = useRouter();
   const [selectedImageId, setSelectedImageId] = useState<string | null>(images[images.length - 1]?.id ?? null);
@@ -596,7 +602,7 @@ function SceneVideoCard({
   }
 
   return (
-    <div className="card-inset flex flex-col gap-3 p-4">
+    <div className={`card-inset flex flex-col gap-3 p-4 ${revisionNote ? "border-danger/50" : ""}`}>
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-xs font-medium text-foreground-muted">
           {onToggleSelected && (
@@ -714,11 +720,18 @@ function SceneVideoCard({
         </div>
       )}
 
+      {revisionNote && (
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+          <span className="font-semibold">Reviewer:</span> {revisionNote}
+        </p>
+      )}
+
       {videos.length > 0 && (
         <SceneFeedbackPanel
           orgId={orgId}
           adId={ad.id}
           sceneId={scene.id}
+          initialFeedbackText={revisionNote}
           allowReferenceAttachment={false}
           onSubmit={({ mode, feedbackText, remember }) => {
             if (!videoModel) {

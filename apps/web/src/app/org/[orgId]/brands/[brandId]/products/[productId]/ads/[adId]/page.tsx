@@ -18,6 +18,7 @@ import {
 import { StudioCanvas } from "./studio-canvas";
 import { CostBreakdown } from "./cost-breakdown";
 import { getAdSpend, groupSpendByScene } from "../spend-data";
+import { getActiveRevision } from "./revision-data";
 
 // Scene-image generation (scene-images-actions.ts) polls a provider
 // synchronously and can run well past Vercel's default function
@@ -122,6 +123,8 @@ async function GatedCanvas({
     ...(await getAssetSignedUrlsByPath([...sceneVideoPaths, ...voiceoverAssetPaths])),
   };
 
+  const revision = await getActiveRevision(orgId, adId);
+
   return (
     <StudioCanvas
       orgId={orgId}
@@ -149,6 +152,7 @@ async function GatedCanvas({
       sceneVoiceoversBySceneId={sceneVoiceoversBySceneId}
       activeSceneVoiceoverJobsBySceneId={activeSceneVoiceoverJobsBySceneId}
       sceneSpendBySceneId={sceneSpendBySceneId}
+      revision={revision}
     />
   );
 }

@@ -11,6 +11,7 @@ export type SidebarInfo = {
   userEmail: string;
   fullName: string | null;
   avatarPath: string | null;
+  unreadNotifications: number;
 };
 
 export async function getSidebarInfo(orgId: string): Promise<SidebarInfo | null> {
@@ -21,7 +22,7 @@ export async function getSidebarInfo(orgId: string): Promise<SidebarInfo | null>
   } = await supabase.auth.getUser();
   if (!user?.email) return null;
 
-  const [orgResult, memberResult, profileResult] = await Promise.all([
+  const [orgResult, memberResult, profileResult, unreadResult] = await Promise.all([
     supabase.from("orgs").select("name").eq("id", orgId).maybeSingle(),
     supabase
       .from("org_members")
@@ -34,6 +35,11 @@ export async function getSidebarInfo(orgId: string): Promise<SidebarInfo | null>
       .select("full_name, avatar_path")
       .eq("user_id", user.id)
       .maybeSingle(),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .is("read_at", null),
   ]);
 
   if (!orgResult.data) return null;
@@ -48,5 +54,6 @@ export async function getSidebarInfo(orgId: string): Promise<SidebarInfo | null>
     userEmail: user.email,
     fullName: profileResult.data?.full_name ?? null,
     avatarPath: profileResult.data?.avatar_path ?? null,
+    unreadNotifications: unreadResult.count ?? 0,
   };
 }

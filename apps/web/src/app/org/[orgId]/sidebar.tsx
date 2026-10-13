@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar } from "@/components/avatar";
 import { ROLE_LABELS } from "@/lib/roles";
 import { CreateAdButton } from "./create-ad-button";
+import { NotificationBell } from "./notification-bell";
 import type { SidebarInfo } from "./sidebar-data";
 
 export function Sidebar({
@@ -66,9 +67,10 @@ export function Sidebar({
           priority
           className="h-10 w-auto shrink-0"
         />
-        <span className="truncate text-sm font-semibold tracking-tight">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">
           {info.orgName}
         </span>
+        <NotificationBell orgId={orgId} unreadCount={info.unreadNotifications} />
       </div>
 
       {info.canCreateAds && (
