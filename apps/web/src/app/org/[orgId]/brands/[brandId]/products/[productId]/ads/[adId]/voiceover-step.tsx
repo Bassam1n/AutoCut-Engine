@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AsyncButton } from "@/components/async-button";
 import { startSceneVoiceoverJob, getVoiceoverJobStatus } from "@/lib/jobs/run-voiceover-job";
-import { searchElevenLabsVoices, getElevenLabsVoiceById, type ElevenLabsVoice } from "./voiceover-data";
+import {
+  searchElevenLabsVoices,
+  getElevenLabsVoiceById,
+  addSharedVoiceToAccount,
+  type ElevenLabsVoice,
+} from "./voiceover-data";
 import { resolveSceneSpeaks } from "@/lib/video/duration";
 import type { Ad } from "../ads-data";
 import type { Scene } from "../scenes-data";
@@ -56,6 +61,9 @@ export function VoiceoverStep({
   const [voices, setVoices] = useState<ElevenLabsVoice[] | null>(null);
   const [voicesError, setVoicesError] = useState<string | null>(null);
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
+  const [hasMoreVoices, setHasMoreVoices] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [isLoadingMoreVoices, setIsLoadingMoreVoices] = useState(false);
 
   // Filters an editor can combine: free-text search, gender, age, and
   // premade-vs-community (ElevenLabs' full shared library — hundreds
@@ -85,14 +93,50 @@ export function VoiceoverStep({
       });
       if (cancelled) return;
       setIsLoadingVoices(false);
-      if (result.ok) setVoices(result.voices);
-      else setVoicesError(result.error);
+      if (result.ok) {
+        setVoices(result.voices);
+        setHasMoreVoices(result.hasMore);
+        setNextPageToken(result.nextPageToken);
+      } else {
+        setVoices([]);
+        setHasMoreVoices(false);
+        setNextPageToken(null);
+        setVoicesError(result.error);
+      }
     }, 300); // debounced — free-text search re-queries ElevenLabs on every keystroke otherwise
     return () => {
       cancelled = true;
       clearTimeout(handle);
     };
+    // Any filter change starts a fresh page-1 search — only "Load
+    // more" below continues pagination within the current filter set.
   }, [orgId, searchText, genderFilter, ageFilter, voiceType, sortByMostUsed]);
+
+  // A single page (max page_size=100) under a narrow filter (e.g.
+  // community + female + young) can come back thin or empty even
+  // though more matches exist on later pages — ElevenLabs's own
+  // library has hundreds of voices, not 100. This follows has_more/
+  // next_page_token to keep going, appending rather than replacing.
+  async function onLoadMoreVoices() {
+    if (!nextPageToken) return;
+    setIsLoadingMoreVoices(true);
+    const result = await searchElevenLabsVoices(orgId, {
+      search: searchText.trim() || undefined,
+      gender: genderFilter || undefined,
+      age: ageFilter || undefined,
+      voiceType,
+      sortByMostUsed,
+      nextPageToken,
+    });
+    setIsLoadingMoreVoices(false);
+    if (result.ok) {
+      setVoices((prev) => [...(prev ?? []), ...result.voices]);
+      setHasMoreVoices(result.hasMore);
+      setNextPageToken(result.nextPageToken);
+    } else {
+      setVoicesError(result.error);
+    }
+  }
 
   // brandId/productId aren't needed by this step's own actions (voice
   // listing and voiceover generation only need orgId/sceneId), but
@@ -174,6 +218,21 @@ export function VoiceoverStep({
         <p className="rounded-lg border border-danger/40 bg-danger/5 p-3 text-sm text-danger">
           {voicesError}
         </p>
+      )}
+      {!isLoadingVoices && !voicesError && voices && voices.length === 0 && (
+        <p className="text-sm text-foreground-muted">
+          No voices matched these filters — try loosening gender/age or switching library.
+        </p>
+      )}
+      {!isLoadingVoices && hasMoreVoices && (
+        <button
+          type="button"
+          onClick={onLoadMoreVoices}
+          disabled={isLoadingMoreVoices}
+          className="self-start text-xs font-medium text-accent hover:underline disabled:opacity-50"
+        >
+          {isLoadingMoreVoices ? "Loading more…" : "Load more voices"}
+        </button>
       )}
 
       {speakingScenes.length === 0 ? (
@@ -257,6 +316,43 @@ function SceneVoiceoverCard({
   const [voiceIdError, setVoiceIdError] = useState<string | null>(null);
   const [addedVoices, setAddedVoices] = useState<ElevenLabsVoice[]>([]);
 
+  // Selecting a community/shared-library voice (publicOwnerId set)
+  // isn't immediately usable for generation — ElevenLabs requires it
+  // be added to the account first, which mints a NEW voice_id (see
+  // voiceover-data.ts's docblock). isAddingVoice tracks that one-time
+  // add call so the voice list can show a pending state and onGenerate
+  // can be blocked until it resolves.
+  const [isAddingVoice, setIsAddingVoice] = useState(false);
+  const [addVoiceError, setAddVoiceError] = useState<string | null>(null);
+
+  async function onSelectVoice(voice: ElevenLabsVoice) {
+    setAddVoiceError(null);
+    if (!voice.publicOwnerId) {
+      setVoiceId(voice.voiceId);
+      return;
+    }
+    // Already added earlier this session (addedVoices tracks it with
+    // publicOwnerId cleared once added) — just select it.
+    const alreadyAdded = addedVoices.find((v) => v.voiceId === voice.voiceId && !v.publicOwnerId);
+    if (alreadyAdded) {
+      setVoiceId(alreadyAdded.voiceId);
+      return;
+    }
+    setIsAddingVoice(true);
+    try {
+      const result = await addSharedVoiceToAccount(orgId, voice.publicOwnerId, voice.voiceId, voice.name);
+      if (!result.ok) {
+        setAddVoiceError(result.error);
+        return;
+      }
+      const addedVoice: ElevenLabsVoice = { ...voice, voiceId: result.voiceId, publicOwnerId: null };
+      setAddedVoices((prev) => [addedVoice, ...prev]);
+      setVoiceId(result.voiceId);
+    } finally {
+      setIsAddingVoice(false);
+    }
+  }
+
   async function onAddVoiceById() {
     setVoiceIdError(null);
     const id = voiceIdInput.trim();
@@ -269,8 +365,11 @@ function SceneVoiceoverCard({
         return;
       }
       setAddedVoices((prev) => (prev.some((v) => v.voiceId === result.voice.voiceId) ? prev : [result.voice, ...prev]));
-      setVoiceId(result.voice.voiceId);
       setVoiceIdInput("");
+      // A shared-library match (publicOwnerId set) still needs the
+      // same add-to-account step as a voice picked from the Community
+      // search results — same reasoning as onSelectVoice below.
+      await onSelectVoice(result.voice);
     } finally {
       setIsLookingUpVoiceId(false);
     }
@@ -329,6 +428,10 @@ function SceneVoiceoverCard({
 
   async function onGenerate() {
     setError(null);
+    if (isAddingVoice) {
+      setError("Still adding that voice to your account — try again in a moment.");
+      return;
+    }
     if (!voiceId) {
       setError("Pick a voice first.");
       return;
@@ -402,6 +505,7 @@ function SceneVoiceoverCard({
           </AsyncButton>
         </div>
         {voiceIdError && <p className="text-xs text-danger">{voiceIdError}</p>}
+        {addVoiceError && <p className="text-xs text-danger">{addVoiceError}</p>}
         <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-border-strong p-1">
           {displayedVoices.length === 0 && (
             <p className="p-2 text-xs text-foreground-muted">No voices available.</p>
@@ -417,10 +521,14 @@ function SceneVoiceoverCard({
               >
                 <button
                   type="button"
-                  onClick={() => setVoiceId(voice.voiceId)}
-                  className="flex-1 text-left"
+                  onClick={() => onSelectVoice(voice)}
+                  disabled={isAddingVoice}
+                  className="flex-1 text-left disabled:opacity-50"
                 >
                   <span className="font-medium">{voice.name}</span>
+                  {voice.publicOwnerId && (
+                    <span className="ml-1.5 text-[10px] text-foreground-muted">(community)</span>
+                  )}
                   {(voice.accent || voice.gender) && (
                     <span className="ml-1.5 text-foreground-muted">
                       {[voice.gender, voice.accent].filter(Boolean).join(" · ")}
