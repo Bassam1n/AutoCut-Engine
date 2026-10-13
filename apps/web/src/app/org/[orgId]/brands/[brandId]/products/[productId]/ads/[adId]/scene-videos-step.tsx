@@ -27,6 +27,11 @@ import type { SceneVideoJob } from "../scene-videos-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 
 const POLL_INTERVAL_MS = 4000; // Video jobs can run minutes-long (spec §5.7: up to ~20 minutes) — a few-second interval is frequent enough to feel responsive without hammering the DB, same order of magnitude as run-provider-job.ts's own 4s poll delay against the provider.
+const STAGGER_MS = 1000; // Same stagger scene-images-step.tsx uses for its own Generate All — starts jobs about a second apart rather than all at once.
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * Scene videos Studio step (spec §5.7). Per scene: pick a generated
@@ -73,7 +78,68 @@ export function SceneVideosStep({
   onContinue: () => void;
 }) {
   const [videoModel, setVideoModel] = useState<ModelOption | null>(videoModelOptions[0] ?? null);
+  const [selectedSceneIds, setSelectedSceneIds] = useState<Set<string>>(new Set());
+  const [isStaggering, setIsStaggering] = useState(false);
   const returnToPath = `/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`;
+
+  // Bulk generation (user feedback: scene videos is the single biggest
+  // wait in the whole pipeline — ~20 min jobs clicked one scene at a
+  // time — same staggered "Generate All" pattern scene-images-step.tsx
+  // already proved). Each card registers its own onGenerate closure
+  // here; a scene whose motion preflight stops just shows its existing
+  // stop-message card as normal (user-confirmed: don't block the rest
+  // of the batch on one scene needing a manual "Animate this instead"
+  // decision).
+  const triggersRef = useRef<Map<string, () => void>>(new Map());
+  function registerTrigger(sceneId: string, trigger: () => void) {
+    triggersRef.current.set(sceneId, trigger);
+  }
+
+  function eligibleSceneIds(): string[] {
+    return scenes
+      .filter((s) => {
+        const hasImage = (imagesBySceneId[s.id] ?? []).length > 0;
+        const hasVideo = (videosBySceneId[s.id] ?? []).length > 0;
+        const isActive = Boolean(activeJobsBySceneId[s.id]);
+        return hasImage && !hasVideo && !isActive;
+      })
+      .map((s) => s.id);
+  }
+
+  async function staggeredGenerate(sceneIds: string[]) {
+    for (let i = 0; i < sceneIds.length; i++) {
+      if (i > 0) await sleep(STAGGER_MS);
+      triggersRef.current.get(sceneIds[i])?.();
+    }
+  }
+
+  async function onGenerateAll() {
+    setIsStaggering(true);
+    try {
+      await staggeredGenerate(eligibleSceneIds());
+    } finally {
+      setIsStaggering(false);
+    }
+  }
+
+  async function onGenerateSelected() {
+    setIsStaggering(true);
+    try {
+      const eligible = new Set(eligibleSceneIds());
+      await staggeredGenerate(scenes.filter((s) => selectedSceneIds.has(s.id) && eligible.has(s.id)).map((s) => s.id));
+    } finally {
+      setIsStaggering(false);
+    }
+  }
+
+  function toggleSelected(sceneId: string) {
+    setSelectedSceneIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sceneId)) next.delete(sceneId);
+      else next.add(sceneId);
+      return next;
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -99,6 +165,13 @@ export function SceneVideosStep({
         />
       )}
 
+      <GenerateAllBar
+        isStaggering={isStaggering}
+        selectedCount={selectedSceneIds.size}
+        onGenerateAll={onGenerateAll}
+        onGenerateSelected={onGenerateSelected}
+      />
+
       {scenes.length === 0 ? (
         <p className="text-sm text-foreground-muted">No scenes yet.</p>
       ) : (
@@ -117,6 +190,9 @@ export function SceneVideosStep({
               activeJob={activeJobsBySceneId[scene.id] ?? null}
               assetUrls={assetUrls}
               videoModel={videoModel}
+              onRegisterTrigger={registerTrigger}
+              isSelected={selectedSceneIds.has(scene.id)}
+              onToggleSelected={() => toggleSelected(scene.id)}
             />
           ))}
         </div>
@@ -131,6 +207,44 @@ export function SceneVideosStep({
           Continue to Export
         </button>
       </div>
+    </div>
+  );
+}
+
+function GenerateAllBar({
+  isStaggering,
+  selectedCount,
+  onGenerateAll,
+  onGenerateSelected,
+}: {
+  isStaggering: boolean;
+  selectedCount: number;
+  onGenerateAll: () => void;
+  onGenerateSelected: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background-raised/50 p-3">
+      <span className="text-xs text-foreground-muted">
+        Starts eligible scenes (has an image, no video yet, not already generating) about a
+        second apart.
+      </span>
+      <AsyncButton
+        onClick={onGenerateAll}
+        isPending={isStaggering}
+        pendingLabel="Starting..."
+        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+      >
+        Generate All
+      </AsyncButton>
+      <AsyncButton
+        onClick={onGenerateSelected}
+        isPending={isStaggering}
+        disabled={selectedCount === 0}
+        pendingLabel="Starting..."
+        className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+      >
+        Generate Selected{selectedCount > 0 ? ` (${selectedCount})` : ""}
+      </AsyncButton>
     </div>
   );
 }
@@ -225,6 +339,9 @@ function SceneVideoCard({
   activeJob,
   assetUrls,
   videoModel,
+  onRegisterTrigger,
+  isSelected,
+  onToggleSelected,
 }: {
   orgId: string;
   brandId: string;
@@ -237,6 +354,10 @@ function SceneVideoCard({
   activeJob: SceneVideoJob | null;
   assetUrls: Record<string, string>;
   videoModel: ModelOption | null;
+  /** Registers this card's onGenerate so "Generate All"/"Generate Selected" (parent-level, staggered) can trigger it without lifting this card's entire generation state up — same pattern scene-images-step.tsx avoids by keeping per-scene state local and only exposing the one callback a bulk action needs. */
+  onRegisterTrigger?: (sceneId: string, trigger: () => void) => void;
+  isSelected?: boolean;
+  onToggleSelected?: () => void;
 }) {
   const router = useRouter();
   const [selectedImageId, setSelectedImageId] = useState<string | null>(images[images.length - 1]?.id ?? null);
@@ -408,6 +529,15 @@ function SceneVideoCard({
     }
   }
 
+  // Exposes this card's onGenerate to the parent's "Generate All"/
+  // "Generate Selected" bulk actions — re-registers whenever
+  // onGenerate's own closure changes (selectedImageId/duration/
+  // videoModel) so a bulk trigger always calls the current version,
+  // never a stale one captured on first mount.
+  useEffect(() => {
+    onRegisterTrigger?.(scene.id, onGenerate);
+  });
+
   /**
    * "Animate this instead" — spec §5.7's "offer to animate what the
    * moment can still do," accepted explicitly by the editor rather
@@ -460,7 +590,18 @@ function SceneVideoCard({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
+        <span className="flex items-center gap-2 text-xs font-medium text-foreground-muted">
+          {onToggleSelected && (
+            <input
+              type="checkbox"
+              checked={Boolean(isSelected)}
+              onChange={onToggleSelected}
+              className="h-3.5 w-3.5 accent-accent"
+              aria-label={`Select scene ${scene.idx + 1} for bulk generation`}
+            />
+          )}
+          Scene {scene.idx + 1}
+        </span>
       </div>
 
       <p className="text-xs text-foreground-muted">{scene.visual || "No visual yet."}</p>
