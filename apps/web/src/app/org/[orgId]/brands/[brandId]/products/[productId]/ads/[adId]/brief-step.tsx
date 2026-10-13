@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { saveBrief } from "../ads-actions";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import type { Ad, AdBrief } from "../ads-data";
+import { buttonVariants } from "@/components/button";
 
 const MAX_HOOKS = 3;
 
@@ -154,7 +155,7 @@ export function BriefStep({
         type="button"
         onClick={onSave}
         disabled={isPending}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        className={`self-start ${buttonVariants.primary}`}
       >
         {isPending ? <LoadingIndicator label="Saving..." /> : "Save & continue"}
       </button>

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { Customer } from "./customers-data";
 import { createCustomer, updateCustomer } from "./customers-actions";
+import { buttonVariants } from "@/components/button";
 
 export function CustomerScreen({
   orgId,
@@ -47,7 +48,7 @@ export function CustomerScreen({
         <button
           type="button"
           onClick={() => setShowNewForm(true)}
-          className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={`self-start ${buttonVariants.primary}`}
         >
           Add audience profile
         </button>
@@ -239,7 +240,7 @@ function CustomerForm({
         <button
           type="submit"
           disabled={disabled}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          className={buttonVariants.primary}
         >
           {submitLabel}
         </button>

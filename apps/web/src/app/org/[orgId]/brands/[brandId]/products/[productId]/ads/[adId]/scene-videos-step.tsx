@@ -26,6 +26,7 @@ import type { SceneImageAsset } from "../scene-images-data";
 import type { SceneVideoJob } from "../scene-videos-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 import type { SceneSpendTotal } from "../spend-data";
+import { buttonVariants } from "@/components/button";
 
 const POLL_INTERVAL_MS = 4000; // Video jobs can run minutes-long (spec §5.7: up to ~20 minutes) — a few-second interval is frequent enough to feel responsive without hammering the DB, same order of magnitude as run-provider-job.ts's own 4s poll delay against the provider.
 const STAGGER_MS = 1000; // Same stagger scene-images-step.tsx uses for its own Generate All — starts jobs about a second apart rather than all at once.
@@ -207,7 +208,7 @@ export function SceneVideosStep({
         <button
           type="button"
           onClick={onContinue}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={buttonVariants.primary}
         >
           Continue to Export
         </button>

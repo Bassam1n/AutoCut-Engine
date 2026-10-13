@@ -15,6 +15,7 @@ import { resolveSceneSpeaks } from "@/lib/video/duration";
 import type { Ad, AdBrief } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneVoiceover, SceneVoiceoverJob } from "../scene-videos-data";
+import { buttonVariants } from "@/components/button";
 
 const POLL_INTERVAL_MS = 4000;
 const STAGGER_MS = 1000; // Same stagger scene-images-step.tsx/scene-videos-step.tsx use for their own Generate All.
@@ -339,7 +340,7 @@ export function VoiceoverStep({
         <button
           type="button"
           onClick={onContinue}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={buttonVariants.primary}
         >
           Continue to Scene videos
         </button>

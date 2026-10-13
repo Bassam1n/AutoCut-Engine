@@ -4,6 +4,7 @@ import { Suspense, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ApiKeyProvider, OrgSecretRow } from "./keys-data";
 import { saveProviderKey } from "./keys-actions";
+import { buttonVariants } from "@/components/button";
 
 /**
  * When linked to with ?returnTo=<path>, shows a banner so the editor
@@ -160,7 +161,7 @@ function ProviderRow({
             type="button"
             onClick={onSave}
             disabled={isPending}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+            className={buttonVariants.primary}
           >
             {isPending ? "Verifying..." : "Verify & save"}
           </button>

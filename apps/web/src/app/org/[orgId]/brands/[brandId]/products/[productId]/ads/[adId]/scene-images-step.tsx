@@ -26,6 +26,7 @@ import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 import type { SceneSpendTotal } from "../spend-data";
+import { buttonVariants } from "@/components/button";
 
 const STAGGER_MS = 1000;
 
@@ -234,7 +235,7 @@ export function SceneImagesStep({
         <button
           type="button"
           onClick={onContinue}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={buttonVariants.primary}
         >
           Continue to scene videos →
         </button>

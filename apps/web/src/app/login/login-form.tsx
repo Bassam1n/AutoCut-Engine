@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { requestMagicLink } from "./actions";
+import { buttonVariants } from "@/components/button";
 
 export function LoginForm() {
   const [isPending, startTransition] = useTransition();
@@ -62,7 +63,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        className={buttonVariants.primary}
       >
         {isPending ? "Sending…" : "Send sign-in link"}
       </button>

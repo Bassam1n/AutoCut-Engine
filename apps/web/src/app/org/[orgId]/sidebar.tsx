@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions";
+import { buttonVariantsSm } from "@/components/button";
 import { CreateAdButton } from "./create-ad-button";
 import type { SidebarInfo } from "./sidebar-data";
 
@@ -48,35 +50,31 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col self-start overflow-y-auto border-r border-border bg-background-raised">
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-xs font-semibold text-accent-ink">
-          AC
+    <aside className="sticky top-4 flex h-[calc(100vh-2rem)] w-64 shrink-0 flex-col self-start overflow-y-auto rounded-3xl bg-background-raised px-3 py-5 shadow-[var(--shadow-raised)]">
+      <div className="flex items-center gap-2.5 px-2 pb-5">
+        <div className="relative h-8 w-8 shrink-0">
+          <Image src="/logo.png" alt="" fill className="object-contain" />
         </div>
-        <span className="text-sm font-semibold tracking-tight">
-          AutoCut Engine
+        <span className="truncate text-sm font-semibold tracking-tight">
+          {info.orgName}
         </span>
       </div>
 
-      <p className="truncate px-5 pb-3 text-xs font-medium uppercase tracking-wide text-foreground-muted">
-        {info.orgName}
-      </p>
-
-      <div className="px-3 pb-2">
+      <div className="pb-3">
         <CreateAdButton orgId={orgId} />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-3">
+      <nav className="flex flex-1 flex-col gap-1">
         {links.map((link) => {
           const isActive = pathname.startsWith(link.href);
           return (
             <Link
               key={link.href}
               href={link.href}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-full px-3.5 py-2.5 text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-accent-soft text-accent"
-                  : "text-foreground hover:bg-border/40"
+                  ? "bg-accent-soft text-accent shadow-[var(--shadow-soft)]"
+                  : "text-foreground-muted hover:bg-border/40 hover:text-foreground"
               }`}
             >
               {link.label}
@@ -85,15 +83,12 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="flex flex-col gap-2 border-t border-border px-5 py-4">
+      <div className="flex flex-col gap-2 rounded-2xl bg-background px-3 py-3">
         <p className="truncate text-xs text-foreground-muted">
           {info.userEmail}
         </p>
         <form action={signOut}>
-          <button
-            type="submit"
-            className="w-full rounded-lg border border-border-strong px-3 py-1.5 text-left text-sm font-medium transition-colors hover:bg-border/40"
-          >
+          <button type="submit" className={`w-full justify-start ${buttonVariantsSm.secondary}`}>
             Sign out
           </button>
         </form>

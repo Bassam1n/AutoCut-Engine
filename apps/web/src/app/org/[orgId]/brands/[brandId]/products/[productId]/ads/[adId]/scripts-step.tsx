@@ -5,6 +5,7 @@ import { generateScripts, selectScript } from "../scripts-actions";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
+import { buttonVariants } from "@/components/button";
 
 export function ScriptsStep({
   orgId,
@@ -86,7 +87,7 @@ export function ScriptsStep({
           type="button"
           onClick={onGenerate}
           disabled={isGenerating}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          className={buttonVariants.primary}
         >
           {isGenerating ? (
             <LoadingIndicator label="Generating scripts..." />

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { listBrandsForPicker } from "../create-ad-actions";
 import type { Brand } from "../brands/brands-data";
+import { buttonVariants } from "@/components/button";
 
 /** Picks a brand first, then redirects to the existing new-product form for it. */
 export function AddProductButton({ orgId }: { orgId: string }) {
@@ -15,7 +16,7 @@ export function AddProductButton({ orgId }: { orgId: string }) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className={`self-start ${buttonVariants.primary}`}
       >
         New product
       </button>

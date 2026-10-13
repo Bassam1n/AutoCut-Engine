@@ -5,6 +5,7 @@ import { generateDialInQuestions, saveDialInAnswers } from "../dial-in-actions";
 import { AsyncButton } from "@/components/async-button";
 import type { Ad } from "../ads-data";
 import type { DialItInQuestion } from "@/lib/claude/schemas/dial-it-in";
+import { buttonVariants } from "@/components/button";
 
 const YOU_DECIDE = "__you_decide__";
 
@@ -107,7 +108,7 @@ export function DialInStep({
             onClick={onStart}
             isPending={isLoading}
             pendingLabel="Preparing questions..."
-            className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+            className={`self-start ${buttonVariants.primary}`}
           >
             Start
           </AsyncButton>
@@ -127,7 +128,7 @@ export function DialInStep({
           <button
             type="button"
             onClick={onContinue}
-            className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+            className={`self-start ${buttonVariants.primary}`}
           >
             Continue →
           </button>
@@ -235,7 +236,7 @@ function FinishCard({
           onClick={() => onFinish(customerName)}
           isPending={isSaving}
           pendingLabel="Saving..."
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={buttonVariants.primary}
         >
           Save &amp; continue
         </AsyncButton>

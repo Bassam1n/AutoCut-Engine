@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
+import { buttonVariants } from "@/components/button";
 import { listBrandsForPicker, listProductsForPicker } from "./create-ad-actions";
 import type { Brand } from "./brands/brands-data";
 import type { Product } from "./brands/[brandId]/products/products-data";
@@ -22,7 +23,7 @@ export function CreateAdButton({ orgId }: { orgId: string }) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className={`w-full ${buttonVariants.primary}`}
       >
         + Create ad
       </button>

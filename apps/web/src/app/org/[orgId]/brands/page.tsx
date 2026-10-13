@@ -4,6 +4,7 @@ import { requireOrgMember } from "@/lib/auth";
 import { getBrands } from "./brands-data";
 import { getSetupChecklist } from "../setup-checklist/checklist-data";
 import { ChecklistCard } from "../setup-checklist/checklist-card";
+import { buttonVariants } from "@/components/button";
 
 export default function BrandsPage({
   params,
@@ -69,7 +70,7 @@ async function GatedBrandsList({
     <div className="flex flex-col gap-3">
       <Link
         href={`/org/${orgId}/brands/new`}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className={`self-start ${buttonVariants.primary}`}
       >
         New brand
       </Link>

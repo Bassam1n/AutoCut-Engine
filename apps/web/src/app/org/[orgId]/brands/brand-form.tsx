@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { Brand } from "./brands-data";
 import type { ActionResult } from "./brands-actions";
+import { buttonVariants } from "@/components/button";
 
 const CONTEXT_FIELDS = [
   { key: "audience", label: "Audience", placeholder: "Who this brand speaks to" },
@@ -91,7 +92,7 @@ export function BrandForm({
       <button
         type="submit"
         disabled={isPending}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        className={`self-start ${buttonVariants.primary}`}
       >
         {submitLabel}
       </button>

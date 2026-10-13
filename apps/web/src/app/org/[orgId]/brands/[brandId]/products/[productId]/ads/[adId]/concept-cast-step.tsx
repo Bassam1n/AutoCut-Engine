@@ -29,6 +29,7 @@ import type { Ad } from "../ads-data";
 import type { Concept, CastMember, BrandCastMember } from "../concepts-data";
 import type { ConceptOption } from "@/lib/claude/schemas/concepts";
 import type { ModelOption } from "@/lib/providers/models-data";
+import { buttonVariants } from "@/components/button";
 
 export function ConceptCastStep({
   orgId,
@@ -317,7 +318,7 @@ export function ConceptCastStep({
           onClick={onGenerateStoryboard}
           isPending={isStoryboarding}
           pendingLabel="Generating storyboard..."
-          className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={`self-start ${buttonVariants.primary}`}
         >
           Generate storyboard →
         </AsyncButton>

@@ -11,6 +11,7 @@ import {
   recordBrandCastUpload,
 } from "./cast-library-actions";
 import type { BrandCastMemberRow } from "./cast-library-data";
+import { buttonVariants } from "@/components/button";
 
 export function CastLibraryPanel({
   orgId,
@@ -33,7 +34,7 @@ export function CastLibraryPanel({
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={`self-start ${buttonVariants.primary}`}
         >
           New cast member
         </button>

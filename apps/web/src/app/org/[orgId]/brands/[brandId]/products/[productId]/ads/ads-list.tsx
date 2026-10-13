@@ -5,6 +5,7 @@ import Link from "next/link";
 import { renameAd, archiveAd, unarchiveAd, duplicateAd } from "./ads-actions";
 import { Modal } from "@/components/modal";
 import type { Ad } from "./ads-data";
+import { buttonVariants } from "@/components/button";
 
 export function AdsList({
   orgId,
@@ -25,7 +26,7 @@ export function AdsList({
       <div className="flex items-center justify-between">
         <Link
           href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads/new`}
-          className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className={`self-start ${buttonVariants.primary}`}
         >
           New ad
         </Link>

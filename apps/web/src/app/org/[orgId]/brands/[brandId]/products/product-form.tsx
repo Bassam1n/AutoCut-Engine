@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { PRODUCT_CATEGORIES, PRODUCT_CATEGORY_LABELS } from "./product-categories";
 import type { Product } from "./products-data";
 import type { ActionResult } from "./products-actions";
+import { buttonVariants } from "@/components/button";
 
 export function ProductForm({
   product,
@@ -123,7 +124,7 @@ export function ProductForm({
       <button
         type="submit"
         disabled={isPending}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        className={`self-start ${buttonVariants.primary}`}
       >
         {submitLabel}
       </button>

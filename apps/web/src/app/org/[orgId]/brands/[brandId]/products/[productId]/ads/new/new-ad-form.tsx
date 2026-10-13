@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { Style } from "@/app/org/[orgId]/styles/styles-data";
 import { createAd } from "../ads-actions";
+import { buttonVariants } from "@/components/button";
 
 export function NewAdForm({
   orgId,
@@ -71,7 +72,7 @@ export function NewAdForm({
         type="button"
         onClick={onCreate}
         disabled={!selectedStyleId || isPending}
-        className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        className={`self-start ${buttonVariants.primary}`}
       >
         {isPending ? "Creating..." : "Start this ad"}
       </button>

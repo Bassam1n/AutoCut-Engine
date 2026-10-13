@@ -1,17 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf9f6;
+  --background: #f0eee9;
   --background-raised: #ffffff;
   --foreground: #16171a;
-  --foreground-muted: #65666b;
-  --border: #e4e2dc;
-  --border-strong: #cfccc3;
+  --foreground-muted: #767671;
+  --border: #e9e7e1;
+  --border-strong: #d8d5cd;
   --accent: #e8521f;
   --accent-ink: #ffffff;
   --accent-soft: #fbe6dc;
   --danger: #b3261e;
   --danger-soft: #fbe7e5;
+
+  /* Reference design's soft, oversized drop shadow — used on cards,
+     the sidebar, buttons and dropdowns, not just on hover, so the UI
+     reads as a stack of floating panels rather than flat sections. */
+  --shadow-soft: 0 1px 2px rgba(22, 23, 26, 0.04), 0 12px 24px -8px rgba(22, 23, 26, 0.08);
+  --shadow-raised: 0 2px 4px rgba(22, 23, 26, 0.05), 0 20px 32px -12px rgba(22, 23, 26, 0.12);
 }
 
 @theme inline {
@@ -26,6 +32,8 @@
   --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --shadow-soft: var(--shadow-soft);
+  --shadow-raised: var(--shadow-raised);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -43,6 +51,8 @@
     --accent-soft: #3a2017;
     --danger: #e5847e;
     --danger-soft: #3a211f;
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 24px -8px rgba(0, 0, 0, 0.45);
+    --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 32px -12px rgba(0, 0, 0, 0.55);
   }
 }
 

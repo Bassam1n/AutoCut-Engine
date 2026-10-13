@@ -9,7 +9,7 @@ export default function OrgLayout({
   params,
 }: LayoutProps<"/org/[orgId]">) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen gap-4 p-4">
       <Suspense fallback={<SidebarSkeleton />}>
         <GatedSidebar params={params} />
       </Suspense>
@@ -20,14 +20,14 @@ export default function OrgLayout({
 
 function SidebarSkeleton() {
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col self-start border-r border-border bg-background-raised">
-      <div className="flex items-center gap-2.5 px-5 py-5">
-        <div className="h-8 w-8 animate-pulse rounded-lg bg-border" />
-        <div className="h-4 w-24 animate-pulse rounded bg-border" />
+    <aside className="sticky top-4 flex h-[calc(100vh-2rem)] w-64 shrink-0 flex-col self-start rounded-3xl bg-background-raised px-3 py-5 shadow-[var(--shadow-raised)]">
+      <div className="flex items-center gap-2.5 px-2 pb-5">
+        <div className="h-8 w-8 animate-pulse rounded-full bg-border" />
+        <div className="h-4 w-24 animate-pulse rounded-full bg-border" />
       </div>
-      <div className="flex flex-col gap-2 px-3">
-        <div className="h-8 animate-pulse rounded-lg bg-border" />
-        <div className="h-8 animate-pulse rounded-lg bg-border" />
+      <div className="flex flex-col gap-2">
+        <div className="h-9 animate-pulse rounded-full bg-border" />
+        <div className="h-9 animate-pulse rounded-full bg-border" />
       </div>
     </aside>
   );

@@ -11,6 +11,7 @@ import { rewriteSceneVisual } from "../scene-visuals-actions";
 import { AsyncButton } from "@/components/async-button";
 import type { Ad } from "../ads-data";
 import type { Scene } from "../scenes-data";
+import { buttonVariants } from "@/components/button";
 
 const HOOK_GROUP_LABELS: Record<string, string> = {
   hook_1: "Hook 1",
@@ -78,7 +79,7 @@ export function StoryboardStep({
           <button
             type="button"
             onClick={onContinue}
-            className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+            className={`self-start ${buttonVariants.primary}`}
           >
             Continue to scene images →
           </button>

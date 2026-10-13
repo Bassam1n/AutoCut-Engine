@@ -8,6 +8,7 @@ import {
   changeOrgMemberRole,
   revokeOrgInvite,
 } from "./team-actions";
+import { buttonVariants } from "@/components/button";
 
 const ROLES = ["owner", "admin", "editor"] as const;
 
@@ -251,7 +252,7 @@ function InviteForm({ orgId, disabled }: { orgId: string; disabled: boolean }) {
         <button
           type="submit"
           disabled={disabled || isPending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          className={buttonVariants.primary}
         >
           Invite
         </button>

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { ApiKeyProvider } from "@/app/org/[orgId]/settings/keys/keys-data";
 import type { BrandSecretRow } from "./keys-data";
 import { saveBrandProviderKey } from "./keys-actions";
+import { buttonVariants } from "@/components/button";
 
 const API_KEY_PROVIDERS: { id: ApiKeyProvider; label: string }[] = [
   { id: "anthropic", label: "Anthropic" },
@@ -140,7 +141,7 @@ function ProviderRow({
             type="button"
             onClick={onSave}
             disabled={isPending}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+            className={buttonVariants.primary}
           >
             {isPending ? "Verifying..." : "Verify & save"}
           </button>

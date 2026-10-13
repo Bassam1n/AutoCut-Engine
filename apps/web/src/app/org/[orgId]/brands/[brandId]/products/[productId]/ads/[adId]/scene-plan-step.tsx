@@ -14,6 +14,7 @@ import { PromptModal } from "@/components/modal";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import type { Ad } from "../ads-data";
 import type { Scene, SceneNote } from "../scenes-data";
+import { buttonVariants } from "@/components/button";
 
 const HOOK_GROUP_LABELS: Record<string, string> = {
   hook_1: "Hook 1",
@@ -112,7 +113,7 @@ export function ScenePlanStep({
           type="button"
           onClick={onLock}
           disabled={isLocking || scenes.length === 0}
-          className="self-start rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          className={`self-start ${buttonVariants.primary}`}
         >
           {isLocking ? "Locking..." : "Lock the plan"}
         </button>
