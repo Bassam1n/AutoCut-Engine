@@ -7,6 +7,7 @@ import {
   patchStoryboard,
 } from "../storyboard-actions";
 import { splitScene, mergeSceneIntoPrevious, updateSceneCopy } from "../scenes-actions";
+import { rewriteSceneVisual } from "../scene-visuals-actions";
 import { AsyncButton } from "@/components/async-button";
 import type { Ad } from "../ads-data";
 import type { Scene } from "../scenes-data";
@@ -201,6 +202,8 @@ function StoryboardRow({
   const [visual, setVisual] = useState(scene.visual);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [rewriteInstruction, setRewriteInstruction] = useState("");
+  const [isRewriting, startRewriteTransition] = useTransition();
 
   const productInFrame = scene.product_id !== null;
   const hookLabel = scene.hook_group ? HOOK_GROUP_LABELS[scene.hook_group] : null;
@@ -232,10 +235,9 @@ function StoryboardRow({
   }
 
   function onSplit() {
-    const mid = Math.floor(copy.length / 2);
     setError(null);
     startTransition(async () => {
-      const result = await splitScene(orgId, brandId, productId, ad.id, scene.id, mid);
+      const result = await splitScene(orgId, brandId, productId, ad.id, scene.id);
       if (!result.ok) setError(result.error);
     });
   }
@@ -245,6 +247,26 @@ function StoryboardRow({
     startTransition(async () => {
       const result = await mergeSceneIntoPrevious(orgId, brandId, productId, ad.id, scene.id);
       if (!result.ok) setError(result.error);
+    });
+  }
+
+  function onRewriteVisual() {
+    setError(null);
+    startRewriteTransition(async () => {
+      const result = await rewriteSceneVisual(
+        orgId,
+        brandId,
+        productId,
+        ad.id,
+        scene.id,
+        rewriteInstruction
+      );
+      if (result.ok) {
+        setVisual(result.visual);
+        setRewriteInstruction("");
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -304,9 +326,27 @@ function StoryboardRow({
           onBlur={saveVisual}
           rows={2}
           placeholder="No visual generated yet"
-          disabled={isPending}
+          disabled={isPending || isRewriting}
           className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
         />
+        <div className="flex gap-2">
+          <input
+            value={rewriteInstruction}
+            onChange={(e) => setRewriteInstruction(e.target.value)}
+            placeholder="e.g. make it more dynamic (optional — leave blank to just improve it)"
+            disabled={isRewriting}
+            className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-1.5 text-xs outline-none disabled:opacity-60"
+          />
+          <AsyncButton
+            onClick={onRewriteVisual}
+            isPending={isRewriting}
+            pendingLabel="Rewriting..."
+            disabled={isPending}
+            className="shrink-0 rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+          >
+            ✨ Rewrite
+          </AsyncButton>
+        </div>
       </div>
 
       {error && <p className="text-xs text-danger">{error}</p>}

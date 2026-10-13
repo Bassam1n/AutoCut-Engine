@@ -13,6 +13,7 @@ import {
   regenerateCastReference,
   generateCharacterSheet,
   approveCastMember,
+  approveAllCastMembers,
   reserveCastReferenceUploadPath,
   recordUploadedCastReference,
   type ModelChoice,
@@ -49,6 +50,7 @@ export function ConceptCastStep({
   const [isGenerating, startGenerating] = useTransition();
   const [isExtracting, startExtracting] = useTransition();
   const [isStoryboarding, startStoryboarding] = useTransition();
+  const [isApprovingAll, startApprovingAll] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [imageModel, setImageModel] = useState<ModelOption | null>(imageModelOptions[0] ?? null);
 
@@ -90,6 +92,15 @@ export function ConceptCastStep({
   const hasConcepts = Boolean(concept?.options.length);
   const hasSelectedConcept = concept?.selected_idx != null;
   const allCastApproved = castMembers.length > 0 && castMembers.every((c) => c.approved);
+  const hasUnapprovedCast = castMembers.some((c) => !c.approved);
+
+  function onApproveAll() {
+    setError(null);
+    startApprovingAll(async () => {
+      const result = await approveAllCastMembers(orgId, brandId, productId, ad.id);
+      if (!result.ok) setError(result.error);
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -134,14 +145,26 @@ export function ConceptCastStep({
         <div className="flex flex-col gap-4 border-t border-border pt-4">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-sm font-semibold">Cast</h3>
-            <AsyncButton
-              onClick={onExtractCast}
-              isPending={isExtracting}
-              pendingLabel="Extracting cast..."
-              className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
-            >
-              {castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
-            </AsyncButton>
+            <div className="flex items-center gap-2">
+              {hasUnapprovedCast && (
+                <AsyncButton
+                  onClick={onApproveAll}
+                  isPending={isApprovingAll}
+                  pendingLabel="Approving..."
+                  className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+                >
+                  Approve all
+                </AsyncButton>
+              )}
+              <AsyncButton
+                onClick={onExtractCast}
+                isPending={isExtracting}
+                pendingLabel="Extracting cast..."
+                className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+              >
+                {castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
+              </AsyncButton>
+            </div>
           </div>
 
           {imageModelOptions.length > 0 && (

@@ -8,10 +8,11 @@ import {
   searchElevenLabsVoices,
   getElevenLabsVoiceById,
   addSharedVoiceToAccount,
+  suggestVoiceoverDelivery,
   type ElevenLabsVoice,
 } from "./voiceover-data";
 import { resolveSceneSpeaks } from "@/lib/video/duration";
-import type { Ad } from "../ads-data";
+import type { Ad, AdBrief } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneVoiceover, SceneVoiceoverJob } from "../scene-videos-data";
 
@@ -248,6 +249,7 @@ export function VoiceoverStep({
                 key={scene.id}
                 orgId={orgId}
                 scene={scene}
+                brief={ad.brief}
                 voices={voices}
                 existing={voiceoversBySceneId[scene.id] ?? null}
                 activeJob={activeJobsBySceneId[scene.id] ?? null}
@@ -274,6 +276,7 @@ export function VoiceoverStep({
 function SceneVoiceoverCard({
   orgId,
   scene,
+  brief,
   voices,
   existing,
   activeJob,
@@ -281,6 +284,7 @@ function SceneVoiceoverCard({
 }: {
   orgId: string;
   scene: Scene;
+  brief: AdBrief;
   voices: ElevenLabsVoice[];
   existing: SceneVoiceover | null;
   activeJob: SceneVoiceoverJob | null;
@@ -324,6 +328,32 @@ function SceneVoiceoverCard({
   // can be blocked until it resolves.
   const [isAddingVoice, setIsAddingVoice] = useState(false);
   const [addVoiceError, setAddVoiceError] = useState<string | null>(null);
+
+  // "Suggest voice + delivery" assist — a TONE description (words
+  // only, never a specific voice_id/voice name: see
+  // voiceover-delivery.ts's schema doc comment for why) plus a
+  // pre-filled, tag-annotated rewrite of the script. Pre-fills script
+  // without submitting anything — same "edit freely before Generate"
+  // flow as the existing scene.copy default.
+  const [toneDescription, setToneDescription] = useState<string | null>(null);
+  const [isSuggestingDelivery, setIsSuggestingDelivery] = useState(false);
+  const [suggestDeliveryError, setSuggestDeliveryError] = useState<string | null>(null);
+
+  async function onSuggestDelivery() {
+    setSuggestDeliveryError(null);
+    setIsSuggestingDelivery(true);
+    try {
+      const result = await suggestVoiceoverDelivery(orgId, scene.copy, brief);
+      if (!result.ok) {
+        setSuggestDeliveryError(result.error);
+        return;
+      }
+      setToneDescription(result.tone_description);
+      setScript(result.delivery_script);
+    } finally {
+      setIsSuggestingDelivery(false);
+    }
+  }
 
   async function onSelectVoice(voice: ElevenLabsVoice) {
     setAddVoiceError(null);
@@ -552,17 +582,39 @@ function SceneVoiceoverCard({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium">Script</label>
+        <div className="flex items-center justify-between gap-2">
+          <label className="text-xs font-medium">Script</label>
+          <AsyncButton
+            onClick={onSuggestDelivery}
+            isPending={isSuggestingDelivery}
+            pendingLabel="Thinking..."
+            className="shrink-0 rounded-full border border-border-strong px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-border/40"
+          >
+            ✨ Suggest voice + delivery
+          </AsyncButton>
+        </div>
         <p className="text-xs text-foreground-muted">
           Pre-filled from this scene&apos;s copy — edit freely (add emotion tags,
           rephrase, etc). Whatever is here is exactly what gets sent to ElevenLabs.
         </p>
+        {suggestDeliveryError && <p className="text-xs text-danger">{suggestDeliveryError}</p>}
+        {toneDescription && (
+          <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-xs text-accent">
+            Suggested tone: {toneDescription}
+          </p>
+        )}
         <textarea
           value={script}
           onChange={(e) => setScript(e.target.value)}
           rows={3}
           className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
         />
+        {toneDescription && (
+          <p className="text-[11px] text-foreground-muted">
+            Delivery tags like [warmly] are ElevenLabs-style audio tags — best effort,
+            not guaranteed to be honored by every voice/model.
+          </p>
+        )}
       </div>
 
       {error && <p className="text-xs text-danger">{error}</p>}

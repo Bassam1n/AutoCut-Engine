@@ -7,6 +7,7 @@ import {
   setSceneNote,
   splitScene,
   mergeSceneIntoPrevious,
+  duplicateScene,
 } from "../scenes-actions";
 import { lockPlan } from "../ads-actions";
 import { PromptModal } from "@/components/modal";
@@ -180,10 +181,9 @@ function SceneRow({
   }
 
   function onSplit() {
-    const mid = Math.floor(copy.length / 2);
     setError(null);
     startTransition(async () => {
-      const result = await splitScene(orgId, brandId, productId, ad.id, scene.id, mid);
+      const result = await splitScene(orgId, brandId, productId, ad.id, scene.id);
       if (!result.ok) setError(result.error);
     });
   }
@@ -192,6 +192,14 @@ function SceneRow({
     setError(null);
     startTransition(async () => {
       const result = await mergeSceneIntoPrevious(orgId, brandId, productId, ad.id, scene.id);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  function onDuplicate() {
+    setError(null);
+    startTransition(async () => {
+      const result = await duplicateScene(orgId, brandId, productId, ad.id, scene.id);
       if (!result.ok) setError(result.error);
     });
   }
@@ -259,6 +267,14 @@ function SceneRow({
             className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
           >
             Split
+          </button>
+          <button
+            type="button"
+            onClick={onDuplicate}
+            disabled={isPending}
+            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          >
+            Duplicate
           </button>
           {!isFirst && (
             <button

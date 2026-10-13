@@ -502,3 +502,32 @@ export async function approveCastMember(
   revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${adId}`);
   return { ok: true };
 }
+
+/**
+ * Bulk variant of approveCastMember (friction-audit finding: approving
+ * a 3-4 character cast one card at a time before "Generate storyboard"
+ * unlocks was pure friction with no reason behind it). Approves every
+ * not-yet-approved cast member for this ad in one update — scoped by
+ * ad_id (not a list of ids) so it stays correct even if a card hasn't
+ * synced client-side yet.
+ */
+export async function approveAllCastMembers(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("cast_members")
+    .update({ approved: true })
+    .eq("org_id", orgId)
+    .eq("ad_id", adId)
+    .eq("approved", false);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${adId}`);
+  return { ok: true };
+}

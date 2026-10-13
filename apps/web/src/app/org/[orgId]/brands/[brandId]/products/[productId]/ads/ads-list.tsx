@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { renameAd, archiveAd, unarchiveAd } from "./ads-actions";
+import { renameAd, archiveAd, unarchiveAd, duplicateAd } from "./ads-actions";
 import { Modal } from "@/components/modal";
 import type { Ad } from "./ads-data";
 
@@ -86,6 +86,17 @@ function AdRow({
     setIsRenaming(true);
   }
 
+  function onDuplicate(e: React.MouseEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      // duplicateAd redirects on success, so a resolved { ok: false }
+      // here always means the duplicate actually failed.
+      const result = await duplicateAd(orgId, brandId, productId, ad.id);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <Link
@@ -108,6 +119,14 @@ function AdRow({
             className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium hover:bg-border/40"
           >
             Rename
+          </button>
+          <button
+            type="button"
+            onClick={onDuplicate}
+            disabled={isPending}
+            className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+          >
+            Duplicate
           </button>
           <button
             type="button"

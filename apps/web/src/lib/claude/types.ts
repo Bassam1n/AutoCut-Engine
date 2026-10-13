@@ -138,6 +138,23 @@ export const PINNED_MODEL_PER_TASK = {
   // depend on it), so this keeps the stronger of the two cheap tiers
   // rather than reaching for Haiku to save a fraction of a cent.
   generate_library_tags: "claude-sonnet-5-5",
+  // Finding a natural sentence/clause break near a midpoint is the
+  // same mechanical, rule-following shape as generate_scene_plan's
+  // own cutting-rule split (which this task is a single-scene
+  // re-run of) — Sonnet, not Opus.
+  split_scene_copy: "claude-sonnet-5-5",
+  // Rewriting one scene's visual description from its copy and the
+  // same brand/concept/style/cast context generate_scene_visuals
+  // uses is the same Visual Director editorial judgment, just scoped
+  // to a single row instead of the whole board — same Opus pin.
+  rewrite_scene_visual: "claude-opus-5-5",
+  // Voiceover Studio's "Suggest voice + delivery" assist: describing a
+  // tone in words and adding inline delivery/emotion tags to a short
+  // line is closer to write_image_prompt/rewrite_tweak_prompt's
+  // editorial prompt-writing judgment than to mechanical extraction —
+  // but the scope here is much smaller (one short line, no multi-part
+  // context synthesis), so Sonnet is the right pin rather than Opus.
+  suggest_voiceover_delivery: "claude-sonnet-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

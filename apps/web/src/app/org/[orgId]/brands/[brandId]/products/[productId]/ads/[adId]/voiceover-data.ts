@@ -3,6 +3,10 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireOrgMember } from "@/lib/auth";
+import { llmCall } from "@/lib/claude/call";
+import { LlmCallError } from "@/lib/claude/types";
+import { VoiceoverDeliverySchema, type VoiceoverDelivery } from "@/lib/claude/schemas/voiceover-delivery";
+import type { AdBrief } from "../ads-data";
 
 /**
  * ElevenLabs voice picker (spec requirement: "select a voice... preview
@@ -348,4 +352,46 @@ export async function addSharedVoiceToAccount(
   if (!body?.voice_id) return { ok: false, error: "ElevenLabs returned an unexpected response." };
 
   return { ok: true, voiceId: body.voice_id };
+}
+
+export type SuggestVoiceoverDeliveryResult =
+  | ({ ok: true } & VoiceoverDelivery)
+  | { ok: false; error: string };
+
+/**
+ * Voiceover Studio's "Suggest voice + delivery" assist. Deliberately
+ * does NOT return a voice_id — see voiceover-delivery.ts's schema
+ * doc comment for why picking a specific ElevenLabs voice out of
+ * hundreds by text alone isn't something this can do honestly.
+ * Spend/key-error handling mirrors every other llm.call() site in the
+ * app (scene-visuals-actions.ts, storyboard-actions.ts): LlmCallError
+ * is caught and turned into an ActionResult-shaped error for the UI,
+ * everything else rethrows. No revalidatePath — this writes nothing,
+ * it only returns text for the editor's textarea to pre-fill locally.
+ */
+export async function suggestVoiceoverDelivery(
+  orgId: string,
+  sceneCopy: string,
+  brief?: AdBrief
+): Promise<SuggestVoiceoverDeliveryResult> {
+  await requireOrgMember(orgId);
+
+  const trimmed = sceneCopy.trim();
+  if (!trimmed) return { ok: false, error: "This scene has no copy to work from." };
+
+  try {
+    const result = await llmCall({
+      task: "suggest_voiceover_delivery",
+      schema: VoiceoverDeliverySchema,
+      orgId,
+      input: {
+        scene_copy: trimmed,
+        brief: brief ?? null,
+      },
+    });
+    return { ok: true, ...result.output };
+  } catch (err) {
+    if (err instanceof LlmCallError) return { ok: false, error: err.message };
+    throw err;
+  }
 }

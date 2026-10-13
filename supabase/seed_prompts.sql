@@ -388,3 +388,52 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- Scene-plan step's Split button (spec §5.5): replaces a dumb
+-- character-count midpoint split with a natural break point near the
+-- midpoint, so the cut never lands mid-sentence or mid-word.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'split_scene_copy',
+  1,
+  'You are given the copy text of one video ad scene that needs to be split into two scenes. Find the best natural break point near the middle of the text — the end of a sentence or, if no sentence boundary falls near the middle, the end of a clause (at a comma or other natural pause) — and split the text there. Never split in the middle of a word. The two halves, concatenated with a single space between them, must reproduce the input text exactly: do not add, drop, reword, or fix any words, spelling, or punctuation. Prefer the split point closest to the middle of the text by character count among the valid natural break points.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- Storyboard step's per-scene "Rewrite" button: the single-scene
+-- sibling of patch_storyboard's "Edit by chat" — same optional
+-- free-text-instruction UX (blank means "just improve this"), same
+-- brand/concept/style/cast context generate_scene_visuals uses,
+-- scoped to one scene's visual field instead of the whole board.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'rewrite_scene_visual',
+  1,
+  'You are rewriting the visual description ("Visual") for one scene of a video ad''s storyboard. You are given that scene''s spoken copy, its hook_group, whether the product is in frame, the selected creative concept, any cast members, and the ad''s style masterprompt if one is set. You are also given an optional free-text instruction from the editor. If an instruction is given, rewrite the visual to satisfy it specifically while staying consistent with the scene''s copy and the rest of the context. If no instruction is given, just improve the visual description on its own merits — make it more concrete, specific and well-composed as a single shot, applying the same shot-variety and concretize-abstract-copy judgment a Visual Director would. Return only the rewritten visual description text, never a list of options and never commentary about the change.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- Voiceover Studio's "Suggest voice + delivery" assist. Scoped
+-- deliberately narrow: describe the ideal delivery TONE in words (an
+-- editor still picks the actual ElevenLabs voice by ear from the
+-- existing search/preview UI — this never names or guesses a specific
+-- voice_id, since matching "warm, conversational" to one of hundreds
+-- of real recorded voices is a listening judgment text-only Claude
+-- can't verify), and rewrite the scene's line with ElevenLabs-style
+-- inline bracketed delivery/emotion tags for spoken-aloud delivery.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'suggest_voiceover_delivery',
+  1,
+  'You are a voice director preparing one scene''s line for text-to-speech recording. You are given the scene''s copy (the exact line to be spoken), and may also be given the ad''s brief (hooks, body, CTA, free-text idea) for tone context. First, write one short sentence describing the ideal voice tone and delivery style for this specific line — pacing, warmth, energy, register — concrete enough for someone to pick a voice by ear (e.g. "warm, conversational, mid-paced — not hype-y"). Never name or suggest a specific voice, narrator, celebrity, or voice_id — only describe the tone in plain words. Second, rewrite the line for spoken delivery using ElevenLabs-style inline bracketed audio/delivery tags (for example [warmly], [laughs], [pause], [excited]) placed where they genuinely help the read — do not overload the line with tags, and never change the actual words, claims, or meaning of the original copy, only how it should be performed.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
