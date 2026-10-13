@@ -17,7 +17,7 @@ import type { Scene } from "../scenes-data";
 import type { Concept, CastMember } from "../concepts-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 import type { SceneImageAsset } from "../scene-images-data";
-import type { SceneVideoJob } from "../scene-videos-data";
+import type { SceneVideoJob, AdVoiceover } from "../scene-videos-data";
 
 export function StudioCanvas({
   orgId,
@@ -40,6 +40,7 @@ export function StudioCanvas({
   archivedSceneVideosBySceneId,
   activeSceneVideoJobsBySceneId,
   sceneVideoUrls,
+  adVoiceover,
 }: {
   orgId: string;
   brandId: string;
@@ -62,6 +63,7 @@ export function StudioCanvas({
   archivedSceneVideosBySceneId: Record<string, SceneImageAsset[]>;
   activeSceneVideoJobsBySceneId: Record<string, SceneVideoJob>;
   sceneVideoUrls: Record<string, string>;
+  adVoiceover: AdVoiceover | null;
 }) {
   const [step, setStep] = useState<StudioStep>(() => ad.current_step ?? initialStep(ad, scripts, scenes));
   const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
@@ -180,6 +182,7 @@ export function StudioCanvas({
             assetUrls={sceneVideoUrls}
             videoModelOptions={videoModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
+            adVoiceover={adVoiceover}
           />
         )}
       </div>

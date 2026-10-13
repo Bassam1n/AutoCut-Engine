@@ -21,10 +21,11 @@ import { submitVideoFeedback } from "../feedback-actions";
 import { SceneFeedbackPanel } from "./scene-feedback-panel";
 import { saveToLibrary } from "@/app/org/[orgId]/library/library-actions";
 import { DownloadAllButton } from "./download-all-button";
+import { VoiceoverPanel } from "./voiceover-panel";
 import type { Ad, AdBrief } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
-import type { SceneVideoJob } from "../scene-videos-data";
+import type { SceneVideoJob, AdVoiceover } from "../scene-videos-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 
 const POLL_INTERVAL_MS = 4000; // Video jobs can run minutes-long (spec §5.7: up to ~20 minutes) — a few-second interval is frequent enough to feel responsive without hammering the DB, same order of magnitude as run-provider-job.ts's own 4s poll delay against the provider.
@@ -57,6 +58,7 @@ export function SceneVideosStep({
   assetUrls,
   videoModelOptions,
   providersWithKeys,
+  adVoiceover,
 }: {
   orgId: string;
   brandId: string;
@@ -70,6 +72,7 @@ export function SceneVideosStep({
   assetUrls: Record<string, string>;
   videoModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
+  adVoiceover: AdVoiceover | null;
 }) {
   const [videoModel, setVideoModel] = useState<ModelOption | null>(videoModelOptions[0] ?? null);
   const returnToPath = `/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`;
@@ -86,6 +89,14 @@ export function SceneVideosStep({
       </div>
 
       <DownloadAllButton orgId={orgId} adId={ad.id} adName={ad.name ?? "ad"} />
+
+      <VoiceoverPanel
+        orgId={orgId}
+        adId={ad.id}
+        hasExistingVoiceover={adVoiceover !== null}
+        voiceoverAudioUrl={adVoiceover ? assetUrls[adVoiceover.voAsset.storage_path] ?? null : null}
+        srtUrl={adVoiceover?.captionAsset ? assetUrls[adVoiceover.captionAsset.storage_path] ?? null : null}
+      />
 
       <SpeakingRuleControl orgId={orgId} brandId={brandId} productId={productId} ad={ad} />
 

@@ -97,3 +97,45 @@ export async function getSceneVideoSignedUrls(storagePaths: string[]): Promise<R
   }
   return result;
 }
+
+export type AdVoiceover = { voAsset: SceneImageAsset; captionAsset: SceneImageAsset | null };
+
+/**
+ * The ad's current whole-ad voiceover (spec §5.4 bullet 5) — the
+ * latest non-archived kind='vo' asset for this ad (scene_id is always
+ * null for these, since generate-voiceover.ts writes one continuous
+ * voiceover per ad, not per scene), plus the matching kind='caption'
+ * asset if one exists. Both assets are ad-scoped, not scene-scoped,
+ * unlike every other getter in this file.
+ */
+export async function getLatestAdVoiceover(orgId: string, adId: string): Promise<AdVoiceover | null> {
+  const service = createServiceClient();
+  const { data: voAssets, error: voError } = await service
+    .from("assets")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("ad_id", adId)
+    .is("scene_id", null)
+    .eq("kind", "vo")
+    .eq("archived", false)
+    .order("version", { ascending: false })
+    .limit(1);
+  if (voError) throw new Error(voError.message);
+
+  const voAsset = voAssets?.[0];
+  if (!voAsset) return null;
+
+  const { data: captionAssets, error: captionError } = await service
+    .from("assets")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("ad_id", adId)
+    .is("scene_id", null)
+    .eq("kind", "caption")
+    .eq("archived", false)
+    .order("version", { ascending: false })
+    .limit(1);
+  if (captionError) throw new Error(captionError.message);
+
+  return { voAsset, captionAsset: captionAssets?.[0] ?? null };
+}
