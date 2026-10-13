@@ -43,6 +43,7 @@ export type Ad = {
     | "scene_images"
     | "voiceover"
     | "scene_videos"
+    | "export"
     | null;
   created_at: string;
   updated_at: string;

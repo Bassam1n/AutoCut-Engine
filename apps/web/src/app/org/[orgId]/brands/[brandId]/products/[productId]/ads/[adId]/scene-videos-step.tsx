@@ -20,7 +20,6 @@ import type { ModelChoice } from "../scene-videos-actions";
 import { submitVideoFeedback } from "../feedback-actions";
 import { SceneFeedbackPanel } from "./scene-feedback-panel";
 import { saveToLibrary } from "@/app/org/[orgId]/library/library-actions";
-import { DownloadAllButton } from "./download-all-button";
 import type { Ad, AdBrief } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
@@ -57,6 +56,7 @@ export function SceneVideosStep({
   assetUrls,
   videoModelOptions,
   providersWithKeys,
+  onContinue,
 }: {
   orgId: string;
   brandId: string;
@@ -70,6 +70,7 @@ export function SceneVideosStep({
   assetUrls: Record<string, string>;
   videoModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
+  onContinue: () => void;
 }) {
   const [videoModel, setVideoModel] = useState<ModelOption | null>(videoModelOptions[0] ?? null);
   const returnToPath = `/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`;
@@ -84,8 +85,6 @@ export function SceneVideosStep({
           makes sense from that image.
         </p>
       </div>
-
-      <DownloadAllButton orgId={orgId} adId={ad.id} adName={ad.name ?? "ad"} />
 
       <SpeakingRuleControl orgId={orgId} brandId={brandId} productId={productId} ad={ad} />
 
@@ -122,6 +121,16 @@ export function SceneVideosStep({
           ))}
         </div>
       )}
+
+      <div className="flex justify-end border-t border-border pt-4">
+        <button
+          type="button"
+          onClick={onContinue}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+        >
+          Continue to Export
+        </button>
+      </div>
     </div>
   );
 }

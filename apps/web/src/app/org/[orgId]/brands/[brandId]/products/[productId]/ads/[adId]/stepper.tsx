@@ -11,7 +11,8 @@ export type StudioStep =
   | "storyboard"
   | "scene_images"
   | "voiceover"
-  | "scene_videos";
+  | "scene_videos"
+  | "export";
 
 // "brief" is deliberately not in this list — it's the manual fallback
 // used only when the editor rejects all 3 generated scripts, not a
@@ -46,6 +47,7 @@ const STEPS: { id: Exclude<StudioStep, "brief">; label: string }[] = [
   { id: "scene_images", label: "Scene images" },
   { id: "voiceover", label: "Voiceover" },
   { id: "scene_videos", label: "Scene videos" },
+  { id: "export", label: "Export" },
 ];
 
 export function Stepper({

@@ -17,7 +17,8 @@ export type StudioStepValue =
   | "storyboard"
   | "scene_images"
   | "voiceover"
-  | "scene_videos";
+  | "scene_videos"
+  | "export";
 
 /**
  * Persists which Studio step the editor is actually on, so reopening

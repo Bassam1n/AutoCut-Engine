@@ -13,7 +13,7 @@
  * reading both files directly, not assumed).
  */
 
-export type DownloadAssetKind = "image" | "video" | "transition";
+export type DownloadAssetKind = "image" | "video" | "transition" | "vo" | "caption";
 
 export type DownloadableAsset = {
   assetId: string;
@@ -27,7 +27,7 @@ export type DownloadableAsset = {
   imageIndexInScene?: number;
 };
 
-export type DownloadScope = "all" | "images" | "videos";
+export type DownloadScope = "all" | "images" | "videos" | "voiceover";
 
 /** Zero-pads a 0-based scene index into the spec's 2-digit scene number, e.g. idx=0 -> "01", idx=10 -> "11". */
 export function sceneNumber(sceneIdx: number): string {
@@ -53,6 +53,14 @@ export function zipEntryName(asset: DownloadableAsset, extension: string): strin
     const n = asset.imageIndexInScene ?? 1;
     return `${sceneNumber(asset.sceneIdx)}-image-${n}.${extension}`;
   }
+  if (asset.kind === "vo") {
+    if (asset.sceneIdx === null) return null;
+    return `${sceneNumber(asset.sceneIdx)}-voiceover.${extension}`;
+  }
+  if (asset.kind === "caption") {
+    if (asset.sceneIdx === null) return null;
+    return `${sceneNumber(asset.sceneIdx)}-captions.${extension}`;
+  }
   // transition
   if (!asset.transitionSceneIndices) return null;
   const [a, b] = asset.transitionSceneIndices;
@@ -63,6 +71,7 @@ export function zipEntryName(asset: DownloadableAsset, extension: string): strin
 export function isIncludedInScope(kind: DownloadAssetKind, scope: DownloadScope): boolean {
   if (scope === "all") return true;
   if (scope === "images") return kind === "image";
+  if (scope === "voiceover") return kind === "vo" || kind === "caption";
   return kind === "video" || kind === "transition";
 }
 

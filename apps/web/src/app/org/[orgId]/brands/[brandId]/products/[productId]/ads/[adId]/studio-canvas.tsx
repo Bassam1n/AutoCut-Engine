@@ -11,6 +11,7 @@ import { DialInStep } from "./dial-in-step";
 import { SceneImagesStep } from "./scene-images-step";
 import { VoiceoverStep } from "./voiceover-step";
 import { SceneVideosStep } from "./scene-videos-step";
+import { ExportStep } from "./export-step";
 import { saveCurrentStep } from "../ads-actions";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
@@ -198,8 +199,10 @@ export function StudioCanvas({
             assetUrls={sceneVideoUrls}
             videoModelOptions={videoModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
+            onContinue={() => goToStep("export")}
           />
         )}
+        {step === "export" && <ExportStep orgId={orgId} ad={ad} scenes={scenes} />}
       </div>
     </div>
   );
@@ -232,6 +235,8 @@ function previousStepFor(step: StudioStep): StudioStep | undefined {
       return "scene_images";
     case "scene_videos":
       return "voiceover";
+    case "export":
+      return "scene_videos";
   }
 }
 

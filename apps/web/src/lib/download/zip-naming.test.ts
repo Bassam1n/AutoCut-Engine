@@ -64,6 +64,16 @@ describe("zipEntryName", () => {
     expect(zipEntryName(asset, "mp4")).toBe("01-02.mp4");
   });
 
+  it('names a scene voiceover clip "NN-voiceover.ext"', () => {
+    const asset: DownloadableAsset = { assetId: "a", storagePath: "x/vo.mp3", kind: "vo", sceneIdx: 1 };
+    expect(zipEntryName(asset, "mp3")).toBe("02-voiceover.mp3");
+  });
+
+  it('names a scene caption/SRT "NN-captions.ext"', () => {
+    const asset: DownloadableAsset = { assetId: "a", storagePath: "x/cap.srt", kind: "caption", sceneIdx: 1 };
+    expect(zipEntryName(asset, "srt")).toBe("02-captions.srt");
+  });
+
   it("returns null for a video/image with no sceneIdx rather than inventing a name", () => {
     const asset: DownloadableAsset = { assetId: "a", storagePath: "x", kind: "video", sceneIdx: null };
     expect(zipEntryName(asset, "mp4")).toBeNull();
@@ -92,6 +102,13 @@ describe("isIncludedInScope", () => {
     expect(isIncludedInScope("video", "videos")).toBe(true);
     expect(isIncludedInScope("transition", "videos")).toBe(true);
     expect(isIncludedInScope("image", "videos")).toBe(false);
+  });
+
+  it('"voiceover" includes only vo and caption kinds', () => {
+    expect(isIncludedInScope("vo", "voiceover")).toBe(true);
+    expect(isIncludedInScope("caption", "voiceover")).toBe(true);
+    expect(isIncludedInScope("video", "voiceover")).toBe(false);
+    expect(isIncludedInScope("image", "voiceover")).toBe(false);
   });
 });
 
