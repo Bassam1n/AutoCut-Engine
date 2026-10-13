@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { requireOrgAdmin } from "@/lib/auth";
+import { requireOrgOwner } from "@/lib/auth";
 import { getOrgSecrets } from "./keys-data";
 import { KeysScreen } from "./keys-screen";
 
@@ -46,7 +46,7 @@ async function GatedKeysScreen({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  await requireOrgAdmin(orgId);
+  await requireOrgOwner(orgId);
 
   const secrets = await getOrgSecrets(orgId);
 

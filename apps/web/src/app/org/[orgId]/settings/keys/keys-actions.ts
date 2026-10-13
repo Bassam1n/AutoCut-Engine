@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireOrgAdmin } from "@/lib/auth";
+import { requireOrgOwner } from "@/lib/auth";
 import { verifyProviderKey } from "./verify-provider-key";
 import type { ApiKeyProvider } from "./keys-data";
 
@@ -22,7 +22,7 @@ export async function saveProviderKey(
   provider: ApiKeyProvider,
   key: string
 ): Promise<ActionResult> {
-  await requireOrgAdmin(orgId);
+  await requireOrgOwner(orgId);
 
   const trimmed = key.trim();
   if (trimmed.length < 4) {

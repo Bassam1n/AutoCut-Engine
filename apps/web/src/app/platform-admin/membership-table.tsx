@@ -2,8 +2,16 @@
 
 import { useState, useTransition } from "react";
 import type { OrgMemberRow, PendingInviteRow } from "./membership-data";
-import { toggleSeatActive, changeRole, revokeInvite, setOrgSeatCap } from "./membership-actions";
+import {
+  toggleSeatActive,
+  changeRole,
+  changeMemberEmail,
+  revokeInvite,
+  setOrgSeatCap,
+} from "./membership-actions";
+import { ROLE_LABELS } from "@/lib/roles";
 
+// The platform admin is the only place the owner role can be granted.
 const ROLES = ["owner", "admin", "editor"] as const;
 
 type OrgGroup = {
@@ -145,6 +153,8 @@ function SeatCapEditor({
 function MemberRow({ member }: { member: OrgMemberRow }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [email, setEmail] = useState(member.member_email ?? "");
 
   if (!member.member_user_id || !member.member_role) return null;
   const userId = member.member_user_id;
@@ -165,19 +175,68 @@ function MemberRow({ member }: { member: OrgMemberRow }) {
     });
   }
 
+  function onSaveEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const result = await changeMemberEmail(member.org_id, userId, email);
+      if (result.ok) setEditingEmail(false);
+      else setError(result.error);
+    });
+  }
+
   return (
-    <tr className="border-t border-border">
-      <td className="py-2 pr-3">{member.member_email}</td>
+    <tr className="border-t border-border align-top">
+      <td className="py-2 pr-3">
+        {editingEmail ? (
+          <form onSubmit={onSaveEmail} className="flex gap-1.5">
+            <input
+              type="email"
+              required
+              aria-label="New email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isPending}
+              className="field field-sm min-w-0 flex-1"
+            />
+            <button type="submit" disabled={isPending} className="btn-primary btn-xs">
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingEmail(false)}
+              disabled={isPending}
+              className="btn-ghost btn-xs"
+            >
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <span className="flex items-center gap-2">
+            {member.member_email}
+            <button
+              type="button"
+              onClick={() => {
+                setEmail(member.member_email ?? "");
+                setEditingEmail(true);
+              }}
+              className="text-xs font-medium text-accent hover:underline"
+            >
+              Edit
+            </button>
+          </span>
+        )}
+      </td>
       <td className="py-2 pr-3">
         <select
           defaultValue={member.member_role}
           disabled={isPending}
           onChange={(e) => onRoleChange(e.target.value as (typeof ROLES)[number])}
-          className="field field-sm capitalize"
+          className="field field-sm"
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>
-              {r}
+              {ROLE_LABELS[r]}
             </option>
           ))}
         </select>
@@ -230,8 +289,7 @@ function InviteRow({ invite }: { invite: PendingInviteRow }) {
   return (
     <li className="flex items-center justify-between text-sm">
       <span className="text-foreground-muted">
-        {invite.email}{" "}
-        <span className="capitalize">({invite.role})</span>
+        {invite.email} ({ROLE_LABELS[invite.role]})
       </span>
       <span className="flex items-center gap-2">
         <button

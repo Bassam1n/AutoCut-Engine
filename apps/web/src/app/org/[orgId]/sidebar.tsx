@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions";
 import { buttonVariantsSm } from "@/components/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Avatar } from "@/components/avatar";
+import { ROLE_LABELS } from "@/lib/roles";
 import { CreateAdButton } from "./create-ad-button";
 import type { SidebarInfo } from "./sidebar-data";
 
@@ -29,12 +31,9 @@ export function Sidebar({
     // gate this behind info.isAdmin the way Team/Provider keys are.
     { href: `/org/${orgId}/library`, label: "Library" },
     { href: `/org/${orgId}/styles`, label: "Styles" },
-    // Spend & guard is visible to every member (orgs_select_own lets
-    // any member read warn/stop thresholds and paused state directly
-    // — see settings/spend/page.tsx) even though the audit log and
-    // Resume button inside it stay admin-only, so this link isn't
-    // gated behind info.isAdmin the way Team/Provider keys are.
-    { href: `/org/${orgId}/settings/spend`, label: "Spend & guard" },
+    // Spend & guard: owner and admin only; the audit log and Resume
+    // inside it are owner-only.
+    ...(info.isAdmin ? [{ href: `/org/${orgId}/settings/spend`, label: "Spend & guard" }] : []),
     // Rules is visible to every member for the same reason Spend &
     // guard is — rules_select (migration 10) has no admin
     // restriction, and an editor benefits from seeing why generations
@@ -42,11 +41,11 @@ export function Sidebar({
     // rule stays admin-only within the page itself (settings/rules's
     // isOrgAdmin() check, same split as Spend & guard).
     { href: `/org/${orgId}/settings/rules`, label: "Rules" },
-    ...(info.isAdmin
-      ? [
-          { href: `/org/${orgId}/team`, label: "Team" },
-          { href: `/org/${orgId}/settings/keys`, label: "Org-wide keys" },
-        ]
+    // Team: owner manages it, admins see it read-only (migration 52).
+    ...(info.isAdmin ? [{ href: `/org/${orgId}/team`, label: "Team" }] : []),
+    // Org-wide keys are owner-only; brand keys stay owner+admin.
+    ...(info.role === "owner"
+      ? [{ href: `/org/${orgId}/settings/keys`, label: "Org-wide keys" }]
       : []),
   ];
 
@@ -92,9 +91,20 @@ export function Sidebar({
       </nav>
 
       <div className="flex flex-col gap-2 rounded-2xl bg-background px-3 py-3">
-        <p className="truncate text-xs text-foreground-muted">
-          {info.userEmail}
-        </p>
+        <Link
+          href={`/org/${orgId}/profile`}
+          className={`-mx-1 flex items-center gap-2.5 rounded-xl px-1 py-1 transition-colors hover:bg-border/40 ${
+            pathname.startsWith(`/org/${orgId}/profile`) ? "bg-border/40" : ""
+          }`}
+        >
+          <Avatar name={info.fullName} email={info.userEmail} avatarPath={info.avatarPath} size={32} />
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-medium">{info.fullName?.trim() || "My profile"}</span>
+            <span className="truncate text-xs text-foreground-muted">
+              {info.role ? ROLE_LABELS[info.role] : info.userEmail}
+            </span>
+          </span>
+        </Link>
         <ThemeToggle />
         <form action={signOut}>
           <button type="submit" className={`w-full justify-start ${buttonVariantsSm.secondary}`}>

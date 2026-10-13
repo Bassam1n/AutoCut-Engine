@@ -126,7 +126,7 @@ function SpendStatusCard({
             </>
           ) : (
             <p className="mt-3 text-xs text-danger/80">
-              Only an org owner or admin can resume spend.
+              Only the org owner can resume spend.
             </p>
           )}
         </div>

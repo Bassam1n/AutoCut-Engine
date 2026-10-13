@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireOrgAdmin } from "@/lib/auth";
+import { requireOrgOwner } from "@/lib/auth";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -16,7 +16,7 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
  * by Postgres.
  */
 export async function resumeOrg(orgId: string): Promise<ActionResult> {
-  await requireOrgAdmin(orgId);
+  await requireOrgOwner(orgId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("resume_org", {

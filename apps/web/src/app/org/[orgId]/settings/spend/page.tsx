@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { requireOrgMember, isOrgAdmin } from "@/lib/auth";
+import { requireOrgAdmin, isOrgOwner } from "@/lib/auth";
 import { getOrgSpendStatus, getOrgAuditLog } from "./spend-data";
 import { SpendScreen } from "./spend-screen";
 
@@ -46,16 +46,11 @@ async function GatedSpendScreen({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  // Visible to every member — orgs_select_own (migration 4) already
-  // lets any member read warn_usd/stop_usd/paused/pause_reason
-  // directly, matching spend_guard.sql's own stated intent ("editors
-  // see spend, that's the whole point of the spend admin screen").
-  // Only the audit log and the Resume button are admin-only (audit_log
-  // itself is admin-gated at the RLS level via audit_log_select_admin)
-  // — isOrgAdmin() below decides whether to fetch/show those, it does
-  // NOT gate the page itself.
-  await requireOrgMember(orgId);
-  const canAdminister = await isOrgAdmin(orgId);
+  // Owner and admin see spend; users don't (role matrix, migration 52).
+  // Only the owner gets the audit log and the Resume button: both
+  // list_org_audit_log() and resume_org() are is_org_owner()-gated.
+  await requireOrgAdmin(orgId);
+  const canAdminister = await isOrgOwner(orgId);
 
   const [status, auditLog] = await Promise.all([
     getOrgSpendStatus(orgId),

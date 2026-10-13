@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { requireOrgAdmin } from "@/lib/auth";
+import { getMyMembership } from "@/lib/membership";
 import { TeamScreen } from "./team-screen";
 import { getOrgMembers, getOrgPendingInvites, getOrgSeatInfo } from "./team-data";
 
@@ -15,11 +16,8 @@ export default function OrgTeamPage({
           Team
         </p>
         <h1 className="mt-1 text-xl font-semibold tracking-tight">
-          Manage your team
+          Your team
         </h1>
-        <p className="mt-1.5 text-sm text-foreground-muted">
-          Invite teammates, change their role, or deactivate a seat.
-        </p>
       </div>
 
       <Suspense fallback={<TeamSkeleton />}>
@@ -47,13 +45,21 @@ async function GatedTeamScreen({
   const { orgId } = await params;
   await requireOrgAdmin(orgId);
 
-  const [members, invites, seatInfo] = await Promise.all([
+  const [members, invites, seatInfo, me] = await Promise.all([
     getOrgMembers(orgId),
     getOrgPendingInvites(orgId),
     getOrgSeatInfo(orgId),
+    getMyMembership(orgId),
   ]);
 
   return (
-    <TeamScreen orgId={orgId} members={members} invites={invites} seatInfo={seatInfo} />
+    <TeamScreen
+      orgId={orgId}
+      members={members}
+      invites={invites}
+      seatInfo={seatInfo}
+      viewerId={me?.userId ?? ""}
+      canManage={me?.role === "owner"}
+    />
   );
 }

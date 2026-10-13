@@ -153,3 +153,37 @@ export async function requireOrgMember(orgId: string): Promise<CurrentUser> {
 
   return user;
 }
+
+/**
+ * Owner-only counterpart to requireOrgAdmin(): team management, org-wide
+ * provider keys, the audit log and resuming a paused org. Backed by
+ * is_org_owner(org_id) (migration 52), which the matching RPCs also
+ * check, so this is the UX redirect and the SQL is the real gate.
+ */
+export async function requireOrgOwner(orgId: string): Promise<CurrentUser> {
+  "use cache: private";
+
+  const user = await getCurrentUser();
+  const supabase = await createClient();
+  const { data: isOwner } = await supabase.rpc("is_org_owner", {
+    check_org_id: orgId,
+  });
+
+  if (!isOwner) {
+    redirect("/");
+  }
+
+  return user;
+}
+
+/** Boolean form of requireOrgOwner(), for owner-only sections inside a wider page. */
+export async function isOrgOwner(orgId: string): Promise<boolean> {
+  "use cache: private";
+
+  const supabase = await createClient();
+  const { data: isOwner } = await supabase.rpc("is_org_owner", {
+    check_org_id: orgId,
+  });
+
+  return Boolean(isOwner);
+}

@@ -1,18 +1,21 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import type { OrgRole } from "@/lib/roles";
 
 export type OrgTeamMember = {
   member_user_id: string;
   member_email: string;
-  member_role: "owner" | "admin" | "editor";
+  member_role: OrgRole;
   member_seat_active: boolean;
   member_joined_at: string;
+  member_full_name: string | null;
+  member_avatar_path: string | null;
 };
 
 export type OrgPendingInvite = {
   invite_id: string;
   email: string;
-  role: "owner" | "admin" | "editor";
+  role: OrgRole;
   invited_at: string;
 };
 
@@ -23,7 +26,7 @@ export type OrgSeatInfo = {
 
 export async function getOrgMembers(orgId: string): Promise<OrgTeamMember[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("list_org_members", {
+  const { data, error } = await supabase.rpc("list_org_team", {
     target_org_id: orgId,
   });
   if (error) throw new Error(error.message);
