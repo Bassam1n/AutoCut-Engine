@@ -134,7 +134,7 @@ export function SceneFeedbackPanel({
       <button
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        className="self-start rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+        className="btn-secondary btn-sm self-start"
       >
         {isOpen ? "Hide feedback" : "Give feedback"}
       </button>
@@ -162,7 +162,7 @@ export function SceneFeedbackPanel({
             onChange={(e) => setFeedbackText(e.target.value)}
             rows={3}
             placeholder="Describe the change you want — e.g. 'make the background darker' rather than a question."
-            className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+            className="field resize-none"
           />
 
           <label className="flex items-center gap-2 text-xs text-foreground-muted">
@@ -179,7 +179,7 @@ export function SceneFeedbackPanel({
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 <label
-                  className={`rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium ${
+                  className={`btn-secondary btn-sm ${
                     isUploadingRef ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-border/40"
                   }`}
                 >
@@ -213,7 +213,7 @@ export function SceneFeedbackPanel({
               isPending={isSubmitting}
               pendingLabel="Submitting..."
               disabled={!feedbackText.trim()}
-              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+              className="btn-primary btn-sm"
             >
               Submit feedback
             </AsyncButton>

@@ -164,7 +164,7 @@ export function ConceptCastStep({
             <button
               type="button"
               onClick={() => setIsWritingOwn(true)}
-              className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+              className="btn-secondary btn-sm"
             >
               Write my own instead
             </button>
@@ -173,7 +173,7 @@ export function ConceptCastStep({
             onClick={onGenerateConcepts}
             isPending={isGenerating}
             pendingLabel="Generating concepts..."
-            className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary btn-sm"
           >
             {hasConcepts ? "Regenerate concepts" : "Generate concepts"}
           </AsyncButton>
@@ -220,7 +220,7 @@ export function ConceptCastStep({
                   onClick={onApproveAll}
                   isPending={isApprovingAll}
                   pendingLabel="Approving..."
-                  className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+                  className="btn-primary btn-sm"
                 >
                   Approve all
                 </AsyncButton>
@@ -229,7 +229,7 @@ export function ConceptCastStep({
                 onClick={onExtractCast}
                 isPending={isExtracting}
                 pendingLabel="Extracting cast..."
-                className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+                className="btn-secondary btn-sm"
               >
                 {castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
               </AsyncButton>
@@ -237,7 +237,7 @@ export function ConceptCastStep({
                 <button
                   type="button"
                   onClick={() => setIsPickingFromLibrary((v) => !v)}
-                  className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+                  className="btn-secondary btn-sm"
                 >
                   {isPickingFromLibrary ? "Hide library" : "Add from library"}
                 </button>
@@ -245,7 +245,7 @@ export function ConceptCastStep({
               <button
                 type="button"
                 onClick={() => setIsAddingManualCast((v) => !v)}
-                className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+                className="btn-secondary btn-sm"
               >
                 {isAddingManualCast ? "Cancel" : "Add manually"}
               </button>
@@ -253,14 +253,14 @@ export function ConceptCastStep({
           </div>
 
           {isPickingFromLibrary && (
-            <div className="flex flex-wrap gap-2 rounded-xl border border-border p-3">
+            <div className="card-inset flex flex-wrap gap-2 p-3">
               {pickableBrandCastMembers.map((member) => (
                 <button
                   key={member.id}
                   type="button"
                   disabled={isAddingCast}
                   onClick={() => onAddFromLibrary(member.id)}
-                  className="flex items-center gap-2 rounded-lg border border-border-strong px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+                  className="btn-secondary btn-sm flex items-center gap-2"
                 >
                   {member.ref_asset_id && assetUrls[member.ref_asset_id] && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -384,13 +384,13 @@ function ManualConceptForm({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-2 p-4">
       <label className="text-xs font-medium">Title</label>
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="A short, memorable name for this concept"
-        className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field"
       />
       <label className="text-xs font-medium">Story</label>
       <textarea
@@ -398,7 +398,7 @@ function ManualConceptForm({
         onChange={(e) => setStory(e.target.value)}
         rows={3}
         placeholder="The narrative/premise this concept tells"
-        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field resize-none"
       />
       <label className="text-xs font-medium">First frame</label>
       <textarea
@@ -406,7 +406,7 @@ function ManualConceptForm({
         onChange={(e) => setFirstFrame(e.target.value)}
         rows={2}
         placeholder="What the viewer sees in the very first frame"
-        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field resize-none"
       />
       <label className="text-xs font-medium">World</label>
       <textarea
@@ -414,7 +414,7 @@ function ManualConceptForm({
         onChange={(e) => setWorld(e.target.value)}
         rows={2}
         placeholder="The setting/location(s) this concept takes place in"
-        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field resize-none"
       />
       <label className="text-xs font-medium">Scene by scene (one beat per line)</label>
       <textarea
@@ -422,7 +422,7 @@ function ManualConceptForm({
         onChange={(e) => setSceneByScene(e.target.value)}
         rows={4}
         placeholder={"Scene 1: ...\nScene 2: ..."}
-        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field resize-none"
       />
       <label className="text-xs font-medium">Standout moments (one per line)</label>
       <textarea
@@ -430,7 +430,7 @@ function ManualConceptForm({
         onChange={(e) => setStandoutMoments(e.target.value)}
         rows={2}
         placeholder="1-3 specific moments that make this concept memorable"
-        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field resize-none"
       />
 
       {error && <p className="text-xs text-danger">{error}</p>}
@@ -440,7 +440,7 @@ function ManualConceptForm({
           type="button"
           onClick={onSubmit}
           disabled={isPending}
-          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="btn-primary btn-sm"
         >
           {isPending ? "Saving..." : "Use this concept"}
         </button>
@@ -448,7 +448,7 @@ function ManualConceptForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-sm"
         >
           Cancel
         </button>
@@ -517,19 +517,19 @@ function ConceptCard({
             value={story}
             onChange={(e) => setStory(e.target.value)}
             rows={3}
-            className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+            className="field resize-none"
           />
           <textarea
             value={world}
             onChange={(e) => setWorld(e.target.value)}
             rows={2}
-            className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+            className="field resize-none"
           />
           <button
             type="button"
             onClick={onSaveEdit}
             disabled={isPending}
-            className="self-start rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm self-start"
           >
             Save
           </button>
@@ -548,7 +548,7 @@ function ConceptCard({
           type="button"
           onClick={onSelect}
           disabled={isPending}
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-sm"
         >
           {isSelected ? "Selected" : "Use this concept"}
         </button>
@@ -556,7 +556,7 @@ function ConceptCard({
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary btn-sm"
           >
             Refine
           </button>
@@ -578,13 +578,13 @@ function ManualCastForm({
   const [description, setDescription] = useState("");
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+    <div className="card-inset flex flex-col gap-2 p-3">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Name"
         disabled={isPending}
-        className="rounded-lg border border-border-strong bg-background px-2.5 py-1.5 text-xs outline-none disabled:opacity-60"
+        className="field field-sm"
       />
       <textarea
         value={description}
@@ -592,14 +592,14 @@ function ManualCastForm({
         placeholder="Description (optional)"
         rows={2}
         disabled={isPending}
-        className="resize-none rounded-lg border border-border-strong bg-background px-2.5 py-1.5 text-xs outline-none disabled:opacity-60"
+        className="field field-sm resize-none"
       />
       <AsyncButton
         onClick={() => onSubmit(name, description)}
         isPending={isPending}
         disabled={!name.trim()}
         pendingLabel="Adding..."
-        className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="btn-primary btn-sm self-start"
       >
         Add cast member
       </AsyncButton>
@@ -679,7 +679,7 @@ function CastMemberCard({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+    <div className="card-inset flex flex-col gap-2 p-3">
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageUrl} alt={member.name} className="aspect-[4/5] w-full rounded-lg object-cover" />
@@ -700,7 +700,7 @@ function CastMemberCard({
           type="button"
           onClick={onApprove}
           disabled={isPending}
-          className="self-start rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-sm self-start"
         >
           Approve
         </button>
@@ -710,7 +710,7 @@ function CastMemberCard({
           type="button"
           onClick={() => setIsRegenerateOpen(true)}
           disabled={isPending}
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-sm"
         >
           Regenerate
         </button>
@@ -719,7 +719,7 @@ function CastMemberCard({
           isPending={sheetStatus === "generating"}
           disabled={isPending}
           pendingLabel="Generating sheet..."
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40"
+          className="btn-secondary btn-sm"
         >
           {sheetUrl ? "Regenerate sheet" : "Character sheet"}
         </AsyncButton>
@@ -729,7 +729,7 @@ function CastMemberCard({
             isPending={isSavingToLibrary}
             disabled={savedToLibrary}
             pendingLabel="Saving..."
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40"
+            className="btn-secondary btn-sm"
           >
             {savedToLibrary ? "Saved to library ✓" : "Save to library"}
           </AsyncButton>
@@ -872,14 +872,14 @@ function RegenerateModal({
           rows={2}
           placeholder="e.g. make the expression friendlier"
           disabled={isPending || isUploading}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
         <AsyncButton
           onClick={onRegenerateWithFeedback}
           isPending={isPending}
           disabled={isUploading}
           pendingLabel="Regenerating..."
-          className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className="btn-primary btn-sm self-start"
         >
           Regenerate
         </AsyncButton>
@@ -888,7 +888,7 @@ function RegenerateModal({
       <div className="flex flex-col gap-1.5 border-t border-border pt-3">
         <label className="text-xs font-medium">Big change — upload your own image instead</label>
         <label
-          className={`self-start rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium ${
+          className={`btn-secondary btn-sm self-start ${
             isUploading || isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-border/40"
           }`}
         >

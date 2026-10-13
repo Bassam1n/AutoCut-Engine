@@ -42,7 +42,7 @@ function Skeleton() {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-        <div key={i} className="aspect-square animate-pulse rounded-xl bg-border" />
+        <div key={i} className="aspect-square animate-pulse rounded-2xl bg-border" />
       ))}
     </div>
   );

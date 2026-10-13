@@ -78,7 +78,7 @@ export function ScenePlanStep({
           type="button"
           onClick={onGenerate}
           disabled={isGenerating || ad.plan_locked}
-          className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-sm shrink-0"
         >
           {isGenerating ? <LoadingIndicator label="Generating scene plan..." /> : scenes.length > 0 ? "Regenerate" : "Generate scene plan"}
         </button>
@@ -208,7 +208,7 @@ function SceneRow({
   const hookLabel = scene.hook_group ? HOOK_GROUP_LABELS[scene.hook_group] : null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-2 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
@@ -238,7 +238,7 @@ function SceneRow({
         onBlur={saveCopy}
         disabled={ad.plan_locked || isPending}
         rows={2}
-        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+        className="field resize-none"
       />
 
       {error && <p className="text-xs text-danger">{error}</p>}
@@ -249,7 +249,7 @@ function SceneRow({
             type="button"
             onClick={() => (note?.type === "idea" ? onRemoveNote() : setNoteModalType("idea"))}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             {note?.type === "idea" ? "Remove idea note" : "Pin idea note"}
           </button>
@@ -257,7 +257,7 @@ function SceneRow({
             type="button"
             onClick={() => (note?.type === "rule" ? onRemoveNote() : setNoteModalType("rule"))}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             {note?.type === "rule" ? "Remove rule note" : "Pin rule note"}
           </button>
@@ -265,7 +265,7 @@ function SceneRow({
             type="button"
             onClick={onSplit}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             Split
           </button>
@@ -273,7 +273,7 @@ function SceneRow({
             type="button"
             onClick={onDuplicate}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             Duplicate
           </button>
@@ -282,7 +282,7 @@ function SceneRow({
               type="button"
               onClick={onMerge}
               disabled={isPending}
-              className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+              className="btn-secondary btn-sm"
             >
               Merge into previous
             </button>

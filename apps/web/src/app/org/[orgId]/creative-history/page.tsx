@@ -29,9 +29,9 @@ export default function CreativeHistoryPage({
 function Skeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="h-16 animate-pulse rounded-xl bg-border" />
-      <div className="h-16 animate-pulse rounded-xl bg-border" />
-      <div className="h-16 animate-pulse rounded-xl bg-border" />
+      <div className="h-16 animate-pulse rounded-2xl bg-border" />
+      <div className="h-16 animate-pulse rounded-2xl bg-border" />
+      <div className="h-16 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }
@@ -54,7 +54,7 @@ async function GatedHistory({ params }: { params: Promise<{ orgId: string }> }) 
           <Link
             key={ad.id}
             href={`/org/${orgId}/brands/${ad.brand_id}/products/${ad.product_id}/ads/${ad.id}`}
-            className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4 transition-colors hover:border-border-strong"
+            className="card card-interactive flex items-center justify-between p-4"
           >
             <div>
               <p className="font-medium">{displayName}</p>

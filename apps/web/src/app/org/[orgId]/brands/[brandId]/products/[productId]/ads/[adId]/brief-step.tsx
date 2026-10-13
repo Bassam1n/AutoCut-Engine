@@ -78,14 +78,14 @@ export function BriefStep({
               onChange={(e) => updateHook(i, e.target.value)}
               placeholder={`Hook ${i + 1}`}
               disabled={isPending}
-              className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+              className="field flex-1"
             />
             {hooks.length > 1 && (
               <button
                 type="button"
                 onClick={() => removeHook(i)}
                 disabled={isPending}
-                className="rounded-lg border border-border-strong px-2.5 text-sm text-foreground-muted transition-colors hover:bg-border/40 disabled:opacity-60"
+                className="btn-secondary px-3 text-foreground-muted"
               >
                 ×
               </button>
@@ -114,7 +114,7 @@ export function BriefStep({
           onChange={(e) => setBody(e.target.value)}
           rows={4}
           disabled={isPending}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
       </div>
 
@@ -127,7 +127,7 @@ export function BriefStep({
           value={cta}
           onChange={(e) => setCta(e.target.value)}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
 
@@ -145,7 +145,7 @@ export function BriefStep({
           rows={3}
           placeholder="Any loose notes about the direction you want"
           disabled={isPending}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
       </div>
 

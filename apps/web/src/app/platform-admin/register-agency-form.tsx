@@ -39,12 +39,12 @@ export function RegisterAgencyForm() {
             readOnly
             value={result.inviteLink}
             onFocus={(e) => e.currentTarget.select()}
-            className="flex-1 truncate rounded-lg border border-border-strong bg-background px-3 py-2 font-mono text-xs"
+            className="field field-sm flex-1 truncate font-mono"
           />
           <button
             type="button"
             onClick={() => copyLink(result.inviteLink)}
-            className="shrink-0 rounded-lg border border-border-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary shrink-0"
           >
             {copied ? "Copied" : "Copy"}
           </button>
@@ -74,7 +74,7 @@ export function RegisterAgencyForm() {
           placeholder="Acme Ads Co."
           required
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-foreground-muted focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:opacity-60"
+          className="field"
         />
       </div>
 
@@ -89,7 +89,7 @@ export function RegisterAgencyForm() {
           placeholder="owner@acmeads.com"
           required
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-foreground-muted focus:border-accent focus:ring-2 focus:ring-accent-soft disabled:opacity-60"
+          className="field"
         />
       </div>
 

@@ -33,9 +33,9 @@ export default function KeysPage({
 function KeysSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="h-16 animate-pulse rounded-xl bg-border" />
-      <div className="h-16 animate-pulse rounded-xl bg-border" />
-      <div className="h-16 animate-pulse rounded-xl bg-border" />
+      <div className="h-16 animate-pulse rounded-2xl bg-border" />
+      <div className="h-16 animate-pulse rounded-2xl bg-border" />
+      <div className="h-16 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }

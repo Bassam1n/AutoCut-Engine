@@ -19,7 +19,7 @@ export async function CostBreakdown({ orgId, adId }: { orgId: string; adId: stri
   const max = grouped.length > 0 ? Math.max(...grouped.map((g) => g.usd)) : 0;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-background-raised/50 p-4">
+    <div className="card-inset flex flex-col gap-3 p-4">
       <div className="flex items-baseline justify-between">
         <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">Cost so far</p>
         <p className="text-xl font-semibold tabular-nums">${total.toFixed(2)}</p>

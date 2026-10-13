@@ -64,3 +64,210 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--foreground);
+}
+
+/*
+ * Shared surface classes for the visual refresh. They live in the
+ * components layer so a call site's own utilities (self-start, w-full,
+ * flex-1, ...) still win. Radius scale: pills for buttons, rounded-xl
+ * for fields, rounded-2xl for cards. Only transform, opacity, colour
+ * and shadow transition; never `all`.
+ */
+@layer components {
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition-property: background-color, border-color, color, box-shadow, filter, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .btn-primary:active:not(:disabled),
+  .btn-secondary:active:not(:disabled),
+  .btn-ghost:active:not(:disabled),
+  .btn-danger:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible,
+  .btn-ghost:focus-visible,
+  .btn-danger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-ghost:disabled,
+  .btn-danger:disabled {
+    opacity: 0.6;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: var(--shadow-soft);
+  }
+  .btn-secondary {
+    border: 1px solid var(--border-strong);
+    background: var(--background-raised);
+    color: var(--foreground);
+    box-shadow: var(--shadow-soft);
+  }
+  .btn-ghost {
+    color: var(--foreground-muted);
+  }
+  .btn-danger {
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+    background: var(--danger-soft);
+    color: var(--danger);
+    box-shadow: var(--shadow-soft);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover:not(:disabled) {
+      filter: brightness(1.05);
+      box-shadow: var(--shadow-raised);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      border-color: var(--foreground-muted);
+      box-shadow: var(--shadow-raised);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--border) 60%, transparent);
+      color: var(--foreground);
+    }
+    .btn-danger:hover:not(:disabled) {
+      filter: brightness(0.97);
+    }
+  }
+
+  /* Compact sizes for per-card actions. */
+  .btn-sm {
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  .btn-xs {
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 11px;
+    line-height: 1rem;
+  }
+
+  /* Inputs, textareas and selects. */
+  .field {
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-strong);
+    background: var(--background-raised);
+    color: var(--foreground);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline: none;
+    box-shadow: inset 0 1px 2px rgba(22, 23, 26, 0.04);
+    transition-property: border-color, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .field::placeholder {
+    color: var(--foreground-muted);
+  }
+  .field:focus,
+  .field:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .field:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .field-sm {
+    border-radius: 0.625rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  /* Native selects become pill-cornered dropdowns with our own chevron. */
+  select.field {
+    appearance: none;
+    cursor: pointer;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23767671' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    box-shadow: var(--shadow-soft);
+  }
+  select.field-sm {
+    padding-right: 1.75rem;
+    background-position: right 0.5rem center;
+  }
+  select.field:focus,
+  select.field:focus-visible {
+    box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-soft);
+  }
+
+  /* Floating card: a top-level panel. Never nest these; use card-inset inside. */
+  .card {
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    background: var(--background-raised);
+    box-shadow: var(--shadow-soft);
+  }
+  .card-interactive {
+    transition-property: border-color, box-shadow, transform;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .card-interactive:hover {
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-raised);
+      transform: translateY(-1px);
+    }
+  }
+  .card-interactive:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Recessed panel inside a card or page section: no shadow, so it reads as a well, not a second floating layer. */
+  .card-inset {
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--background) 55%, var(--background-raised));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .field {
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+    select.field {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a4a3a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-interactive:hover,
+    .btn-primary:active,
+    .btn-secondary:active,
+    .btn-ghost:active,
+    .btn-danger:active {
+      transform: none;
+    }
+  }
+}

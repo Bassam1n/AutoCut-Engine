@@ -29,7 +29,7 @@ export function TeamScreen({
     <div className="flex flex-col gap-6">
       <SeatUsageBadge seatInfo={seatInfo} />
 
-      <div className="rounded-xl border border-border bg-background-raised p-5">
+      <div className="card p-5">
         <h2 className="mb-3 text-sm font-semibold">Members</h2>
         {members.length === 0 ? (
           <p className="text-sm text-foreground-muted">No members yet.</p>
@@ -65,7 +65,7 @@ export function TeamScreen({
         )}
       </div>
 
-      <div className="rounded-xl border border-border bg-background-raised p-5">
+      <div className="card p-5">
         <h2 className="mb-3 text-sm font-semibold">Invite a team member</h2>
         <InviteForm orgId={orgId} disabled={atCap || seatInfo.seatCap === null} />
       </div>
@@ -129,7 +129,7 @@ function MemberRow({ orgId, member }: { orgId: string; member: OrgTeamMember }) 
           defaultValue={member.member_role}
           disabled={isPending}
           onChange={(e) => onRoleChange(e.target.value as (typeof ROLES)[number])}
-          className="rounded-md border border-border-strong bg-background px-2 py-1 text-xs capitalize outline-none disabled:opacity-60"
+          className="field field-sm capitalize"
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>
@@ -235,13 +235,13 @@ function InviteForm({ orgId, disabled }: { orgId: string; disabled: boolean }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={disabled || isPending}
-          className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field flex-1"
         />
         <select
           value={role}
           onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}
           disabled={disabled || isPending}
-          className="rounded-lg border border-border-strong bg-background px-2 py-2 text-sm capitalize outline-none disabled:opacity-60"
+          className="field capitalize"
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>

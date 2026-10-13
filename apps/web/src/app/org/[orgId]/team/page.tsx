@@ -33,8 +33,8 @@ function TeamSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       <div className="h-10 animate-pulse rounded-lg bg-border" />
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }

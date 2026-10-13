@@ -88,7 +88,7 @@ export function RefUploader({
           value={kind}
           onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}
           disabled={uploading}
-          className="rounded-lg border border-border-strong bg-background px-2 py-2 text-sm capitalize outline-none disabled:opacity-60"
+          className="field capitalize"
         >
           {KINDS.map((k) => (
             <option key={k} value={k}>

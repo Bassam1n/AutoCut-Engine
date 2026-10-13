@@ -53,7 +53,7 @@ function PromptEditorCard({ task, active }: { task: string; active: PromptVersio
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-2 p-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold">{TASK_LABELS[task] ?? task}</p>
@@ -79,7 +79,7 @@ function PromptEditorCard({ task, active }: { task: string; active: PromptVersio
         }}
         rows={6}
         disabled={isPending}
-        className="resize-y rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+        className="field resize-y"
       />
 
       <div className="flex items-center gap-3">
@@ -87,7 +87,7 @@ function PromptEditorCard({ task, active }: { task: string; active: PromptVersio
           type="button"
           onClick={onSave}
           disabled={isPending || !isDirty}
-          className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="btn-primary btn-sm self-start"
         >
           {isPending ? <LoadingIndicator label="Saving..." /> : "Save as new version"}
         </button>

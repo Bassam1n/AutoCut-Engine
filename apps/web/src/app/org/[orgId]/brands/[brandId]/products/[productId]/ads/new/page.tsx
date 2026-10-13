@@ -38,7 +38,7 @@ function PickerSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="aspect-[4/5] animate-pulse rounded-xl bg-border" />
+        <div key={i} className="aspect-[4/5] animate-pulse rounded-2xl bg-border" />
       ))}
     </div>
   );

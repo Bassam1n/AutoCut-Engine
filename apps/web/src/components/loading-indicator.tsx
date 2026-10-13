@@ -31,7 +31,7 @@ export function LoadingIndicator({ label }: { label: string }) {
 /** Full-width skeleton block variant, for a step that's loading its initial content rather than reacting to a button click. */
 export function LoadingBlock({ label }: { label: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-16 text-center">
+    <div className="card-inset flex flex-1 flex-col items-center justify-center gap-3 border-dashed py-16 text-center">
       <LoadingIndicator label={label} />
     </div>
   );

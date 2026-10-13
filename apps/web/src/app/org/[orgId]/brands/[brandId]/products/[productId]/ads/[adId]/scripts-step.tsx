@@ -80,7 +80,7 @@ export function ScriptsStep({
             value={lengthInput}
             onChange={(e) => setLengthInput(e.target.value)}
             disabled={isGenerating}
-            className="w-28 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+            className="field w-28"
           />
         </div>
         <button
@@ -120,7 +120,7 @@ export function ScriptsStep({
                 type="button"
                 onClick={() => onSelect(script.id)}
                 disabled={isSelecting}
-                className="mt-1 self-start rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+                className="btn-secondary btn-sm mt-1 self-start"
               >
                 {script.selected ? "Selected ✓" : "Use this script"}
               </button>

@@ -49,7 +49,7 @@ export function LibraryPanel({ orgId, isOpen, onClose }: { orgId: string; isOpen
   if (!isOpen) return null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-background-raised/50 p-3">
+    <div className="card-inset flex flex-col gap-2 p-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold">Library — drag an image onto a scene below</span>
         <button type="button" onClick={onClose} className="text-xs text-foreground-muted hover:text-foreground">

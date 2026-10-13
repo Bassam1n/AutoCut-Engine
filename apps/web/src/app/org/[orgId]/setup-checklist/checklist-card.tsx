@@ -30,7 +30,7 @@ export function ChecklistCard({
   ];
 
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-4">
+    <div className="card p-4">
       <p className="mb-3 text-sm font-semibold">Finish setup before generating</p>
       <ul className="flex flex-col gap-2">
         {items.map((item) => (

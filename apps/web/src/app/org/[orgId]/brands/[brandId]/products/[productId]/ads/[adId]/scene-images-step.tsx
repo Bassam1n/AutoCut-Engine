@@ -173,7 +173,7 @@ export function SceneImagesStep({
         <button
           type="button"
           onClick={() => setIsLibraryOpen((v) => !v)}
-          className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+          className="btn-secondary btn-sm shrink-0"
         >
           {isLibraryOpen ? "Hide library" : "Browse library"}
         </button>
@@ -258,13 +258,13 @@ function GenerateAllBar({
   const [count, setCount] = useState(1);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background-raised/50 p-3">
+    <div className="card-inset flex flex-wrap items-center gap-3 p-3">
       <CountStepper value={count} onChange={setCount} label="Images per scene" />
       <AsyncButton
         onClick={() => onGenerateAll(count)}
         isPending={isStaggering}
         pendingLabel="Starting..."
-        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className="btn-primary btn-sm"
       >
         Generate All
       </AsyncButton>
@@ -273,7 +273,7 @@ function GenerateAllBar({
         isPending={isStaggering}
         disabled={selectedCount === 0}
         pendingLabel="Starting..."
-        className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+        className="btn-secondary btn-sm"
       >
         Generate Selected{selectedCount > 0 ? ` (${selectedCount})` : ""}
       </AsyncButton>
@@ -293,7 +293,7 @@ function CountStepper({
   return (
     <div className="flex items-center gap-2 text-xs">
       <span className="font-medium text-foreground-muted">{label}</span>
-      <div className="flex items-center overflow-hidden rounded-lg border border-border-strong">
+      <div className="flex items-center overflow-hidden rounded-full border border-border-strong bg-background-raised shadow-soft">
         <button
           type="button"
           onClick={() => onChange(Math.max(1, value - 1))}
@@ -381,7 +381,7 @@ function SceneImageCard({
   const [override, setOverride] = useState(scene.image_prompt_override);
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <input
@@ -409,7 +409,7 @@ function SceneImageCard({
         <button
           type="button"
           onClick={() => setIsPromptOpen((v) => !v)}
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+          className="btn-secondary btn-sm"
         >
           {isPromptOpen ? "Hide prompt" : "Edit prompt"}
         </button>
@@ -592,7 +592,7 @@ function SceneImageCard({
           onClick={() => onGenerate(count)}
           isPending={isGenerating}
           pendingLabel={`Generating... (${elapsedSeconds}s)`}
-          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className="btn-primary btn-sm"
         >
           {images.length > 0 ? "Regenerate" : "Generate"}
         </AsyncButton>
@@ -691,7 +691,7 @@ function PromptOverrideEditor({
         onChange={(e) => setText(e.target.value)}
         rows={4}
         placeholder="Computed automatically at generation time unless you save an override here."
-        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field resize-none"
       />
       <div className="flex gap-2">
         <AsyncButton
@@ -699,7 +699,7 @@ function PromptOverrideEditor({
           isPending={isSaving}
           pendingLabel="Saving..."
           disabled={!text.trim()}
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40"
+          className="btn-secondary btn-sm"
         >
           Save override
         </AsyncButton>
@@ -708,7 +708,7 @@ function PromptOverrideEditor({
             type="button"
             onClick={onReset}
             disabled={isSaving}
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             Reset
           </button>
@@ -774,7 +774,7 @@ function FeedbackUpload({
   return (
     <div className="flex items-center gap-2 border-t border-border pt-3">
       <label
-        className={`rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium ${
+        className={`btn-secondary btn-sm ${
           isUploading ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-border/40"
         }`}
       >
@@ -849,7 +849,7 @@ function ArchivedImagesStrip({
                 type="button"
                 onClick={() => onRestore(asset.id)}
                 disabled={restoringId === asset.id}
-                className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+                className="btn-secondary btn-sm"
               >
                 {restoringId === asset.id ? "Restoring..." : "Restore"}
               </button>

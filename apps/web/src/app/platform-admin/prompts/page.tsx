@@ -35,7 +35,7 @@ function Skeleton() {
   return (
     <div className="flex flex-col gap-4">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-40 animate-pulse rounded-xl bg-border" />
+        <div key={i} className="h-40 animate-pulse rounded-2xl bg-border" />
       ))}
     </div>
   );

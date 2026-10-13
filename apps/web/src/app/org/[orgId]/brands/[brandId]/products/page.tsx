@@ -32,14 +32,14 @@ export default function ProductsPage({
 }
 
 function HeaderSkeleton() {
-  return <div className="h-12 animate-pulse rounded-xl bg-border" />;
+  return <div className="h-12 animate-pulse rounded-2xl bg-border" />;
 }
 
 function ProductsSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="h-20 animate-pulse rounded-xl bg-border" />
-      <div className="h-20 animate-pulse rounded-xl bg-border" />
+      <div className="h-20 animate-pulse rounded-2xl bg-border" />
+      <div className="h-20 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }
@@ -112,7 +112,7 @@ async function GatedProducts({
             <Link
               key={product.id}
               href={`/org/${orgId}/brands/${brandId}/products/${product.id}`}
-              className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4 transition-colors hover:border-border-strong"
+              className="card card-interactive flex items-center justify-between p-4"
             >
               <div>
                 <p className="font-medium">{product.name}</p>

@@ -102,7 +102,7 @@ function AdRow({
     <div className="flex flex-col gap-1">
       <Link
         href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`}
-        className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4 transition-colors hover:border-border-strong"
+        className="card card-interactive flex items-center justify-between p-4"
       >
         <div>
           <p className="font-medium">{displayName}</p>
@@ -117,7 +117,7 @@ function AdRow({
           <button
             type="button"
             onClick={onRenameClick}
-            className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium hover:bg-border/40"
+            className="btn-secondary btn-sm"
           >
             Rename
           </button>
@@ -125,7 +125,7 @@ function AdRow({
             type="button"
             onClick={onDuplicate}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             Duplicate
           </button>
@@ -133,7 +133,7 @@ function AdRow({
             type="button"
             onClick={onArchiveToggle}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             {ad.archived ? "Unarchive" : "Archive"}
           </button>
@@ -192,12 +192,12 @@ function RenameModal({
           placeholder="Ad name"
           autoFocus
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
         <button
           type="submit"
           disabled={isPending}
-          className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="btn-primary btn-sm self-start"
         >
           {isPending ? "Saving..." : "Save"}
         </button>

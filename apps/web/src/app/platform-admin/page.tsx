@@ -27,7 +27,7 @@ export default function PlatformAdminPage() {
         <div className="flex shrink-0 items-start gap-3">
           <Link
             href="/platform-admin/prompts"
-            className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary"
           >
             Agent prompts
           </Link>
@@ -75,8 +75,8 @@ function FormSkeleton() {
 function TableSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }
@@ -93,7 +93,7 @@ async function AccountMenu() {
       <form action={signOut}>
         <button
           type="submit"
-          className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+          className="btn-secondary"
         >
           Sign out
         </button>
@@ -105,7 +105,7 @@ async function AccountMenu() {
 async function GatedForm() {
   await requirePlatformAdmin();
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-6 shadow-sm">
+    <div className="card p-6">
       <RegisterAgencyForm />
     </div>
   );

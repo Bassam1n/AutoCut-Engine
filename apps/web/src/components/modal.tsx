@@ -19,7 +19,7 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border bg-background-raised p-5"
+        className="card flex w-full max-w-sm flex-col gap-4 p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -78,11 +78,11 @@ function PromptModalForm({
         name="value"
         placeholder={placeholder}
         autoFocus
-        className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field"
       />
       <button
         type="submit"
-        className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className="btn-primary btn-sm self-start"
       >
         Confirm
       </button>

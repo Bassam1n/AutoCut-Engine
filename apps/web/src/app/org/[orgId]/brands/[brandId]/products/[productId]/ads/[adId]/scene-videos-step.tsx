@@ -229,7 +229,7 @@ function GenerateAllBar({
   onGenerateSelected: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background-raised/50 p-3">
+    <div className="card-inset flex flex-wrap items-center gap-3 p-3">
       <span className="text-xs text-foreground-muted">
         Starts eligible scenes (has an image, no video yet, not already generating) about a
         second apart.
@@ -238,7 +238,7 @@ function GenerateAllBar({
         onClick={onGenerateAll}
         isPending={isStaggering}
         pendingLabel="Starting..."
-        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className="btn-primary btn-sm"
       >
         Generate All
       </AsyncButton>
@@ -247,7 +247,7 @@ function GenerateAllBar({
         isPending={isStaggering}
         disabled={selectedCount === 0}
         pendingLabel="Starting..."
-        className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+        className="btn-secondary btn-sm"
       >
         Generate Selected{selectedCount > 0 ? ` (${selectedCount})` : ""}
       </AsyncButton>
@@ -305,7 +305,7 @@ function SpeakingRuleControl({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-2 p-4">
       <label className="text-xs font-medium">Who speaks on camera?</label>
       <p className="text-xs text-foreground-muted">
         Controls whether scene copy is allowed into video prompts.
@@ -596,7 +596,7 @@ function SceneVideoCard({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-xs font-medium text-foreground-muted">
           {onToggleSelected && (
@@ -781,7 +781,7 @@ function SceneVideoCard({
               onClick={() => onAnimateFallback(stopMessage.fallback as string)}
               isPending={isAnimatingFallback}
               pendingLabel="Starting..."
-              className="self-start rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+              className="btn-secondary btn-sm self-start"
             >
               Animate this instead
             </AsyncButton>
@@ -795,7 +795,7 @@ function SceneVideoCard({
           isPending={isGenerating}
           pendingLabel="Generating... (this can take a while)"
           disabled={images.length === 0}
-          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className="btn-primary btn-sm"
         >
           {videos.length > 0 ? "Regenerate" : "Generate"}
         </AsyncButton>
@@ -849,7 +849,7 @@ function VideoIdeaEditor({
       rows={2}
       disabled={isSaving}
       placeholder="e.g. 'she turns the bottle to show the label' — leave blank to let the motion preflight decide from the scene's visual"
-      className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+      className="field resize-none"
     />
   );
 }
@@ -905,7 +905,7 @@ function ArchivedVideosStrip({
                 type="button"
                 onClick={() => onRestore(asset.id)}
                 disabled={restoringId === asset.id}
-                className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+                className="btn-secondary btn-sm"
               >
                 {restoringId === asset.id ? "Restoring..." : "Restore"}
               </button>

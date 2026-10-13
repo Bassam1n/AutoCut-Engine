@@ -36,14 +36,14 @@ export default function ProductDetailPage({
 }
 
 function HeaderSkeleton() {
-  return <div className="h-12 animate-pulse rounded-xl bg-border" />;
+  return <div className="h-12 animate-pulse rounded-2xl bg-border" />;
 }
 
 function SectionSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       <div className="h-10 animate-pulse rounded-lg bg-border" />
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }
@@ -78,7 +78,7 @@ async function GatedHeader({
       </div>
       <Link
         href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads`}
-        className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className="btn-primary shrink-0"
       >
         Ads
       </Link>

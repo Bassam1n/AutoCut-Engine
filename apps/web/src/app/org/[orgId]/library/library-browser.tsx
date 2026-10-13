@@ -70,18 +70,18 @@ export function LibraryBrowser({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background-raised/50 p-3">
+      <div className="card-inset flex flex-wrap items-center gap-3 p-3">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or tag..."
-          className="min-w-[200px] flex-1 rounded-lg border border-border-strong bg-background px-3 py-1.5 text-sm outline-none"
+          className="field min-w-[200px] flex-1"
         />
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
-          className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs"
+          className="field field-sm"
         >
           <option value="all">All types</option>
           <option value="image">Images</option>
@@ -90,7 +90,7 @@ export function LibraryBrowser({
         <select
           value={brandFilter}
           onChange={(e) => setBrandFilter(e.target.value)}
-          className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs"
+          className="field field-sm"
         >
           <option value="all">All brands</option>
           {brands.map((b) => (
@@ -102,7 +102,7 @@ export function LibraryBrowser({
         <select
           value={timeFilter}
           onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-          className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs"
+          className="field field-sm"
         >
           <option value="all">Any time</option>
           <option value="7d">Last 7 days</option>
@@ -231,7 +231,7 @@ function LibraryCard({
     <div
       draggable={item.asset_kind === "image"}
       onDragStart={onDragStart}
-      className="flex flex-col gap-2 rounded-xl border border-border p-3"
+      className="card-inset flex flex-col gap-2 p-3"
     >
       <div className="relative">
         <button
@@ -280,28 +280,28 @@ function LibraryCard({
         <button
           type="button"
           onClick={() => setIsRenaming(true)}
-          className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium hover:bg-border/40"
+          className="btn-secondary btn-xs"
         >
           Rename
         </button>
         <button
           type="button"
           onClick={() => setIsAssigningBrand(true)}
-          className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium hover:bg-border/40"
+          className="btn-secondary btn-xs"
         >
           Brand
         </button>
         <button
           type="button"
           onClick={() => setIsSettingCast(true)}
-          className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium hover:bg-border/40"
+          className="btn-secondary btn-xs"
         >
           Character ref
         </button>
         <button
           type="button"
           onClick={() => setIsSettingStyle(true)}
-          className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium hover:bg-border/40"
+          className="btn-secondary btn-xs"
         >
           Style ref
         </button>

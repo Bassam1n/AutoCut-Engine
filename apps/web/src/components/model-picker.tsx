@@ -43,7 +43,7 @@ export function ModelPicker({
           const option = options.find((o) => o.provider === provider && o.endpoint === endpoint);
           if (option) onChange(option);
         }}
-        className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+        className="field"
       >
         <option value="" disabled>
           Select a model

@@ -37,8 +37,8 @@ export default function OrgProductsPage({
 function Skeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }
@@ -90,7 +90,7 @@ async function GatedProducts({ params }: { params: Promise<{ orgId: string }> })
                   <Link
                     key={product.id}
                     href={`/org/${orgId}/brands/${brand.id}/products/${product.id}`}
-                    className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4 transition-colors hover:border-border-strong"
+                    className="card card-interactive flex items-center justify-between p-4"
                   >
                     <div>
                       <p className="font-medium">{product.name}</p>

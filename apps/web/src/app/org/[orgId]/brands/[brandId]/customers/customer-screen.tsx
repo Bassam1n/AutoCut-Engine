@@ -72,7 +72,7 @@ function CustomerCard({
 
   if (isEditing) {
     return (
-      <div className="rounded-xl border border-border bg-background-raised p-4">
+      <div className="card p-4">
         <CustomerForm
           defaultValues={customer}
           submitLabel="Save"
@@ -96,7 +96,7 @@ function CustomerCard({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-4">
+    <div className="card p-4">
       <div className="flex items-start justify-between">
         <div>
           <p className="font-medium">{customer.name}</p>
@@ -143,7 +143,7 @@ function NewCustomerForm({
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-4">
+    <div className="card p-4">
       <CustomerForm
         submitLabel="Add"
         onCancel={onDone}
@@ -194,7 +194,7 @@ function CustomerForm({
           required
           defaultValue={defaultValues?.name}
           disabled={disabled}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -207,7 +207,7 @@ function CustomerForm({
           placeholder="e.g. 25-34"
           defaultValue={defaultValues?.profile.age_range ?? ""}
           disabled={disabled}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -220,7 +220,7 @@ function CustomerForm({
           rows={2}
           defaultValue={defaultValues?.profile.pains ?? ""}
           disabled={disabled}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -233,7 +233,7 @@ function CustomerForm({
           rows={2}
           defaultValue={defaultValues?.profile.desired_outcome ?? ""}
           disabled={disabled}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
       </div>
       <div className="flex gap-2">
@@ -248,7 +248,7 @@ function CustomerForm({
           type="button"
           onClick={onCancel}
           disabled={disabled}
-          className="rounded-lg border border-border-strong px-4 py-2 text-sm font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary"
         >
           Cancel
         </button>

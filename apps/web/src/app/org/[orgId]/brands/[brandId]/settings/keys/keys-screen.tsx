@@ -83,7 +83,7 @@ function ProviderRow({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-4">
+    <div className="card p-4">
       <div className="flex items-center justify-between">
         <span className="font-medium">{label}</span>
         {existing && !editing && (
@@ -135,7 +135,7 @@ function ProviderRow({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             disabled={isPending}
-            className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+            className="field flex-1"
           />
           <button
             type="button"
@@ -153,7 +153,7 @@ function ProviderRow({
               setValue("");
             }}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary"
           >
             Cancel
           </button>

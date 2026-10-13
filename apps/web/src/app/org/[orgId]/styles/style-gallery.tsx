@@ -45,7 +45,7 @@ export function StyleGallery({
           placeholder="Search styles..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-56 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+          className="field w-56"
         />
         <button
           type="button"
@@ -142,7 +142,7 @@ function StyleCard({
     <button
       type="button"
       onClick={onOpen}
-      className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-background-raised text-left transition-colors hover:border-border-strong"
+      className="card card-interactive group relative flex flex-col overflow-hidden text-left"
     >
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-accent-soft">
         {style.preview_image_url ? (
@@ -185,7 +185,7 @@ function StyleDetailModal({ style, onClose }: { style: Style; onClose: () => voi
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-background-raised"
+        className="card flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border p-4">

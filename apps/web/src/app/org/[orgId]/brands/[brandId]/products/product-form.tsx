@@ -38,7 +38,7 @@ export function ProductForm({
           required
           defaultValue={product?.name}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
 
@@ -54,7 +54,7 @@ export function ProductForm({
           name="category"
           defaultValue={product?.category ?? ""}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         >
           <option value="">Select a category</option>
           {PRODUCT_CATEGORIES.map((category) => (
@@ -78,7 +78,7 @@ export function ProductForm({
           placeholder="One line describing the product"
           defaultValue={product?.what_it_is ?? ""}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
 
@@ -95,7 +95,7 @@ export function ProductForm({
           placeholder={'e.g. "15cm tall, 8cm wide" or "about the size of a soda can"'}
           defaultValue={product?.real_world_size ?? ""}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
         <p className="text-xs text-foreground-muted">
           Helps generated images and videos show the product at the right scale.
@@ -115,7 +115,7 @@ export function ProductForm({
           type="url"
           defaultValue={product?.url ?? ""}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
 

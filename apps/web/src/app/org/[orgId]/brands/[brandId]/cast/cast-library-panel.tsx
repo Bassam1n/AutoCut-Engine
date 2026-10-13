@@ -82,14 +82,14 @@ function CreateForm({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium">Name</label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -102,7 +102,7 @@ function CreateForm({
           onChange={(e) => setDescription(e.target.value)}
           disabled={isPending}
           rows={2}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
@@ -111,7 +111,7 @@ function CreateForm({
           onClick={onSubmit}
           isPending={isPending}
           pendingLabel="Saving..."
-          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className="btn-primary btn-sm"
         >
           Create
         </AsyncButton>
@@ -119,7 +119,7 @@ function CreateForm({
           type="button"
           onClick={onClose}
           disabled={isPending}
-          className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-sm"
         >
           Cancel
         </button>
@@ -198,7 +198,7 @@ function MemberCard({
   const refUrl = member.ref_asset_id ? assetUrls[member.ref_asset_id] : undefined;
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+    <div className="card-inset flex flex-col gap-2 p-3">
       {refUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={refUrl} alt={member.name} className="aspect-square w-full rounded-lg object-cover" />
@@ -214,21 +214,21 @@ function MemberCard({
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={isSaving}
-            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none disabled:opacity-60"
+            className="field field-sm"
           />
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={isSaving}
             rows={2}
-            className="resize-none rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none disabled:opacity-60"
+            className="field field-sm resize-none"
           />
           <div className="flex gap-1.5">
             <AsyncButton
               onClick={onSave}
               isPending={isSaving}
               pendingLabel="Saving..."
-              className="rounded-lg bg-accent px-2 py-1 text-[11px] font-medium text-accent-ink transition-opacity hover:opacity-90"
+              className="btn-primary btn-xs"
             >
               Save
             </AsyncButton>
@@ -236,7 +236,7 @@ function MemberCard({
               type="button"
               onClick={() => setIsEditing(false)}
               disabled={isSaving}
-              className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+              className="btn-secondary btn-xs"
             >
               Cancel
             </button>
@@ -256,7 +256,7 @@ function MemberCard({
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary btn-xs"
           >
             Edit
           </button>
@@ -265,7 +265,7 @@ function MemberCard({
           type="button"
           onClick={() => refInputRef.current?.click()}
           disabled={isUploading === "ref"}
-          className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-xs"
         >
           {isUploading === "ref" ? "Uploading..." : refUrl ? "Replace image" : "Upload image"}
         </button>
@@ -273,7 +273,7 @@ function MemberCard({
           type="button"
           onClick={() => sheetInputRef.current?.click()}
           disabled={isUploading === "sheet"}
-          className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-xs"
         >
           {isUploading === "sheet" ? "Uploading..." : member.sheet_asset_id ? "Replace sheet" : "Upload sheet"}
         </button>
@@ -281,7 +281,7 @@ function MemberCard({
           type="button"
           onClick={onDeactivate}
           disabled={isDeactivating}
-          className="rounded-lg border border-border-strong px-2 py-1 text-[11px] font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+          className="btn-secondary btn-xs text-danger hover:bg-danger/10"
         >
           {isDeactivating ? "Removing..." : "Remove"}
         </button>

@@ -31,14 +31,14 @@ export default function CastLibraryPage({
 }
 
 function HeaderSkeleton() {
-  return <div className="h-12 animate-pulse rounded-xl bg-border" />;
+  return <div className="h-12 animate-pulse rounded-2xl bg-border" />;
 }
 
 function ListSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
-      <div className="h-24 animate-pulse rounded-xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
+      <div className="h-24 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }

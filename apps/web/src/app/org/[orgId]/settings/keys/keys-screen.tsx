@@ -63,14 +63,14 @@ export function KeysScreen({
         {OAUTH_PROVIDERS.map((p) => (
           <div
             key={p.id}
-            className="mb-2 flex items-center justify-between rounded-xl border border-border bg-background-raised p-4"
+            className="card mb-2 flex items-center justify-between p-4"
           >
             <span className="font-medium">{p.label}</span>
             <button
               type="button"
               disabled
               title="OAuth connect is not built yet"
-              className="cursor-not-allowed rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium opacity-50"
+              className="btn-secondary"
             >
               Connect
             </button>
@@ -118,7 +118,7 @@ function ProviderRow({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-4">
+    <div className="card p-4">
       <div className="flex items-center justify-between">
         <span className="font-medium">{label}</span>
         {existing && !editing && (
@@ -155,7 +155,7 @@ function ProviderRow({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             disabled={isPending}
-            className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+            className="field flex-1"
           />
           <button
             type="button"
@@ -174,7 +174,7 @@ function ProviderRow({
                 setValue("");
               }}
               disabled={isPending}
-              className="rounded-lg border border-border-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+              className="btn-secondary"
             >
               Cancel
             </button>

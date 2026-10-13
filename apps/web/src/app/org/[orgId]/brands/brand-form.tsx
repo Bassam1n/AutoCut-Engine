@@ -46,7 +46,7 @@ export function BrandForm({
           required
           defaultValue={brand?.name}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
 
@@ -63,7 +63,7 @@ export function BrandForm({
           type="url"
           defaultValue={brand?.logo_url ?? ""}
           disabled={isPending}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
 
@@ -81,7 +81,7 @@ export function BrandForm({
               placeholder={field.placeholder}
               defaultValue={brand?.brand_context?.[field.key] ?? ""}
               disabled={isPending}
-              className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+              className="field resize-none"
             />
           </div>
         ))}

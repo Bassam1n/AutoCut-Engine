@@ -75,7 +75,7 @@ function SpendStatusCard({
   const isPaused = status.paused && !resumed;
 
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-5">
+    <div className="card p-5">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground-muted">
           Rolling 24 hour spend <span className="text-foreground-muted/60">(estimate)</span>

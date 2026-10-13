@@ -133,7 +133,7 @@ function RuleCard({
               <select
                 value={kind}
                 onChange={(e) => setKind(e.target.value as "do" | "avoid")}
-                className="w-fit rounded-lg border border-border bg-background px-2 py-1 text-sm"
+                className="field w-fit"
               >
                 <option value="do">DO</option>
                 <option value="avoid">AVOID</option>
@@ -142,7 +142,7 @@ function RuleCard({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-border bg-background p-2 text-sm"
+                className="field w-full p-2"
               />
             </div>
           ) : (
@@ -162,7 +162,7 @@ function RuleCard({
                   type="button"
                   onClick={onSaveEdit}
                   disabled={isPending}
-                  className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-accent-ink disabled:opacity-60"
+                  className="btn-primary btn-sm"
                 >
                   Save
                 </button>
@@ -173,7 +173,7 @@ function RuleCard({
                     setText(rule.text);
                     setKind(rule.kind);
                   }}
-                  className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium"
+                  className="btn-secondary btn-sm"
                 >
                   Cancel
                 </button>
@@ -182,7 +182,7 @@ function RuleCard({
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium"
+                className="btn-secondary btn-sm"
               >
                 Edit
               </button>
@@ -191,7 +191,7 @@ function RuleCard({
               type="button"
               onClick={onTogglePause}
               disabled={isPending}
-              className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium disabled:opacity-60"
+              className="btn-secondary btn-sm"
             >
               {rule.active ? "Pause" : "Resume"}
             </button>

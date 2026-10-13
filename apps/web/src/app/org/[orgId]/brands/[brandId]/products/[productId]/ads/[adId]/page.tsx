@@ -44,7 +44,7 @@ function CanvasSkeleton() {
     <div className="flex min-h-screen flex-col">
       <div className="h-12 animate-pulse border-b border-border bg-border/20" />
       <div className="mx-auto w-full max-w-3xl flex-1 px-6 py-8">
-        <div className="h-64 animate-pulse rounded-xl bg-border" />
+        <div className="h-64 animate-pulse rounded-2xl bg-border" />
       </div>
     </div>
   );

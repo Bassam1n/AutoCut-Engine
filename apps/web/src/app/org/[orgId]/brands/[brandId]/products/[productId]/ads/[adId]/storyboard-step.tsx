@@ -99,7 +99,7 @@ function SceneRail({
   onJump: (sceneId: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto rounded-xl border border-border bg-background-raised/50 p-3">
+    <div className="card-inset flex items-center gap-1.5 overflow-x-auto p-3">
       {scenes.map((scene) => {
         const isActive = scene.id === activeSceneId;
         const stageColor = scene.visual
@@ -154,7 +154,7 @@ function ChatPatch({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+    <div className="card-inset flex flex-col gap-2 p-3">
       <label className="text-xs font-medium">Edit by chat</label>
       <div className="flex gap-2">
         <input
@@ -162,14 +162,14 @@ function ChatPatch({
           onChange={(e) => setInstruction(e.target.value)}
           placeholder="e.g. make scene 3's CTA mention the discount"
           disabled={isPending}
-          className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field flex-1"
         />
         <AsyncButton
           onClick={onSubmit}
           isPending={isPending}
           pendingLabel="Patching..."
           disabled={!instruction.trim()}
-          className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className="btn-primary shrink-0"
         >
           Patch
         </AsyncButton>
@@ -315,7 +315,7 @@ function StoryboardRow({
           onBlur={saveCopy}
           rows={2}
           disabled={isPending}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
       </div>
 
@@ -328,7 +328,7 @@ function StoryboardRow({
           rows={2}
           placeholder="No visual generated yet"
           disabled={isPending || isRewriting}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field resize-none"
         />
         <div className="flex gap-2">
           <input
@@ -336,14 +336,14 @@ function StoryboardRow({
             onChange={(e) => setRewriteInstruction(e.target.value)}
             placeholder="e.g. make it more dynamic (optional — leave blank to just improve it)"
             disabled={isRewriting}
-            className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-1.5 text-xs outline-none disabled:opacity-60"
+            className="field field-sm flex-1"
           />
           <AsyncButton
             onClick={onRewriteVisual}
             isPending={isRewriting}
             pendingLabel="Rewriting..."
             disabled={isPending}
-            className="shrink-0 rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary btn-sm shrink-0"
           >
             ✨ Rewrite
           </AsyncButton>
@@ -357,7 +357,7 @@ function StoryboardRow({
           type="button"
           onClick={onSplit}
           disabled={isPending}
-          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary btn-sm"
         >
           Split
         </button>
@@ -366,7 +366,7 @@ function StoryboardRow({
             type="button"
             onClick={onMerge}
             disabled={isPending}
-            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+            className="btn-secondary btn-sm"
           >
             Merge into previous
           </button>

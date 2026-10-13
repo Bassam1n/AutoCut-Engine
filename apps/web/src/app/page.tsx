@@ -31,7 +31,7 @@ export default function HomePage() {
 
 function AccountBadgeSkeleton() {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4">
+    <div className="card flex items-center justify-between p-4">
       <div className="h-4 w-40 animate-pulse rounded bg-border" />
       <div className="h-8 w-20 animate-pulse rounded-lg bg-border" />
     </div>
@@ -47,7 +47,7 @@ async function AccountBadge() {
   }
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-border bg-background-raised p-4">
+    <div className="card flex items-center justify-between p-4">
       <p className="text-sm">
         Signed in as{" "}
         <span className="font-medium">{user.email}</span>
@@ -55,7 +55,7 @@ async function AccountBadge() {
       <form action={signOut}>
         <button
           type="submit"
-          className="rounded-lg border border-border-strong px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/40"
+          className="btn-secondary"
         >
           Sign out
         </button>

@@ -51,8 +51,8 @@ async function GatedChecklist({
 function BrandsSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="h-20 animate-pulse rounded-xl bg-border" />
-      <div className="h-20 animate-pulse rounded-xl bg-border" />
+      <div className="h-20 animate-pulse rounded-2xl bg-border" />
+      <div className="h-20 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }
@@ -86,7 +86,7 @@ async function GatedBrandsList({
             <Link
               key={brand.id}
               href={`/org/${orgId}/brands/${brand.id}/customers`}
-              className="flex items-center gap-3 rounded-xl border border-border bg-background-raised p-4 transition-colors hover:border-border-strong"
+              className="card card-interactive flex items-center gap-3 p-4"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-accent-soft text-sm font-semibold text-accent">
                 {brand.logo_url ? (

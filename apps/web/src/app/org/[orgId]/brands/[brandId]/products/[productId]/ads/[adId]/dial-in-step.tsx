@@ -115,7 +115,7 @@ export function DialInStep({
           <button
             type="button"
             onClick={onContinue}
-            className="self-start rounded-lg border border-border-strong px-4 py-2 text-sm font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary self-start"
           >
             Skip for now →
           </button>
@@ -161,7 +161,7 @@ function QuestionCard({
   const [customValue, setCustomValue] = useState("");
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-4 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
         Question {index + 1} of {total} — {question.topic === "viewer" ? "about the viewer" : "about the ad"}
       </p>
@@ -192,13 +192,13 @@ function QuestionCard({
           value={customValue}
           onChange={(e) => setCustomValue(e.target.value)}
           placeholder="Or type your own answer"
-          className="flex-1 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+          className="field flex-1"
         />
         <button
           type="button"
           onClick={() => customValue.trim() && onAnswer(question.id, customValue.trim())}
           disabled={!customValue.trim()}
-          className="rounded-lg border border-border-strong px-3 py-2 text-sm font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary"
         >
           Use this
         </button>
@@ -219,7 +219,7 @@ function FinishCard({
   const [customerName, setCustomerName] = useState("");
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-4 p-4">
       <p className="text-sm font-medium">All set. Save this as a customer profile?</p>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-medium">Customer name</label>
@@ -228,7 +228,7 @@ function FinishCard({
           onChange={(e) => setCustomerName(e.target.value)}
           placeholder="e.g. Sarah"
           disabled={isSaving}
-          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+          className="field"
         />
       </div>
       <div className="flex gap-2">
@@ -244,7 +244,7 @@ function FinishCard({
           type="button"
           onClick={onSkipSave}
           disabled={isSaving}
-          className="rounded-lg border border-border-strong px-4 py-2 text-sm font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+          className="btn-secondary"
         >
           Skip saving
         </button>

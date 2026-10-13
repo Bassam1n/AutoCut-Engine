@@ -158,13 +158,13 @@ export function ExportStep({
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-background-raised/50 p-3">
+      <div className="card-inset flex flex-col gap-2 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-foreground-muted">Download all</span>
           <select
             value={scope}
             onChange={(e) => setScope(e.target.value as DownloadScope)}
-            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs"
+            className="field field-sm"
           >
             <option value="all">Everything</option>
             <option value="images">Images only</option>
@@ -175,7 +175,7 @@ export function ExportStep({
             onClick={onDownloadZip}
             isPending={isZipping}
             pendingLabel="Zipping..."
-            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+            className="btn-primary btn-sm"
           >
             Download zip
           </AsyncButton>
@@ -185,7 +185,7 @@ export function ExportStep({
             isPending={isZipping}
             pendingLabel="Zipping..."
             disabled={selected.size === 0}
-            className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:cursor-not-allowed disabled:opacity-40"
+            className="btn-secondary btn-sm disabled:cursor-not-allowed disabled:opacity-40"
           >
             Download selected{selected.size > 0 ? ` (${selected.size})` : ""}
           </AsyncButton>
@@ -251,7 +251,7 @@ function SceneExportCard({
   const caption = entries.find((e) => e.kind === "caption");
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-3 p-4">
       <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
       <div className="flex flex-wrap gap-3">
         {video && (

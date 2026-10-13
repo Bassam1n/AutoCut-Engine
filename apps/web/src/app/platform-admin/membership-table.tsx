@@ -45,7 +45,7 @@ function OrgSection({ group }: { group: OrgGroup }) {
   const seatUsage = activeMembers.filter((m) => m.member_seat_active).length + group.invites.length;
 
   return (
-    <div className="rounded-xl border border-border bg-background-raised p-5">
+    <div className="card p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold">{group.orgName}</h2>
         <SeatCapEditor orgId={group.orgId} seatCap={group.seatCap} seatUsage={seatUsage} />
@@ -127,7 +127,7 @@ function SeatCapEditor({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={isPending}
-        className="w-24 rounded-md border border-border-strong bg-background px-2 py-1 text-xs outline-none disabled:opacity-60"
+        className="field field-sm w-24"
       />
       <button
         type="button"
@@ -173,7 +173,7 @@ function MemberRow({ member }: { member: OrgMemberRow }) {
           defaultValue={member.member_role}
           disabled={isPending}
           onChange={(e) => onRoleChange(e.target.value as (typeof ROLES)[number])}
-          className="rounded-md border border-border-strong bg-background px-2 py-1 text-xs capitalize outline-none disabled:opacity-60"
+          className="field field-sm capitalize"
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>

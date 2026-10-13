@@ -87,7 +87,7 @@ export function Stepper({
           <button
             type="button"
             onClick={onPreviousStep}
-            className="inline-flex items-center gap-1 rounded-lg border border-border-strong px-2 py-1 text-xs font-medium text-foreground-muted transition-colors hover:bg-border/40 hover:text-foreground"
+            className="btn-secondary btn-sm inline-flex items-center gap-1 text-foreground-muted hover:text-foreground"
           >
             <span aria-hidden="true">←</span> Previous step
           </button>

@@ -227,19 +227,19 @@ export function VoiceoverStep({
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+      <div className="card-inset flex flex-col gap-2 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="text"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             placeholder="Search voices by name…"
-            className="min-w-[160px] flex-1 rounded-lg border border-border-strong bg-background px-2.5 py-1.5 text-xs outline-none"
+            className="field field-sm min-w-[160px] flex-1"
           />
           <select
             value={genderFilter}
             onChange={(e) => setGenderFilter(e.target.value)}
-            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none"
+            className="field field-sm"
           >
             <option value="">Any gender</option>
             <option value="male">Male</option>
@@ -249,7 +249,7 @@ export function VoiceoverStep({
           <select
             value={ageFilter}
             onChange={(e) => setAgeFilter(e.target.value)}
-            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none"
+            className="field field-sm"
           >
             <option value="">Any age</option>
             <option value="young">Young</option>
@@ -259,7 +259,7 @@ export function VoiceoverStep({
           <select
             value={voiceType}
             onChange={(e) => setVoiceType(e.target.value as "premade" | "community")}
-            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none"
+            className="field field-sm"
           >
             <option value="premade">Premade library</option>
             <option value="community">Community library</option>
@@ -361,7 +361,7 @@ function GenerateAllBar({
   onGenerateSelected: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background-raised/50 p-3">
+    <div className="card-inset flex flex-wrap items-center gap-3 p-3">
       <span className="text-xs text-foreground-muted">
         Starts eligible scenes (voice picked, script non-empty, not already generating) about a
         second apart. Scenes still missing a voice or script are skipped.
@@ -370,7 +370,7 @@ function GenerateAllBar({
         onClick={onGenerateAll}
         isPending={isStaggering}
         pendingLabel="Starting..."
-        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+        className="btn-primary btn-sm"
       >
         Generate All
       </AsyncButton>
@@ -379,7 +379,7 @@ function GenerateAllBar({
         isPending={isStaggering}
         disabled={selectedCount === 0}
         pendingLabel="Starting..."
-        className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+        className="btn-secondary btn-sm"
       >
         Generate Selected{selectedCount > 0 ? ` (${selectedCount})` : ""}
       </AsyncButton>
@@ -650,7 +650,7 @@ function SceneVoiceoverCard({
   const srtUrl = existing?.captionAsset ? assetUrls[existing.captionAsset.storage_path] ?? null : null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
+    <div className="card-inset flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-xs font-medium text-foreground-muted">
           {onToggleSelected && (
@@ -675,20 +675,20 @@ function SceneVoiceoverCard({
             value={voiceIdInput}
             onChange={(e) => setVoiceIdInput(e.target.value)}
             placeholder="Add by voice ID…"
-            className="flex-1 rounded-lg border border-border-strong bg-background px-2 py-1 text-xs outline-none"
+            className="field field-sm flex-1"
           />
           <AsyncButton
             onClick={onAddVoiceById}
             isPending={isLookingUpVoiceId}
             pendingLabel="Looking up…"
-            className="shrink-0 rounded-lg border border-border-strong px-2 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+            className="btn-secondary btn-sm shrink-0"
           >
             Add
           </AsyncButton>
         </div>
         {voiceIdError && <p className="text-xs text-danger">{voiceIdError}</p>}
         {addVoiceError && <p className="text-xs text-danger">{addVoiceError}</p>}
-        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-border-strong p-1">
+        <div className="card-inset flex max-h-48 flex-col gap-1 overflow-y-auto p-1">
           {displayedVoices.length === 0 && (
             <p className="p-2 text-xs text-foreground-muted">No voices available.</p>
           )}
@@ -759,7 +759,7 @@ function SceneVoiceoverCard({
           value={script}
           onChange={(e) => setScript(e.target.value)}
           rows={3}
-          className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+          className="field resize-none"
         />
         {toneDescription && (
           <p className="text-[11px] text-foreground-muted">
@@ -787,7 +787,7 @@ function SceneVoiceoverCard({
           onClick={onGenerate}
           isPending={isGenerating}
           pendingLabel="Generating..."
-          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+          className="btn-primary btn-sm"
         >
           {existing ? "Regenerate" : "Generate voiceover"}
         </AsyncButton>
