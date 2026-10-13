@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --background: #f0eee9;
   --background-raised: #ffffff;
   --foreground: #16171a;
@@ -12,6 +13,8 @@
   --accent-soft: #fbe6dc;
   --danger: #b3261e;
   --danger-soft: #fbe7e5;
+  /* Sidebar: the raised shadow tinted with the brand orange, offset downward like the others. */
+  --shadow-sidebar: 0 2px 6px rgba(232, 82, 31, 0.12), 0 24px 48px -16px rgba(232, 82, 31, 0.38);
 
   /* Reference design's soft, oversized drop shadow — used on cards,
      the sidebar, buttons and dropdowns, not just on hover, so the UI
@@ -38,8 +41,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Dark tokens apply when the OS asks for dark (unless the user picked
+   Light in the sidebar toggle) or when the user picked Dark. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --background: #121212;
     --background-raised: #1b1b1b;
     --foreground: #f2f1ee;
@@ -51,9 +57,28 @@
     --accent-soft: #3a2017;
     --danger: #e5847e;
     --danger-soft: #3a211f;
+    --shadow-sidebar: 0 2px 6px rgba(240, 106, 53, 0.18), 0 24px 48px -16px rgba(240, 106, 53, 0.42);
     --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 24px -8px rgba(0, 0, 0, 0.45);
     --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 32px -12px rgba(0, 0, 0, 0.55);
   }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #121212;
+  --background-raised: #1b1b1b;
+  --foreground: #f2f1ee;
+  --foreground-muted: #a4a3a0;
+  --border: #2d2d2d;
+  --border-strong: #3d3d3d;
+  --accent: #f06a35;
+  --accent-ink: #16171a;
+  --accent-soft: #3a2017;
+  --danger: #e5847e;
+  --danger-soft: #3a211f;
+  --shadow-sidebar: 0 2px 6px rgba(240, 106, 53, 0.18), 0 24px 48px -16px rgba(240, 106, 53, 0.42);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 24px -8px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 32px -12px rgba(0, 0, 0, 0.55);
 }
 
 * {
@@ -253,12 +278,18 @@ body {
   }
 
   @media (prefers-color-scheme: dark) {
-    .field {
+    :where(:root:not([data-theme="light"])) .field {
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
     }
-    select.field {
+    :where(:root:not([data-theme="light"])) select.field {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a4a3a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
     }
+  }
+  :where(:root[data-theme="dark"]) .field {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  }
+  :where(:root[data-theme="dark"]) select.field {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a4a3a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
   }
 
   @media (prefers-reduced-motion: reduce) {

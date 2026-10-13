@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions";
 import { buttonVariantsSm } from "@/components/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { CreateAdButton } from "./create-ad-button";
 import type { SidebarInfo } from "./sidebar-data";
 
@@ -50,7 +51,7 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="sticky top-4 flex h-[calc(100vh-2rem)] w-64 shrink-0 flex-col self-start overflow-y-auto rounded-3xl bg-background-raised px-3 py-5 shadow-[var(--shadow-raised)]">
+    <aside className="sticky top-4 flex h-[calc(100vh-2rem)] w-64 shrink-0 flex-col self-start overflow-y-auto rounded-3xl bg-background-raised px-3 py-5 shadow-[var(--shadow-sidebar)]">
       <div className="flex items-center gap-2.5 px-2 pb-5">
         <div className="relative h-8 w-8 shrink-0">
           <Image src="/logo.png" alt="" fill className="object-contain" />
@@ -87,6 +88,7 @@ export function Sidebar({
         <p className="truncate text-xs text-foreground-muted">
           {info.userEmail}
         </p>
+        <ThemeToggle />
         <form action={signOut}>
           <button type="submit" className={`w-full justify-start ${buttonVariantsSm.secondary}`}>
             Sign out
