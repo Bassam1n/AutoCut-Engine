@@ -211,6 +211,7 @@ export const runProviderJob = task({
       target_model: jobPayload.endpoint,
       target_usd_est: usdEstimate,
       target_kind: jobPayload.spendKind,
+      target_scene_id: job.scene_id,
     });
 
     await supabase

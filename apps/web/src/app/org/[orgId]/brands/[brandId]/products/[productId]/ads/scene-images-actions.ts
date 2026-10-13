@@ -542,6 +542,24 @@ export async function reserveFeedbackImageUploadPath(
   return { ok: true, path };
 }
 
+/** Restores an archived image asset — mirrors scene-videos-actions.ts's restoreArchivedVideo exactly. Unlike video (exactly one current version), a scene can have several simultaneously-current images, so restoring doesn't re-archive anything else: it just un-archives the picked one, adding it back alongside whatever is currently non-archived for that scene. */
+export async function restoreArchivedImage(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string,
+  assetId: string
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const service = createServiceClient();
+  const { error } = await service.from("assets").update({ archived: false }).eq("id", assetId).eq("org_id", orgId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${adId}`);
+  return { ok: true };
+}
+
 /** Records a scene-scoped feedback image after the browser confirms the direct Storage upload succeeded. Spec §5.6 reference tier (b) / §5.8 "attach a reference image". */
 export async function recordFeedbackImage(
   orgId: string,

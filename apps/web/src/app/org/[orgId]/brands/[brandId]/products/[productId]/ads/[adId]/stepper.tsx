@@ -50,11 +50,14 @@ const STEPS: { id: Exclude<StudioStep, "brief">; label: string }[] = [
   { id: "export", label: "Export" },
 ];
 
+export type SceneStepProgress = { done: number; total: number };
+
 export function Stepper({
   currentStep,
   onStepClick,
   onPreviousStep,
   adsListHref,
+  sceneProgress,
 }: {
   currentStep: StudioStep;
   onStepClick?: (step: StudioStep) => void;
@@ -62,6 +65,8 @@ export function Stepper({
   onPreviousStep?: () => void;
   /** Where the top-level "leave Studio" back link goes — the ad's product's ads list. */
   adsListHref: string;
+  /** Per-scene "N/total done" counts for the steps where that's a meaningful number (not every step — scripts/concept/storyboard are whole-ad states, not per-scene counts). */
+  sceneProgress?: Partial<Record<Extract<StudioStep, "scene_images" | "voiceover" | "scene_videos">, SceneStepProgress>>;
 }) {
   // "brief" has no entry of its own in STEPS (it's the fallback off of
   // "scripts") — treat it as still being on the "scripts" step so the
@@ -93,6 +98,7 @@ export function Stepper({
         const isActive = step.id === effectiveStep;
         const isDone = i < currentIndex;
         const isClickable = isDone && onStepClick;
+        const progress = sceneProgress?.[step.id as keyof NonNullable<typeof sceneProgress>];
 
         return (
           <div key={step.id} className="flex items-center gap-1">
@@ -120,6 +126,11 @@ export function Stepper({
                 {isDone ? "✓" : i + 1}
               </span>
               {step.label}
+              {progress && progress.total > 0 && (
+                <span className="rounded-full bg-border/60 px-1.5 py-0.5 text-[10px] font-normal text-foreground-muted">
+                  {progress.done}/{progress.total}
+                </span>
+              )}
             </button>
             {i < STEPS.length - 1 && (
               <span className="shrink-0 text-foreground-muted/40">→</span>

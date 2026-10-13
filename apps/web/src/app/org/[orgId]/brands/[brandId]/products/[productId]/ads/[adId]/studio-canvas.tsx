@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Stepper, type StudioStep } from "./stepper";
+import { Stepper, type StudioStep, type SceneStepProgress } from "./stepper";
 import { ScriptsStep } from "./scripts-step";
 import { BriefStep } from "./brief-step";
 import { ScenePlanStep } from "./scene-plan-step";
@@ -20,6 +20,7 @@ import type { Concept, CastMember } from "../concepts-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 import type { SceneImageAsset } from "../scene-images-data";
 import type { SceneVideoJob, SceneVoiceover, SceneVoiceoverJob } from "../scene-videos-data";
+import type { SceneSpendTotal } from "../spend-data";
 
 export function StudioCanvas({
   orgId,
@@ -35,6 +36,7 @@ export function StudioCanvas({
   providersWithKeys,
   costBreakdown,
   sceneImagesBySceneId,
+  archivedSceneImagesBySceneId,
   sceneFeedbackImagesBySceneId,
   sceneImageUrls,
   videoModelOptions,
@@ -44,6 +46,7 @@ export function StudioCanvas({
   sceneVideoUrls,
   sceneVoiceoversBySceneId,
   activeSceneVoiceoverJobsBySceneId,
+  sceneSpendBySceneId,
 }: {
   orgId: string;
   brandId: string;
@@ -59,6 +62,7 @@ export function StudioCanvas({
   /** Server-rendered <CostBreakdown /> slot — composed in from page.tsx since it's an async Server Component and can't be imported directly into this Client Component. */
   costBreakdown: React.ReactNode;
   sceneImagesBySceneId: Record<string, SceneImageAsset[]>;
+  archivedSceneImagesBySceneId: Record<string, SceneImageAsset[]>;
   sceneFeedbackImagesBySceneId: Record<string, SceneImageAsset[]>;
   sceneImageUrls: Record<string, string>;
   videoModelOptions: ModelOption[];
@@ -68,10 +72,23 @@ export function StudioCanvas({
   sceneVideoUrls: Record<string, string>;
   sceneVoiceoversBySceneId: Record<string, SceneVoiceover>;
   activeSceneVoiceoverJobsBySceneId: Record<string, SceneVoiceoverJob>;
+  sceneSpendBySceneId: Record<string, SceneSpendTotal>;
 }) {
   const [step, setStep] = useState<StudioStep>(() => ad.current_step ?? initialStep(ad, scripts, scenes));
   const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
   const previousStep = previousStepFor(step);
+
+  // "Done" means "has at least one current asset for that scene" — jobs
+  // that fail or are never started both just leave a scene absent from
+  // these maps, so there's no reliable way to surface a failed-count here
+  // (getActiveSceneVideoJobs/getActiveSceneVoiceoverJobs only ever return
+  // queued/running rows; a failed job isn't loaded anywhere in this tree).
+  const totalScenes = scenes.length;
+  const sceneProgress: Partial<Record<Extract<StudioStep, "scene_images" | "voiceover" | "scene_videos">, SceneStepProgress>> = {
+    scene_images: { done: Object.keys(sceneImagesBySceneId).length, total: totalScenes },
+    voiceover: { done: Object.keys(sceneVoiceoversBySceneId).length, total: totalScenes },
+    scene_videos: { done: Object.keys(sceneVideosBySceneId).length, total: totalScenes },
+  };
 
   // Wraps setStep so every navigation (stepper click, "Previous step",
   // or a step's own "Continue") also persists ad.current_step — see
@@ -90,6 +107,7 @@ export function StudioCanvas({
         onStepClick={goToStep}
         onPreviousStep={previousStep ? () => goToStep(previousStep) : undefined}
         adsListHref={adsListHref}
+        sceneProgress={sceneProgress}
       />
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-6 py-8">
@@ -165,10 +183,12 @@ export function StudioCanvas({
             ad={ad}
             scenes={scenes}
             imagesBySceneId={sceneImagesBySceneId}
+            archivedImagesBySceneId={archivedSceneImagesBySceneId}
             feedbackImagesBySceneId={sceneFeedbackImagesBySceneId}
             imageUrls={sceneImageUrls}
             imageModelOptions={imageModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
+            sceneSpendBySceneId={sceneSpendBySceneId}
             onContinue={() => goToStep("voiceover")}
           />
         )}
@@ -199,6 +219,7 @@ export function StudioCanvas({
             assetUrls={sceneVideoUrls}
             videoModelOptions={videoModelOptions}
             providersWithKeys={new Set(providersWithKeys)}
+            sceneSpendBySceneId={sceneSpendBySceneId}
             onContinue={() => goToStep("export")}
           />
         )}

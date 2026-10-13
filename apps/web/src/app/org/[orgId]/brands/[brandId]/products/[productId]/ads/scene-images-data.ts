@@ -38,6 +38,28 @@ export async function getSceneImages(orgId: string, adId: string): Promise<Recor
   return bySceneId;
 }
 
+/** Archived image assets — archived by submitImageFeedback() as a side effect whenever Tweak/Rework replaces a scene's current image with a rewritten one. Mirrors scene-videos-data.ts's getArchivedSceneVideos exactly. */
+export async function getArchivedSceneImages(orgId: string, adId: string): Promise<Record<string, SceneImageAsset[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("assets")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("ad_id", adId)
+    .eq("kind", "image")
+    .eq("archived", true)
+    .order("version", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const bySceneId: Record<string, SceneImageAsset[]> = {};
+  for (const asset of data ?? []) {
+    if (!asset.scene_id) continue;
+    (bySceneId[asset.scene_id] ??= []).push(asset);
+  }
+  return bySceneId;
+}
+
 /** Attached feedback images (assets.kind='feedback'), grouped by scene — spec §5.6 reference tier (b). */
 export async function getSceneFeedbackImages(orgId: string, adId: string): Promise<Record<string, SceneImageAsset[]>> {
   const supabase = await createClient();

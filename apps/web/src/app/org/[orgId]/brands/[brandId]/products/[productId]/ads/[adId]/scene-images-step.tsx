@@ -13,6 +13,7 @@ import {
   resolveFinalImagePrompt,
   reserveFeedbackImageUploadPath,
   recordFeedbackImage,
+  restoreArchivedImage,
   type ModelChoice,
   type ReferenceTierLabel,
 } from "../scene-images-actions";
@@ -24,6 +25,7 @@ import type { Ad } from "../ads-data";
 import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
 import type { ModelOption } from "@/lib/providers/models-data";
+import type { SceneSpendTotal } from "../spend-data";
 
 const STAGGER_MS = 1000;
 
@@ -34,10 +36,12 @@ export function SceneImagesStep({
   ad,
   scenes,
   imagesBySceneId,
+  archivedImagesBySceneId,
   feedbackImagesBySceneId,
   imageUrls,
   imageModelOptions,
   providersWithKeys,
+  sceneSpendBySceneId,
   onContinue,
 }: {
   orgId: string;
@@ -46,10 +50,12 @@ export function SceneImagesStep({
   ad: Ad;
   scenes: Scene[];
   imagesBySceneId: Record<string, SceneImageAsset[]>;
+  archivedImagesBySceneId: Record<string, SceneImageAsset[]>;
   feedbackImagesBySceneId: Record<string, SceneImageAsset[]>;
   imageUrls: Record<string, string>;
   imageModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
+  sceneSpendBySceneId?: Record<string, SceneSpendTotal>;
   onContinue: () => void;
 }) {
   const [imageModel, setImageModel] = useState<ModelOption | null>(imageModelOptions[0] ?? null);
@@ -207,8 +213,10 @@ export function SceneImagesStep({
               ad={ad}
               scene={scene}
               images={imagesBySceneId[scene.id] ?? []}
+              archivedImages={archivedImagesBySceneId[scene.id] ?? []}
               feedbackImages={feedbackImagesBySceneId[scene.id] ?? []}
               imageUrls={imageUrls}
+              spend={sceneSpendBySceneId?.[scene.id]}
               isGenerating={generatingSceneIds.has(scene.id)}
               isSelected={selectedSceneIds.has(scene.id)}
               onToggleSelected={() => toggleSelected(scene.id)}
@@ -313,8 +321,10 @@ function SceneImageCard({
   ad,
   scene,
   images,
+  archivedImages,
   feedbackImages,
   imageUrls,
+  spend,
   isGenerating,
   isSelected,
   onToggleSelected,
@@ -329,8 +339,10 @@ function SceneImageCard({
   ad: Ad;
   scene: Scene;
   images: SceneImageAsset[];
+  archivedImages: SceneImageAsset[];
   feedbackImages: SceneImageAsset[];
   imageUrls: Record<string, string>;
+  spend?: SceneSpendTotal;
   isGenerating: boolean;
   isSelected: boolean;
   onToggleSelected: () => void;
@@ -378,6 +390,14 @@ function SceneImageCard({
             aria-label={`Select scene ${scene.idx + 1} for Generate Selected`}
           />
           <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
+          {spend && spend.usd > 0 && (
+            <span
+              title={`${spend.count} generation${spend.count === 1 ? "" : "s"}`}
+              className="rounded-full bg-border/60 px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted"
+            >
+              ${spend.usd.toFixed(2)}
+            </span>
+          )}
           {override && (
             <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent">
               Prompt overridden
@@ -549,6 +569,18 @@ function SceneImageCard({
               attachedReferenceStoragePath
             );
           }}
+        />
+      )}
+
+      {archivedImages.length > 0 && (
+        <ArchivedImagesStrip
+          orgId={orgId}
+          brandId={brandId}
+          productId={productId}
+          adId={ad.id}
+          scene={scene}
+          archivedImages={archivedImages}
+          imageUrls={imageUrls}
         />
       )}
 
@@ -755,6 +787,74 @@ function FeedbackUpload({
         />
       </label>
       {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+function ArchivedImagesStrip({
+  orgId,
+  brandId,
+  productId,
+  adId,
+  scene,
+  archivedImages,
+  imageUrls,
+}: {
+  orgId: string;
+  brandId: string;
+  productId: string;
+  adId: string;
+  scene: Scene;
+  archivedImages: SceneImageAsset[];
+  imageUrls: Record<string, string>;
+}) {
+  const router = useRouter();
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  async function onRestore(assetId: string) {
+    setRestoringId(assetId);
+    try {
+      const result = await restoreArchivedImage(orgId, brandId, productId, adId, assetId);
+      if (result.ok) router.refresh();
+    } finally {
+      setRestoringId(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+      <span className="text-xs font-medium text-foreground-muted">
+        Archived images — archived when scene {scene.idx + 1}&apos;s image was replaced by Tweak/Rework
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {archivedImages.map((asset) => {
+          const url = imageUrls[asset.storage_path];
+          return (
+            <div key={asset.id} className="flex flex-col gap-1">
+              {url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={url}
+                  alt={`Scene ${scene.idx + 1} archived image v${asset.version}`}
+                  className="h-20 w-20 rounded-lg object-cover opacity-70"
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-border text-xs text-foreground-muted">
+                  v{asset.version}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => onRestore(asset.id)}
+                disabled={restoringId === asset.id}
+                className="rounded-lg border border-border-strong px-2 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+              >
+                {restoringId === asset.id ? "Restoring..." : "Restore"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

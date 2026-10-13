@@ -8,6 +8,7 @@ export type SpendEvent = {
   usd_est: number;
   kind: string;
   created_at: string;
+  scene_id: string | null;
 };
 
 const TASK_LABELS: Record<string, string> = {
@@ -30,7 +31,7 @@ export async function getAdSpend(orgId: string, adId: string): Promise<SpendEven
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("spend_events")
-    .select("id, provider, model, usd_est, kind, created_at")
+    .select("id, provider, model, usd_est, kind, created_at, scene_id")
     .eq("org_id", orgId)
     .eq("ad_id", adId)
     .order("created_at");
@@ -52,4 +53,27 @@ export function groupSpendByKind(events: SpendEvent[]): SpendByKind[] {
   return Array.from(groups.entries())
     .map(([kind, { usd, count }]) => ({ kind, label: spendKindLabel(kind), usd, count }))
     .sort((a, b) => b.usd - a.usd);
+}
+
+/**
+ * Per-scene totals (friction-audit finding: an editor burning budget
+ * re-rolling one problem scene had no way to see which scene was
+ * actually eating it, only the whole-ad aggregate). Events with no
+ * scene_id (scripts, concepts, cast — whole-ad/brand-level spend, see
+ * migration 00000000000048's own reasoning) are simply excluded, not
+ * folded into some "other" bucket — they're genuinely not a scene's
+ * cost to attribute.
+ */
+export type SceneSpendTotal = { usd: number; count: number };
+
+export function groupSpendByScene(events: SpendEvent[]): Record<string, SceneSpendTotal> {
+  const bySceneId: Record<string, SceneSpendTotal> = {};
+  for (const event of events) {
+    if (!event.scene_id) continue;
+    const existing = bySceneId[event.scene_id] ?? { usd: 0, count: 0 };
+    existing.usd += event.usd_est;
+    existing.count += 1;
+    bySceneId[event.scene_id] = existing;
+  }
+  return bySceneId;
 }

@@ -325,6 +325,26 @@ export async function submitImageFeedback(
     .eq("id", imageResult.assetId);
   if (updateError) return { ok: false, error: updateError.message };
 
+  // Tweak/Rework targets and rewrites ONE existing image into a
+  // replacement, unlike bulk Generate/Regenerate (scene-images-
+  // actions.ts's generateSceneImages), which deliberately produces
+  // 1-4 simultaneously-current images an editor picks between later
+  // (scene-videos-step.tsx's own "pick which one to animate" picker).
+  // Archiving every other prior non-archived image here, before this
+  // call's own update() above landed the new one, would be wrong on
+  // both counts; archiving them AFTER it (now, excluding the asset
+  // that update() just moved into this scene) matches the "replace
+  // the current one, keep history, allow restore" model Scene videos
+  // already has — see getArchivedSceneImages/restoreArchivedImage.
+  await service
+    .from("assets")
+    .update({ archived: true })
+    .eq("org_id", orgId)
+    .eq("scene_id", sceneId)
+    .eq("kind", "image")
+    .eq("archived", false)
+    .neq("id", imageResult.assetId);
+
   // Spec §5.8: regenerating a scene's image archives that scene's
   // videos — same rule generateSceneImages already applies, repeated
   // here since Tweak/Rework on the image is itself a regeneration.

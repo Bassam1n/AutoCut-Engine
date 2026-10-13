@@ -7,7 +7,7 @@ import { getScenes } from "../scenes-data";
 import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data";
 import { getModelOptions } from "@/lib/providers/models-data";
 import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
-import { getSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
+import { getSceneImages, getArchivedSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
 import {
   getSceneVideos,
   getArchivedSceneVideos,
@@ -17,6 +17,7 @@ import {
 } from "../scene-videos-data";
 import { StudioCanvas } from "./studio-canvas";
 import { CostBreakdown } from "./cost-breakdown";
+import { getAdSpend, groupSpendByScene } from "../spend-data";
 
 // Scene-image generation (scene-images-actions.ts) polls a provider
 // synchronously and can run well past Vercel's default function
@@ -75,6 +76,7 @@ async function GatedCanvas({
   const providersWithKeys = secrets.map((s) => s.provider);
 
   const sceneImagesBySceneId = await getSceneImages(orgId, adId);
+  const archivedSceneImagesBySceneId = await getArchivedSceneImages(orgId, adId);
   const sceneFeedbackImagesBySceneId = await getSceneFeedbackImages(orgId, adId);
   const sceneVideosBySceneId = await getSceneVideos(orgId, adId);
   const archivedSceneVideosBySceneId = await getArchivedSceneVideos(orgId, adId);
@@ -82,8 +84,11 @@ async function GatedCanvas({
   const sceneVoiceoversBySceneId = await getSceneVoiceovers(orgId, adId);
   const activeSceneVoiceoverJobsBySceneId = await getActiveSceneVoiceoverJobs(orgId, adId);
 
+  const sceneSpendBySceneId = groupSpendByScene(await getAdSpend(orgId, adId));
+
   const sceneImagePaths = [
     ...Object.values(sceneImagesBySceneId).flat(),
+    ...Object.values(archivedSceneImagesBySceneId).flat(),
     ...Object.values(sceneFeedbackImagesBySceneId).flat(),
   ].map((a) => a.storage_path);
   const sceneImageUrls = await getAssetSignedUrlsByPath(sceneImagePaths);
@@ -124,6 +129,7 @@ async function GatedCanvas({
       providersWithKeys={providersWithKeys}
       costBreakdown={<CostBreakdown orgId={orgId} adId={adId} />}
       sceneImagesBySceneId={sceneImagesBySceneId}
+      archivedSceneImagesBySceneId={archivedSceneImagesBySceneId}
       sceneFeedbackImagesBySceneId={sceneFeedbackImagesBySceneId}
       sceneImageUrls={sceneImageUrls}
       videoModelOptions={videoModelOptions}
@@ -133,6 +139,7 @@ async function GatedCanvas({
       sceneVideoUrls={sceneVideoUrls}
       sceneVoiceoversBySceneId={sceneVoiceoversBySceneId}
       activeSceneVoiceoverJobsBySceneId={activeSceneVoiceoverJobsBySceneId}
+      sceneSpendBySceneId={sceneSpendBySceneId}
     />
   );
 }

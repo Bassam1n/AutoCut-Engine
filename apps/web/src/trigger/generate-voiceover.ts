@@ -221,6 +221,7 @@ export const generateVoiceover = task({
       target_model: ELEVENLABS_TTS_MODEL,
       target_usd_est: (ttsPrice?.usd ?? 0) * script.length,
       target_kind: "voiceover:tts",
+      target_scene_id: job.scene_id,
     });
 
     // --- 2. STT: word-level timestamps on the audio just generated. ---
@@ -322,6 +323,7 @@ export const generateVoiceover = task({
       target_model: ELEVENLABS_STT_MODEL,
       target_usd_est: (sttPrice?.usd ?? 0) * audioDurationMinutes,
       target_kind: "voiceover:stt",
+      target_scene_id: job.scene_id,
     });
 
     await supabase

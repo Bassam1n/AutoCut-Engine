@@ -25,6 +25,7 @@ import type { Scene } from "../scenes-data";
 import type { SceneImageAsset } from "../scene-images-data";
 import type { SceneVideoJob } from "../scene-videos-data";
 import type { ModelOption } from "@/lib/providers/models-data";
+import type { SceneSpendTotal } from "../spend-data";
 
 const POLL_INTERVAL_MS = 4000; // Video jobs can run minutes-long (spec §5.7: up to ~20 minutes) — a few-second interval is frequent enough to feel responsive without hammering the DB, same order of magnitude as run-provider-job.ts's own 4s poll delay against the provider.
 const STAGGER_MS = 1000; // Same stagger scene-images-step.tsx uses for its own Generate All — starts jobs about a second apart rather than all at once.
@@ -61,6 +62,7 @@ export function SceneVideosStep({
   assetUrls,
   videoModelOptions,
   providersWithKeys,
+  sceneSpendBySceneId,
   onContinue,
 }: {
   orgId: string;
@@ -75,6 +77,7 @@ export function SceneVideosStep({
   assetUrls: Record<string, string>;
   videoModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
+  sceneSpendBySceneId?: Record<string, SceneSpendTotal>;
   onContinue: () => void;
 }) {
   const [videoModel, setVideoModel] = useState<ModelOption | null>(videoModelOptions[0] ?? null);
@@ -190,6 +193,7 @@ export function SceneVideosStep({
               activeJob={activeJobsBySceneId[scene.id] ?? null}
               assetUrls={assetUrls}
               videoModel={videoModel}
+              spend={sceneSpendBySceneId?.[scene.id]}
               onRegisterTrigger={registerTrigger}
               isSelected={selectedSceneIds.has(scene.id)}
               onToggleSelected={() => toggleSelected(scene.id)}
@@ -339,6 +343,7 @@ function SceneVideoCard({
   activeJob,
   assetUrls,
   videoModel,
+  spend,
   onRegisterTrigger,
   isSelected,
   onToggleSelected,
@@ -354,6 +359,7 @@ function SceneVideoCard({
   activeJob: SceneVideoJob | null;
   assetUrls: Record<string, string>;
   videoModel: ModelOption | null;
+  spend?: SceneSpendTotal;
   /** Registers this card's onGenerate so "Generate All"/"Generate Selected" (parent-level, staggered) can trigger it without lifting this card's entire generation state up — same pattern scene-images-step.tsx avoids by keeping per-scene state local and only exposing the one callback a bulk action needs. */
   onRegisterTrigger?: (sceneId: string, trigger: () => void) => void;
   isSelected?: boolean;
@@ -602,6 +608,14 @@ function SceneVideoCard({
           )}
           Scene {scene.idx + 1}
         </span>
+        {spend && spend.usd > 0 && (
+          <span
+            title={`${spend.count} generation${spend.count === 1 ? "" : "s"}`}
+            className="rounded-full bg-border/60 px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted"
+          >
+            ${spend.usd.toFixed(2)}
+          </span>
+        )}
       </div>
 
       <p className="text-xs text-foreground-muted">{scene.visual || "No visual yet."}</p>

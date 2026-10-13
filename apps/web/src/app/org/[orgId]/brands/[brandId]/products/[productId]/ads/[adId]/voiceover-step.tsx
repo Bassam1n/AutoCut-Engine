@@ -17,6 +17,11 @@ import type { Scene } from "../scenes-data";
 import type { SceneVoiceover, SceneVoiceoverJob } from "../scene-videos-data";
 
 const POLL_INTERVAL_MS = 4000;
+const STAGGER_MS = 1000; // Same stagger scene-images-step.tsx/scene-videos-step.tsx use for their own Generate All.
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * Voiceover Studio step — a real step of its own (not a panel bolted
@@ -150,6 +155,66 @@ export function VoiceoverStep({
 
   const speakingScenes = scenes.filter((scene) => resolveSceneSpeaks(ad.brief.speaking, scene));
 
+  // Bulk generation — same staggered "Generate All" pattern as Scene
+  // images/videos. Unlike Scene videos there's no mid-flight decision
+  // a scene can stop on; a scene is simply either ready to generate
+  // (voice picked, script non-empty, no active job) or it isn't, and
+  // an unready scene is silently skipped rather than surfaced as an
+  // error — picking a voice/writing a script is normal, expected setup
+  // work here, not a failure state worth a visible count.
+  const triggersRef = useRef<Map<string, () => void>>(new Map());
+  const eligibilityRef = useRef<Map<string, () => boolean>>(new Map());
+  const [selectedSceneIds, setSelectedSceneIds] = useState<Set<string>>(new Set());
+  const [isStaggering, setIsStaggering] = useState(false);
+
+  function registerTrigger(sceneId: string, trigger: () => void) {
+    triggersRef.current.set(sceneId, trigger);
+  }
+  function registerEligibility(sceneId: string, isEligible: () => boolean) {
+    eligibilityRef.current.set(sceneId, isEligible);
+  }
+
+  function eligibleSceneIds(): string[] {
+    return speakingScenes.filter((s) => eligibilityRef.current.get(s.id)?.() ?? false).map((s) => s.id);
+  }
+
+  async function staggeredGenerate(sceneIds: string[]) {
+    for (let i = 0; i < sceneIds.length; i++) {
+      if (i > 0) await sleep(STAGGER_MS);
+      triggersRef.current.get(sceneIds[i])?.();
+    }
+  }
+
+  async function onGenerateAll() {
+    setIsStaggering(true);
+    try {
+      await staggeredGenerate(eligibleSceneIds());
+    } finally {
+      setIsStaggering(false);
+    }
+  }
+
+  async function onGenerateSelected() {
+    setIsStaggering(true);
+    try {
+      const eligible = new Set(eligibleSceneIds());
+      await staggeredGenerate(
+        speakingScenes.filter((s) => selectedSceneIds.has(s.id) && eligible.has(s.id)).map((s) => s.id)
+      );
+    } finally {
+      setIsStaggering(false);
+    }
+  }
+
+  function toggleSelected(sceneId: string) {
+    setSelectedSceneIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sceneId)) next.delete(sceneId);
+      else next.add(sceneId);
+      return next;
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -244,6 +309,12 @@ export function VoiceoverStep({
       ) : (
         voices && (
           <div className="flex flex-col gap-4">
+            <GenerateAllBar
+              isStaggering={isStaggering}
+              selectedCount={selectedSceneIds.size}
+              onGenerateAll={onGenerateAll}
+              onGenerateSelected={onGenerateSelected}
+            />
             {speakingScenes.map((scene) => (
               <SceneVoiceoverCard
                 key={scene.id}
@@ -254,6 +325,10 @@ export function VoiceoverStep({
                 existing={voiceoversBySceneId[scene.id] ?? null}
                 activeJob={activeJobsBySceneId[scene.id] ?? null}
                 assetUrls={assetUrls}
+                onRegisterTrigger={registerTrigger}
+                onRegisterEligibility={registerEligibility}
+                isSelected={selectedSceneIds.has(scene.id)}
+                onToggleSelected={() => toggleSelected(scene.id)}
               />
             ))}
           </div>
@@ -273,6 +348,44 @@ export function VoiceoverStep({
   );
 }
 
+function GenerateAllBar({
+  isStaggering,
+  selectedCount,
+  onGenerateAll,
+  onGenerateSelected,
+}: {
+  isStaggering: boolean;
+  selectedCount: number;
+  onGenerateAll: () => void;
+  onGenerateSelected: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background-raised/50 p-3">
+      <span className="text-xs text-foreground-muted">
+        Starts eligible scenes (voice picked, script non-empty, not already generating) about a
+        second apart. Scenes still missing a voice or script are skipped.
+      </span>
+      <AsyncButton
+        onClick={onGenerateAll}
+        isPending={isStaggering}
+        pendingLabel="Starting..."
+        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90"
+      >
+        Generate All
+      </AsyncButton>
+      <AsyncButton
+        onClick={onGenerateSelected}
+        isPending={isStaggering}
+        disabled={selectedCount === 0}
+        pendingLabel="Starting..."
+        className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+      >
+        Generate Selected{selectedCount > 0 ? ` (${selectedCount})` : ""}
+      </AsyncButton>
+    </div>
+  );
+}
+
 function SceneVoiceoverCard({
   orgId,
   scene,
@@ -281,6 +394,10 @@ function SceneVoiceoverCard({
   existing,
   activeJob,
   assetUrls,
+  onRegisterTrigger,
+  onRegisterEligibility,
+  isSelected,
+  onToggleSelected,
 }: {
   orgId: string;
   scene: Scene;
@@ -289,6 +406,12 @@ function SceneVoiceoverCard({
   existing: SceneVoiceover | null;
   activeJob: SceneVoiceoverJob | null;
   assetUrls: Record<string, string>;
+  /** Registers this card's onGenerate so "Generate All"/"Generate Selected" (parent-level, staggered) can trigger it without lifting this card's entire generation state up. */
+  onRegisterTrigger?: (sceneId: string, trigger: () => void) => void;
+  /** Registers a cheap, side-effect-free readiness check (voice picked, script non-empty, not already generating) so the parent can silently skip an unready scene from "Generate All" instead of starting it and hitting onGenerate's own validation errors. */
+  onRegisterEligibility?: (sceneId: string, isEligible: () => boolean) => void;
+  isSelected?: boolean;
+  onToggleSelected?: () => void;
 }) {
   const router = useRouter();
   // Script auto-assembles from scene.copy as a starting default, but
@@ -490,6 +613,21 @@ function SceneVoiceoverCard({
     }
   }
 
+  // Re-registers every render (no dependency array) so a bulk trigger
+  // always calls the CURRENT onGenerate closure — never a stale one
+  // captured on first mount — same as scene-videos-step.tsx's
+  // onRegisterTrigger effect. The eligibility check mirrors onGenerate's
+  // own validation exactly (voiceId set, script non-empty, not already
+  // generating/adding a voice) so "Generate All" only fires scenes that
+  // would actually succeed.
+  useEffect(() => {
+    onRegisterTrigger?.(scene.id, onGenerate);
+    onRegisterEligibility?.(
+      scene.id,
+      () => !isAddingVoice && !isGenerating && Boolean(voiceId) && script.trim().length > 0
+    );
+  });
+
   function onPreviewVoice(voice: ElevenLabsVoice) {
     if (!voice.previewUrl) return;
     // Plain <audio> element playback of ElevenLabs's own preview_url —
@@ -511,7 +649,18 @@ function SceneVoiceoverCard({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border p-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
+        <span className="flex items-center gap-2 text-xs font-medium text-foreground-muted">
+          {onToggleSelected && (
+            <input
+              type="checkbox"
+              checked={Boolean(isSelected)}
+              onChange={onToggleSelected}
+              className="h-3.5 w-3.5 accent-accent"
+              aria-label={`Select scene ${scene.idx + 1} for bulk generation`}
+            />
+          )}
+          Scene {scene.idx + 1}
+        </span>
         {existing && <span className="text-xs text-foreground-muted">v{existing.voAsset.version}</span>}
       </div>
 
