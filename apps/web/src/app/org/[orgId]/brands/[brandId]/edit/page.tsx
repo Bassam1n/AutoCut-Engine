@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { requireOrgMember } from "@/lib/auth";
+import { requireCanManageBrandContent, isOrgAdmin } from "@/lib/auth";
 import { getBrand } from "../../brands-data";
 import { BrandForm } from "../../brand-form";
 import { updateBrand, archiveBrand } from "../../brands-actions";
@@ -47,7 +47,8 @@ async function GatedForm({
   params: Promise<{ orgId: string; brandId: string }>;
 }) {
   const { orgId, brandId } = await params;
-  await requireOrgMember(orgId);
+  await requireCanManageBrandContent(orgId);
+  const canArchive = await isOrgAdmin(orgId);
 
   const brand = await getBrand(orgId, brandId);
   if (!brand) notFound();
@@ -60,12 +61,14 @@ async function GatedForm({
         onSubmit={updateBrand.bind(null, orgId, brandId)}
       />
 
-      <div className="border-t border-border pt-4">
-        <ArchiveBrandButton
-          onArchive={archiveBrand.bind(null, orgId, brandId)}
-          orgId={orgId}
-        />
-      </div>
+      {canArchive && (
+        <div className="border-t border-border pt-4">
+          <ArchiveBrandButton
+            onArchive={archiveBrand.bind(null, orgId, brandId)}
+            orgId={orgId}
+          />
+        </div>
+      )}
     </div>
   );
 }

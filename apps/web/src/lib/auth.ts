@@ -187,3 +187,45 @@ export async function isOrgOwner(orgId: string): Promise<boolean> {
 
   return Boolean(isOwner);
 }
+
+/**
+ * Whether the signed-in member may create ads in this org (migration
+ * 53: users by default, owners/admins only if the platform admin turned
+ * it on). Same check as the ads_insert RLS policy.
+ */
+export async function canCreateAds(orgId: string): Promise<boolean> {
+  "use cache: private";
+
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("member_can_create_ads", { check_org_id: orgId });
+  return Boolean(data);
+}
+
+export async function requireCanCreateAds(orgId: string): Promise<CurrentUser> {
+  "use cache: private";
+
+  const user = await requireOrgMember(orgId);
+  if (!(await canCreateAds(orgId))) redirect(`/org/${orgId}/brands`);
+  return user;
+}
+
+/**
+ * Whether the signed-in member may create/edit products and edit brand
+ * details (owners and admins always; users when an owner or admin has
+ * turned it on). Same check as the products/brands update RLS policies.
+ */
+export async function canManageBrandContent(orgId: string): Promise<boolean> {
+  "use cache: private";
+
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("member_can_manage_brand_content", { check_org_id: orgId });
+  return Boolean(data);
+}
+
+export async function requireCanManageBrandContent(orgId: string): Promise<CurrentUser> {
+  "use cache: private";
+
+  const user = await requireOrgMember(orgId);
+  if (!(await canManageBrandContent(orgId))) redirect(`/org/${orgId}/brands`);
+  return user;
+}

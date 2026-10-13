@@ -10,12 +10,16 @@ export function ProductForm({
   product,
   onSubmit,
   submitLabel,
+  readOnly = false,
 }: {
   product?: Product;
   onSubmit: (formData: FormData) => Promise<ActionResult>;
   submitLabel: string;
+  /** View-only for users without product editing access (migration 53). */
+  readOnly?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const busy = isPending || readOnly;
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(formData: FormData) {
@@ -37,7 +41,7 @@ export function ProductForm({
           name="name"
           required
           defaultValue={product?.name}
-          disabled={isPending}
+          disabled={busy}
           className="field"
         />
       </div>
@@ -53,7 +57,7 @@ export function ProductForm({
           id="category"
           name="category"
           defaultValue={product?.category ?? ""}
-          disabled={isPending}
+          disabled={busy}
           className="field"
         >
           <option value="">Select a category</option>
@@ -77,7 +81,7 @@ export function ProductForm({
           name="what_it_is"
           placeholder="One line describing the product"
           defaultValue={product?.what_it_is ?? ""}
-          disabled={isPending}
+          disabled={busy}
           className="field"
         />
       </div>
@@ -94,7 +98,7 @@ export function ProductForm({
           name="real_world_size"
           placeholder={'e.g. "15cm tall, 8cm wide" or "about the size of a soda can"'}
           defaultValue={product?.real_world_size ?? ""}
-          disabled={isPending}
+          disabled={busy}
           className="field"
         />
         <p className="text-xs text-foreground-muted">
@@ -114,20 +118,22 @@ export function ProductForm({
           name="url"
           type="url"
           defaultValue={product?.url ?? ""}
-          disabled={isPending}
+          disabled={busy}
           className="field"
         />
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className={`self-start ${buttonVariants.primary}`}
-      >
-        {submitLabel}
-      </button>
+      {!readOnly && (
+        <button
+          type="submit"
+          disabled={busy}
+          className={`self-start ${buttonVariants.primary}`}
+        >
+          {submitLabel}
+        </button>
+      )}
     </form>
   );
 }

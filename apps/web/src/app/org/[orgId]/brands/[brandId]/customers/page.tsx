@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgMember, canManageBrandContent } from "@/lib/auth";
 import { getBrand } from "../../brands-data";
 import { getCustomers } from "./customers-data";
 import { CustomerScreen } from "./customer-screen";
@@ -50,7 +50,10 @@ async function GatedHeader({
   const { orgId, brandId } = await params;
   await requireOrgMember(orgId);
 
-  const brand = await getBrand(orgId, brandId);
+  const [brand, canEditBrand] = await Promise.all([
+    getBrand(orgId, brandId),
+    canManageBrandContent(orgId),
+  ]);
   if (!brand) notFound();
 
   return (
@@ -70,12 +73,14 @@ async function GatedHeader({
           Audience profiles for this brand.
         </p>
       </div>
-      <Link
-        href={`/org/${orgId}/brands/${brandId}/edit`}
-        className="btn-secondary shrink-0"
-      >
-        Edit brand
-      </Link>
+      {canEditBrand && (
+        <Link
+          href={`/org/${orgId}/brands/${brandId}/edit`}
+          className="btn-secondary shrink-0"
+        >
+          Edit brand
+        </Link>
+      )}
     </div>
   );
 }

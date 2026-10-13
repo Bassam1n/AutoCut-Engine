@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireOrgOwner } from "@/lib/auth";
+import { requireOrgAdmin, requireOrgOwner } from "@/lib/auth";
 import { changeUserEmail } from "@/lib/change-email";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -127,6 +127,31 @@ export async function changeOrgMemberEmail(
     target_user_id: userId,
     new_email: result.email,
   });
+
+  revalidatePath(`/org/${orgId}/team`);
+  return { ok: true };
+}
+
+/**
+ * Lets a user create/edit products and edit brand details. The one
+ * team setting an admin can change too (owner or admin, never their own
+ * row, users only), per set_member_brand_content_access().
+ */
+export async function setMemberBrandContentAccess(
+  orgId: string,
+  userId: string,
+  allowed: boolean
+): Promise<ActionResult> {
+  await requireOrgAdmin(orgId);
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("set_member_brand_content_access", {
+    target_org_id: orgId,
+    target_user_id: userId,
+    allowed,
+  });
+
+  if (error) return { ok: false, error: friendlyError(error.message) };
 
   revalidatePath(`/org/${orgId}/team`);
   return { ok: true };

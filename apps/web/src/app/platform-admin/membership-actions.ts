@@ -104,3 +104,27 @@ export async function changeMemberEmail(
   revalidatePath("/platform-admin");
   return { ok: true };
 }
+
+/**
+ * Ad creation access for one member: true/false, or null to fall back
+ * to the role default (users yes, owners and admins no).
+ */
+export async function setMemberAdAccess(
+  orgId: string,
+  userId: string,
+  allowed: boolean | null
+): Promise<ActionResult> {
+  await requirePlatformAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("set_member_can_create_ads", {
+    target_org_id: orgId,
+    target_user_id: userId,
+    allowed,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/platform-admin");
+  return { ok: true };
+}

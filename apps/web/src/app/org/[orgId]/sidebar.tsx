@@ -67,9 +67,11 @@ export function Sidebar({
         </span>
       </div>
 
-      <div className="pb-3">
-        <CreateAdButton orgId={orgId} />
-      </div>
+      {info.canCreateAds && (
+        <div className="pb-3">
+          <CreateAdButton orgId={orgId} />
+        </div>
+      )}
 
       <nav className="flex flex-1 flex-col gap-1">
         {links.map((link) => {

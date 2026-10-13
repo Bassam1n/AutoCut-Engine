@@ -14,12 +14,15 @@ export function RefUploader({
   productId,
   refs,
   signedUrls,
+  canUpload = true,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   refs: ProductRef[];
   signedUrls: Record<string, string>;
+  /** False for users without product editing access: photos are view-only. */
+  canUpload?: boolean;
 }) {
   const [kind, setKind] = useState<(typeof KINDS)[number]>("photo");
   const [uploading, setUploading] = useState(false);
@@ -83,7 +86,7 @@ export function RefUploader({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2">
+      {canUpload && <div className="flex items-center gap-2">
         <select
           value={kind}
           onChange={(e) => setKind(e.target.value as (typeof KINDS)[number])}
@@ -97,11 +100,7 @@ export function RefUploader({
           ))}
         </select>
         <label
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-opacity ${
-            uploading
-              ? "cursor-not-allowed bg-accent/60 text-accent-ink opacity-60"
-              : "cursor-pointer bg-accent text-accent-ink hover:opacity-90"
-          }`}
+          className={`btn-primary ${uploading ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
         >
           {uploading ? "Uploading..." : "Upload image"}
           <input
@@ -113,7 +112,7 @@ export function RefUploader({
             className="hidden"
           />
         </label>
-      </div>
+      </div>}
 
       {error && <p className="text-sm text-danger">{error}</p>}
 

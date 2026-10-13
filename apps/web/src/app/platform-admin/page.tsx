@@ -4,7 +4,11 @@ import { requirePlatformAdmin, getCurrentUser } from "@/lib/auth";
 import { signOut } from "../actions";
 import { RegisterAgencyForm } from "./register-agency-form";
 import { MembershipTable } from "./membership-table";
-import { getAllOrgsWithMembers, getAllPendingInvites } from "./membership-data";
+import {
+  getAllOrgsWithMembers,
+  getAllPendingInvites,
+  getAllMemberPermissions,
+} from "./membership-data";
 
 export default function PlatformAdminPage() {
   return (
@@ -113,9 +117,10 @@ async function GatedForm() {
 
 async function GatedMembershipTable() {
   await requirePlatformAdmin();
-  const [members, invites] = await Promise.all([
+  const [members, invites, permissions] = await Promise.all([
     getAllOrgsWithMembers(),
     getAllPendingInvites(),
+    getAllMemberPermissions(),
   ]);
-  return <MembershipTable members={members} invites={invites} />;
+  return <MembershipTable members={members} invites={invites} permissions={permissions} />;
 }

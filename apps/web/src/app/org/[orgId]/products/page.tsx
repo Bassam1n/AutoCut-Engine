@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgMember, canManageBrandContent } from "@/lib/auth";
 import { getBrands } from "../brands/brands-data";
 import { getAllOrgProducts } from "../brands/[brandId]/products/products-data";
 import { PRODUCT_CATEGORY_LABELS } from "../brands/[brandId]/products/product-categories";
@@ -46,6 +46,7 @@ function Skeleton() {
 async function GatedAddButton({ params }: { params: Promise<{ orgId: string }> }) {
   const { orgId } = await params;
   await requireOrgMember(orgId);
+  if (!(await canManageBrandContent(orgId))) return null;
   return <AddProductButton orgId={orgId} />;
 }
 

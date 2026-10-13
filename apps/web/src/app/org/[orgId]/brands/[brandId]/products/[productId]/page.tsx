@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgMember, canManageBrandContent } from "@/lib/auth";
 import { getBrand } from "../../../brands-data";
 import { getProduct, getProductRefs, getProductRefSignedUrls } from "../products-data";
 import { ProductForm } from "../product-form";
@@ -94,7 +94,10 @@ async function GatedDetailForm({
   const { orgId, brandId, productId } = await params;
   await requireOrgMember(orgId);
 
-  const product = await getProduct(orgId, brandId, productId);
+  const [product, canEdit] = await Promise.all([
+    getProduct(orgId, brandId, productId),
+    canManageBrandContent(orgId),
+  ]);
   if (!product) notFound();
 
   return (
@@ -103,14 +106,17 @@ async function GatedDetailForm({
         product={product}
         submitLabel="Save changes"
         onSubmit={updateProduct.bind(null, orgId, brandId, productId)}
+        readOnly={!canEdit}
       />
-      <div className="border-t border-border pt-4">
-        <ArchiveProductButton
-          orgId={orgId}
-          brandId={brandId}
-          onArchive={archiveProduct.bind(null, orgId, brandId, productId)}
-        />
-      </div>
+      {canEdit && (
+        <div className="border-t border-border pt-4">
+          <ArchiveProductButton
+            orgId={orgId}
+            brandId={brandId}
+            onArchive={archiveProduct.bind(null, orgId, brandId, productId)}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -123,7 +129,10 @@ async function GatedRefs({
   const { orgId, brandId, productId } = await params;
   await requireOrgMember(orgId);
 
-  const refs = await getProductRefs(orgId, productId);
+  const [refs, canUpload] = await Promise.all([
+    getProductRefs(orgId, productId),
+    canManageBrandContent(orgId),
+  ]);
   const signedUrls = await getProductRefSignedUrls(orgId, refs);
 
   return (
@@ -133,6 +142,7 @@ async function GatedRefs({
       productId={productId}
       refs={refs}
       signedUrls={signedUrls}
+      canUpload={canUpload}
     />
   );
 }

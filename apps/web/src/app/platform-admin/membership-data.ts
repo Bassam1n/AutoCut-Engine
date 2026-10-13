@@ -35,3 +35,18 @@ export async function getAllPendingInvites(): Promise<PendingInviteRow[]> {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export type MemberPermissionRow = {
+  org_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "editor";
+  can_create_ads: boolean | null;
+  can_manage_brand_content: boolean;
+};
+
+export async function getAllMemberPermissions(): Promise<MemberPermissionRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_all_member_permissions");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}

@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { OrgTeamMember, OrgPendingInvite, OrgSeatInfo } from "./team-data";
+import type {
+  OrgTeamMember,
+  OrgMemberPermissions,
+  OrgPendingInvite,
+  OrgSeatInfo,
+} from "./team-data";
 import {
   inviteMember,
   toggleOrgMemberSeatActive,
   changeOrgMemberRole,
   changeOrgMemberEmail,
   revokeOrgInvite,
+  setMemberBrandContentAccess,
 } from "./team-actions";
 import { buttonVariants } from "@/components/button";
 import { Avatar } from "@/components/avatar";
@@ -24,6 +30,7 @@ type AssignableRole = (typeof ASSIGNABLE_ORG_ROLES)[number];
 export function TeamScreen({
   orgId,
   members,
+  permissions,
   invites,
   seatInfo,
   viewerId,
@@ -31,12 +38,14 @@ export function TeamScreen({
 }: {
   orgId: string;
   members: OrgTeamMember[];
+  permissions: OrgMemberPermissions[];
   invites: OrgPendingInvite[];
   seatInfo: OrgSeatInfo;
   viewerId: string;
   canManage: boolean;
 }) {
   const atCap = seatInfo.seatCap !== null && seatInfo.seatUsage >= seatInfo.seatCap;
+  const permsByUser = new Map(permissions.map((p) => [p.user_id, p]));
 
   return (
     <div className="flex flex-col gap-6">
@@ -44,7 +53,8 @@ export function TeamScreen({
         <SeatUsageBadge seatInfo={seatInfo} />
       ) : (
         <p className="card-inset px-4 py-3 text-sm text-foreground-muted">
-          You can view the team. Only the owner can invite people or change roles.
+          You can view the team and turn product editing on or off for users. Only the
+          owner can invite people or change roles.
         </p>
       )}
 
@@ -59,6 +69,7 @@ export function TeamScreen({
                 key={m.member_user_id}
                 orgId={orgId}
                 member={m}
+                permissions={permsByUser.get(m.member_user_id)}
                 isSelf={m.member_user_id === viewerId}
                 editable={canManage && m.member_user_id !== viewerId && m.member_role !== "owner"}
               />
@@ -125,11 +136,13 @@ function RoleBadge({ role }: { role: OrgTeamMember["member_role"] }) {
 function MemberRow({
   orgId,
   member,
+  permissions,
   isSelf,
   editable,
 }: {
   orgId: string;
   member: OrgTeamMember;
+  permissions: OrgMemberPermissions | undefined;
   isSelf: boolean;
   editable: boolean;
 }) {
@@ -158,6 +171,14 @@ function MemberRow({
     });
   }
 
+  function onBrandAccessChange(allowed: boolean) {
+    setError(null);
+    startTransition(async () => {
+      const result = await setMemberBrandContentAccess(orgId, member.member_user_id, allowed);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   function onSaveEmail(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -169,6 +190,8 @@ function MemberRow({
   }
 
   const displayName = member.member_full_name?.trim();
+  // null = role default (migration 53): users create ads, owners/admins don't.
+  const createsAds = permissions?.can_create_ads ?? member.member_role === "editor";
 
   return (
     <li className="flex flex-col gap-2 border-t border-border py-3 first:border-t-0 first:pt-0">
@@ -240,6 +263,27 @@ function MemberRow({
               {member.member_seat_active ? "Deactivate" : "Reactivate"}
             </button>
           </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pl-12 text-xs text-foreground-muted">
+        <span title="Ad creation is set by the platform admin">
+          {createsAds ? "Can create ads" : "Can't create ads"}
+        </span>
+        {member.member_role === "editor" && (
+          <label
+            className={`inline-flex items-center gap-1.5 ${isSelf ? "" : "cursor-pointer"}`}
+            title="Lets this user add and edit products and edit brand details"
+          >
+            <input
+              type="checkbox"
+              checked={permissions?.can_manage_brand_content ?? false}
+              disabled={isPending || isSelf}
+              onChange={(e) => onBrandAccessChange(e.target.checked)}
+              className="h-3.5 w-3.5 accent-[var(--accent)]"
+            />
+            Can add products &amp; edit brands
+          </label>
         )}
       </div>
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgMember, canCreateAds } from "@/lib/auth";
 import { getAd } from "./ads-data";
 import { getAdScripts } from "./scripts-data";
 import { getScenes } from "./scenes-data";
@@ -59,6 +59,9 @@ export async function createAd(
   styleId: string | null
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  if (!(await canCreateAds(orgId))) {
+    return { ok: false, error: "You don't have permission to create ads. Ask the platform admin to turn it on." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -205,6 +208,9 @@ export async function duplicateAd(
   adId: string
 ): Promise<ActionResult> {
   await requireOrgMember(orgId);
+  if (!(await canCreateAds(orgId))) {
+    return { ok: false, error: "You don't have permission to create ads. Ask the platform admin to turn it on." };
+  }
 
   const source = await getAd(orgId, productId, adId);
   if (!source) return { ok: false, error: "Ad not found." };

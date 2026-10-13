@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgMember, isOrgAdmin, isOrgOwner } from "@/lib/auth";
 import { getBrands } from "./brands-data";
 import { getSetupChecklist } from "../setup-checklist/checklist-data";
 import { ChecklistCard } from "../setup-checklist/checklist-card";
@@ -42,6 +42,9 @@ async function GatedChecklist({
 }) {
   const { orgId } = await params;
   await requireOrgMember(orgId);
+  // Setup is the owner's job (org keys are owner-only), and the
+  // checklist reads list_org_secrets, which non-owners can't call.
+  if (!(await isOrgOwner(orgId))) return null;
 
   const checklist = await getSetupChecklist(orgId);
 
@@ -64,16 +67,18 @@ async function GatedBrandsList({
 }) {
   const { orgId } = await params;
   await requireOrgMember(orgId);
-  const brands = await getBrands(orgId);
+  const [brands, canCreateBrand] = await Promise.all([getBrands(orgId), isOrgAdmin(orgId)]);
 
   return (
     <div className="flex flex-col gap-3">
-      <Link
-        href={`/org/${orgId}/brands/new`}
-        className={`self-start ${buttonVariants.primary}`}
-      >
-        New brand
-      </Link>
+      {canCreateBrand && (
+        <Link
+          href={`/org/${orgId}/brands/new`}
+          className={`self-start ${buttonVariants.primary}`}
+        >
+          New brand
+        </Link>
+      )}
 
       {brands.length === 0 ? (
         <p className="text-sm text-foreground-muted">

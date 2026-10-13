@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { requireOrgMember } from "@/lib/auth";
+import { requireCanCreateAds } from "@/lib/auth";
 import { getProduct } from "../../../products-data";
 import { getVisibleStyles } from "@/app/org/[orgId]/styles/styles-data";
 import { NewAdForm } from "./new-ad-form";
@@ -50,7 +50,7 @@ async function GatedPicker({
   params: Promise<{ orgId: string; brandId: string; productId: string }>;
 }) {
   const { orgId, brandId, productId } = await params;
-  await requireOrgMember(orgId);
+  await requireCanCreateAds(orgId);
 
   const product = await getProduct(orgId, brandId, productId);
   if (!product) notFound();

@@ -6,8 +6,7 @@ import { getAdScripts } from "../scripts-data";
 import { getScenes } from "../scenes-data";
 import { getConcept, getCastMembers, getAssetSignedUrls, getBrandCastMembers } from "../concepts-data";
 import { getModelOptions } from "@/lib/providers/models-data";
-import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
-import { getBrandSecrets } from "../../../../settings/keys/keys-data";
+import { getProvidersWithKeys } from "@/app/org/[orgId]/settings/keys/keys-data";
 import { getSceneImages, getArchivedSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
 import {
   getSceneVideos,
@@ -79,8 +78,10 @@ async function GatedCanvas({
   // has one saved — matches get_brand_secret_value's own fallback
   // chain exactly, so this warning never contradicts what generation
   // will actually do.
-  const [orgSecrets, brandSecrets] = await Promise.all([getOrgSecrets(orgId), getBrandSecrets(orgId, brandId)]);
-  const providersWithKeys = Array.from(new Set([...orgSecrets.map((s) => s.provider), ...brandSecrets.map((s) => s.provider)]));
+  // list_providers_with_keys is member-readable; the full key listings
+  // are owner-only (org) and owner/admin-only (brand), so users and
+  // admins couldn't load this page through them.
+  const providersWithKeys = await getProvidersWithKeys(orgId, brandId);
 
   const sceneImagesBySceneId = await getSceneImages(orgId, adId);
   const archivedSceneImagesBySceneId = await getArchivedSceneImages(orgId, adId);

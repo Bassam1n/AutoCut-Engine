@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgMember, canManageBrandContent } from "@/lib/auth";
 import { getBrand } from "../../brands-data";
 import { getProducts } from "./products-data";
 import { PRODUCT_CATEGORY_LABELS } from "./product-categories";
@@ -91,16 +91,21 @@ async function GatedProducts({
   const brand = await getBrand(orgId, brandId);
   if (!brand) notFound();
 
-  const products = await getProducts(orgId, brandId);
+  const [products, canAddProduct] = await Promise.all([
+    getProducts(orgId, brandId),
+    canManageBrandContent(orgId),
+  ]);
 
   return (
     <div className="flex flex-col gap-3">
-      <Link
-        href={`/org/${orgId}/brands/${brandId}/products/new`}
-        className={`self-start ${buttonVariants.primary}`}
-      >
-        New product
-      </Link>
+      {canAddProduct && (
+        <Link
+          href={`/org/${orgId}/brands/${brandId}/products/new`}
+          className={`self-start ${buttonVariants.primary}`}
+        >
+          New product
+        </Link>
+      )}
 
       {products.length === 0 ? (
         <p className="text-sm text-foreground-muted">

@@ -12,11 +12,14 @@ export function AdsList({
   brandId,
   productId,
   ads,
+  canCreate,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   ads: Ad[];
+  /** member_can_create_ads(): hides New ad and Duplicate when false. */
+  canCreate: boolean;
 }) {
   const [showArchived, setShowArchived] = useState(false);
   const visible = ads.filter((ad) => (showArchived ? ad.archived : !ad.archived));
@@ -24,12 +27,16 @@ export function AdsList({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <Link
-          href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads/new`}
-          className={`self-start ${buttonVariants.primary}`}
-        >
-          New ad
-        </Link>
+        {canCreate ? (
+          <Link
+            href={`/org/${orgId}/brands/${brandId}/products/${productId}/ads/new`}
+            className={`self-start ${buttonVariants.primary}`}
+          >
+            New ad
+          </Link>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
           onClick={() => setShowArchived((v) => !v)}
@@ -46,7 +53,14 @@ export function AdsList({
       ) : (
         <div className="flex flex-col gap-3">
           {visible.map((ad) => (
-            <AdRow key={ad.id} orgId={orgId} brandId={brandId} productId={productId} ad={ad} />
+            <AdRow
+              key={ad.id}
+              orgId={orgId}
+              brandId={brandId}
+              productId={productId}
+              ad={ad}
+              canDuplicate={canCreate}
+            />
           ))}
         </div>
       )}
@@ -59,11 +73,13 @@ function AdRow({
   brandId,
   productId,
   ad,
+  canDuplicate,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   ad: Ad;
+  canDuplicate: boolean;
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -121,14 +137,16 @@ function AdRow({
           >
             Rename
           </button>
-          <button
-            type="button"
-            onClick={onDuplicate}
-            disabled={isPending}
-            className="btn-secondary btn-sm"
-          >
-            Duplicate
-          </button>
+          {canDuplicate && (
+            <button
+              type="button"
+              onClick={onDuplicate}
+              disabled={isPending}
+              className="btn-secondary btn-sm"
+            >
+              Duplicate
+            </button>
+          )}
           <button
             type="button"
             onClick={onArchiveToggle}

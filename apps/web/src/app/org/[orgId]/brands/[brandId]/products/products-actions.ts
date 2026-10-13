@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireOrgMember } from "@/lib/auth";
+import { requireCanManageBrandContent } from "@/lib/auth";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -12,7 +12,7 @@ export async function createProduct(
   brandId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireOrgMember(orgId);
+  await requireCanManageBrandContent(orgId);
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Product name is required." };
@@ -49,7 +49,7 @@ export async function updateProduct(
   productId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireOrgMember(orgId);
+  await requireCanManageBrandContent(orgId);
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Product name is required." };
@@ -85,7 +85,7 @@ export async function archiveProduct(
   brandId: string,
   productId: string
 ): Promise<ActionResult> {
-  await requireOrgMember(orgId);
+  await requireCanManageBrandContent(orgId);
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -116,7 +116,7 @@ export async function reserveProductRefPath(
   productId: string,
   fileName: string
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
-  await requireOrgMember(orgId);
+  await requireCanManageBrandContent(orgId);
 
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${orgId}/products/${productId}/${Date.now()}_${safeName}`;
@@ -132,7 +132,7 @@ export async function recordProductRef(
   name: string,
   storagePath: string
 ): Promise<ActionResult> {
-  await requireOrgMember(orgId);
+  await requireCanManageBrandContent(orgId);
 
   const supabase = await createClient();
   const { error } = await supabase.from("product_refs").insert({

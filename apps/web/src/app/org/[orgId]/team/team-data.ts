@@ -19,6 +19,12 @@ export type OrgPendingInvite = {
   invited_at: string;
 };
 
+export type OrgMemberPermissions = {
+  user_id: string;
+  can_create_ads: boolean | null;
+  can_manage_brand_content: boolean;
+};
+
 export type OrgSeatInfo = {
   seatCap: number | null;
   seatUsage: number;
@@ -29,6 +35,17 @@ export async function getOrgMembers(orgId: string): Promise<OrgTeamMember[]> {
   const { data, error } = await supabase.rpc("list_org_team", {
     target_org_id: orgId,
   });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/** Per-member toggles (migration 53). org_members is readable by every active member. */
+export async function getOrgMemberPermissions(orgId: string): Promise<OrgMemberPermissions[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("org_members")
+    .select("user_id, can_create_ads, can_manage_brand_content")
+    .eq("org_id", orgId);
   if (error) throw new Error(error.message);
   return data ?? [];
 }

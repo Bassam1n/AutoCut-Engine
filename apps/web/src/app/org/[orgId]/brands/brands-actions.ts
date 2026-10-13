@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgAdmin, requireCanManageBrandContent } from "@/lib/auth";
 import type { BrandContext } from "./brands-data";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -25,7 +25,8 @@ function readBrandContext(formData: FormData): BrandContext {
 }
 
 export async function createBrand(orgId: string, formData: FormData): Promise<ActionResult> {
-  await requireOrgMember(orgId);
+  // Creating brands is owner/admin only (migration 53, brands_insert).
+  await requireOrgAdmin(orgId);
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Brand name is required." };
@@ -55,7 +56,7 @@ export async function updateBrand(
   brandId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  await requireOrgMember(orgId);
+  await requireCanManageBrandContent(orgId);
 
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { ok: false, error: "Brand name is required." };
@@ -81,7 +82,7 @@ export async function updateBrand(
 }
 
 export async function archiveBrand(orgId: string, brandId: string): Promise<ActionResult> {
-  await requireOrgMember(orgId);
+  await requireOrgAdmin(orgId);
   const supabase = await createClient();
 
   const { error } = await supabase

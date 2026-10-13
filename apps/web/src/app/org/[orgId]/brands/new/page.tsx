@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { requireOrgMember } from "@/lib/auth";
+import { requireOrgAdmin } from "@/lib/auth";
 import { BrandForm } from "../brand-form";
 import { createBrand } from "../brands-actions";
 import { BackButton } from "../../back-button";
@@ -44,7 +44,7 @@ async function GatedForm({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  await requireOrgMember(orgId);
+  await requireOrgAdmin(orgId);
 
   return (
     <BrandForm

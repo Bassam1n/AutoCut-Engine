@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { OrgMemberRow, PendingInviteRow } from "./membership-data";
+import type { OrgMemberRow, PendingInviteRow, MemberPermissionRow } from "./membership-data";
 import {
   toggleSeatActive,
   changeRole,
   changeMemberEmail,
+  setMemberAdAccess,
   revokeInvite,
   setOrgSeatCap,
 } from "./membership-actions";
@@ -25,11 +26,14 @@ type OrgGroup = {
 export function MembershipTable({
   members,
   invites,
+  permissions,
 }: {
   members: OrgMemberRow[];
   invites: PendingInviteRow[];
+  permissions: MemberPermissionRow[];
 }) {
   const groups = groupByOrg(members, invites);
+  const adAccess = new Map(permissions.map((p) => [`${p.org_id}:${p.user_id}`, p.can_create_ads]));
 
   if (groups.length === 0) {
     return (
@@ -42,13 +46,19 @@ export function MembershipTable({
   return (
     <div className="flex flex-col gap-6">
       {groups.map((group) => (
-        <OrgSection key={group.orgId} group={group} />
+        <OrgSection key={group.orgId} group={group} adAccess={adAccess} />
       ))}
     </div>
   );
 }
 
-function OrgSection({ group }: { group: OrgGroup }) {
+function OrgSection({
+  group,
+  adAccess,
+}: {
+  group: OrgGroup;
+  adAccess: Map<string, boolean | null>;
+}) {
   const activeMembers = group.members.filter((m) => m.member_user_id !== null);
   const seatUsage = activeMembers.filter((m) => m.member_seat_active).length + group.invites.length;
 
@@ -66,12 +76,17 @@ function OrgSection({ group }: { group: OrgGroup }) {
               <th className="pb-2 font-medium">Email</th>
               <th className="pb-2 font-medium">Role</th>
               <th className="pb-2 font-medium">Access</th>
+              <th className="pb-2 font-medium">Ads</th>
               <th className="pb-2 font-medium" />
             </tr>
           </thead>
           <tbody>
             {activeMembers.map((m) => (
-              <MemberRow key={m.member_user_id} member={m} />
+              <MemberRow
+                key={m.member_user_id}
+                member={m}
+                adAccess={adAccess.get(`${m.org_id}:${m.member_user_id}`) ?? null}
+              />
             ))}
           </tbody>
         </table>
@@ -150,7 +165,7 @@ function SeatCapEditor({
   );
 }
 
-function MemberRow({ member }: { member: OrgMemberRow }) {
+function MemberRow({ member, adAccess }: { member: OrgMemberRow; adAccess: boolean | null }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState(false);
@@ -171,6 +186,15 @@ function MemberRow({ member }: { member: OrgMemberRow }) {
     setError(null);
     startTransition(async () => {
       const result = await toggleSeatActive(member.org_id, userId, !member.member_seat_active);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  function onAdAccessChange(value: string) {
+    setError(null);
+    const allowed = value === "on" ? true : value === "off" ? false : null;
+    startTransition(async () => {
+      const result = await setMemberAdAccess(member.org_id, userId, allowed);
       if (!result.ok) setError(result.error);
     });
   }
@@ -251,6 +275,22 @@ function MemberRow({ member }: { member: OrgMemberRow }) {
         >
           {member.member_seat_active ? "Active" : "Deactivated"}
         </span>
+      </td>
+      <td className="py-2 pr-3">
+        <select
+          aria-label={`Ad creation for ${member.member_email}`}
+          value={adAccess === null ? "default" : adAccess ? "on" : "off"}
+          disabled={isPending}
+          onChange={(e) => onAdAccessChange(e.target.value)}
+          className="field field-sm"
+        >
+          {/* Role default: users create ads, owners and admins don't (migration 53). */}
+          <option value="default">
+            Default ({member.member_role === "editor" ? "on" : "off"})
+          </option>
+          <option value="on">On</option>
+          <option value="off">Off</option>
+        </select>
       </td>
       <td className="py-2 text-right">
         <button

@@ -2,7 +2,12 @@ import { Suspense } from "react";
 import { requireOrgAdmin } from "@/lib/auth";
 import { getMyMembership } from "@/lib/membership";
 import { TeamScreen } from "./team-screen";
-import { getOrgMembers, getOrgPendingInvites, getOrgSeatInfo } from "./team-data";
+import {
+  getOrgMembers,
+  getOrgMemberPermissions,
+  getOrgPendingInvites,
+  getOrgSeatInfo,
+} from "./team-data";
 
 export default function OrgTeamPage({
   params,
@@ -45,8 +50,9 @@ async function GatedTeamScreen({
   const { orgId } = await params;
   await requireOrgAdmin(orgId);
 
-  const [members, invites, seatInfo, me] = await Promise.all([
+  const [members, permissions, invites, seatInfo, me] = await Promise.all([
     getOrgMembers(orgId),
+    getOrgMemberPermissions(orgId),
     getOrgPendingInvites(orgId),
     getOrgSeatInfo(orgId),
     getMyMembership(orgId),
@@ -56,6 +62,7 @@ async function GatedTeamScreen({
     <TeamScreen
       orgId={orgId}
       members={members}
+      permissions={permissions}
       invites={invites}
       seatInfo={seatInfo}
       viewerId={me?.userId ?? ""}
