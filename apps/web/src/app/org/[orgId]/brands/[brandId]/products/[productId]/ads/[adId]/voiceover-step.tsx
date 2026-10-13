@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AsyncButton } from "@/components/async-button";
 import { startSceneVoiceoverJob, getVoiceoverJobStatus } from "@/lib/jobs/run-voiceover-job";
-import { listElevenLabsVoices, type ElevenLabsVoice } from "./voiceover-data";
+import { searchElevenLabsVoices, getElevenLabsVoiceById, type ElevenLabsVoice } from "./voiceover-data";
 import { resolveSceneSpeaks } from "@/lib/video/duration";
 import type { Ad } from "../ads-data";
 import type { Scene } from "../scenes-data";
@@ -25,10 +25,12 @@ const POLL_INTERVAL_MS = 4000;
  * single whole-ad clip has no way to line up with one scene's video
  * generation call).
  *
- * The voice list and preview audio are fetched ONCE for the whole
- * step (every scene uses the same org-wide voice catalog), while the
- * picked voice and editable script are tracked per scene, since
- * different scenes legitimately want different delivery/emotion.
+ * The voice search (free text + gender/age/library filters, debounced)
+ * is shared across the whole step — every scene picks from the same
+ * result set — while the picked voice and editable script are tracked
+ * per scene, since different scenes legitimately want different
+ * delivery/emotion. Each scene card can also pull in an extra voice
+ * directly by ID, merged into just that scene's own picker.
  */
 export function VoiceoverStep({
   orgId,
@@ -55,19 +57,42 @@ export function VoiceoverStep({
   const [voicesError, setVoicesError] = useState<string | null>(null);
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
 
+  // Filters an editor can combine: free-text search, gender, age, and
+  // premade-vs-community (ElevenLabs' full shared library — hundreds
+  // of voices, per the user's explicit ask that premade-only was too
+  // limiting), plus a client-side "most used" re-sort (see
+  // voiceover-data.ts's docblock for why that can't be a true
+  // full-library popularity rank). Shared across every scene card —
+  // one search result set, each scene just picks from it.
+  const [searchText, setSearchText] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
+  const [ageFilter, setAgeFilter] = useState("");
+  const [voiceType, setVoiceType] = useState<"premade" | "community">("premade");
+  const [sortByMostUsed, setSortByMostUsed] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const result = await listElevenLabsVoices(orgId);
+    const handle = setTimeout(async () => {
+      if (cancelled) return;
+      setIsLoadingVoices(true);
+      setVoicesError(null);
+      const result = await searchElevenLabsVoices(orgId, {
+        search: searchText.trim() || undefined,
+        gender: genderFilter || undefined,
+        age: ageFilter || undefined,
+        voiceType,
+        sortByMostUsed,
+      });
       if (cancelled) return;
       setIsLoadingVoices(false);
       if (result.ok) setVoices(result.voices);
       else setVoicesError(result.error);
-    })();
+    }, 300); // debounced — free-text search re-queries ElevenLabs on every keystroke otherwise
     return () => {
       cancelled = true;
+      clearTimeout(handle);
     };
-  }, [orgId]);
+  }, [orgId, searchText, genderFilter, ageFilter, voiceType, sortByMostUsed]);
 
   // brandId/productId aren't needed by this step's own actions (voice
   // listing and voiceover generation only need orgId/sceneId), but
@@ -89,6 +114,58 @@ export function VoiceoverStep({
           separate ElevenLabs voiceover clip per speaking scene. Optional — Scene
           videos works fine with no voiceover at all, but when a scene has one, its
           clip is automatically used as reference audio for that scene&apos;s video.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="Search voices by name…"
+            className="min-w-[160px] flex-1 rounded-lg border border-border-strong bg-background px-2.5 py-1.5 text-xs outline-none"
+          />
+          <select
+            value={genderFilter}
+            onChange={(e) => setGenderFilter(e.target.value)}
+            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none"
+          >
+            <option value="">Any gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="non-binary">Non-binary</option>
+          </select>
+          <select
+            value={ageFilter}
+            onChange={(e) => setAgeFilter(e.target.value)}
+            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none"
+          >
+            <option value="">Any age</option>
+            <option value="young">Young</option>
+            <option value="middle_aged">Middle-aged</option>
+            <option value="old">Old</option>
+          </select>
+          <select
+            value={voiceType}
+            onChange={(e) => setVoiceType(e.target.value as "premade" | "community")}
+            className="rounded-lg border border-border-strong bg-background px-2 py-1.5 text-xs outline-none"
+          >
+            <option value="premade">Premade library</option>
+            <option value="community">Community library</option>
+          </select>
+          <label className="flex items-center gap-1.5 text-xs text-foreground-muted">
+            <input
+              type="checkbox"
+              checked={sortByMostUsed}
+              onChange={(e) => setSortByMostUsed(e.target.checked)}
+            />
+            Most used first
+          </label>
+        </div>
+        <p className="text-[11px] text-foreground-muted">
+          Community library searches ElevenLabs&apos; full shared voice catalog (hundreds
+          of voices), not just the small premade set.
         </p>
       </div>
 
@@ -170,6 +247,36 @@ function SceneVoiceoverCard({
   const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(null);
   const jobIdRef = useRef<string | null>(activeJob?.id ?? null);
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Voices added directly by ID (user's explicit ask: "by providing
+  // the voice id") — kept separate from the shared search results and
+  // merged in below, since a pasted ID may never appear in any
+  // premade/community search page at all.
+  const [voiceIdInput, setVoiceIdInput] = useState("");
+  const [isLookingUpVoiceId, setIsLookingUpVoiceId] = useState(false);
+  const [voiceIdError, setVoiceIdError] = useState<string | null>(null);
+  const [addedVoices, setAddedVoices] = useState<ElevenLabsVoice[]>([]);
+
+  async function onAddVoiceById() {
+    setVoiceIdError(null);
+    const id = voiceIdInput.trim();
+    if (!id) return;
+    setIsLookingUpVoiceId(true);
+    try {
+      const result = await getElevenLabsVoiceById(orgId, id);
+      if (!result.ok) {
+        setVoiceIdError(result.error);
+        return;
+      }
+      setAddedVoices((prev) => (prev.some((v) => v.voiceId === result.voice.voiceId) ? prev : [result.voice, ...prev]));
+      setVoiceId(result.voice.voiceId);
+      setVoiceIdInput("");
+    } finally {
+      setIsLookingUpVoiceId(false);
+    }
+  }
+
+  const displayedVoices = [...addedVoices.filter((v) => !voices.some((listed) => listed.voiceId === v.voiceId)), ...voices];
 
   useEffect(() => {
     if (!activeJob) return;
@@ -277,11 +384,29 @@ function SceneVoiceoverCard({
 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-medium">Voice</label>
+        <div className="flex gap-1.5">
+          <input
+            type="text"
+            value={voiceIdInput}
+            onChange={(e) => setVoiceIdInput(e.target.value)}
+            placeholder="Add by voice ID…"
+            className="flex-1 rounded-lg border border-border-strong bg-background px-2 py-1 text-xs outline-none"
+          />
+          <AsyncButton
+            onClick={onAddVoiceById}
+            isPending={isLookingUpVoiceId}
+            pendingLabel="Looking up…"
+            className="shrink-0 rounded-lg border border-border-strong px-2 py-1 text-xs font-medium transition-colors hover:bg-border/40"
+          >
+            Add
+          </AsyncButton>
+        </div>
+        {voiceIdError && <p className="text-xs text-danger">{voiceIdError}</p>}
         <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-lg border border-border-strong p-1">
-          {voices.length === 0 && (
+          {displayedVoices.length === 0 && (
             <p className="p-2 text-xs text-foreground-muted">No voices available.</p>
           )}
-          {voices.map((voice) => {
+          {displayedVoices.map((voice) => {
             const isSelected = voice.voiceId === voiceId;
             return (
               <div
