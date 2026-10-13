@@ -12,6 +12,7 @@ import type { ModelOption } from "@/lib/providers/models-data";
  */
 export function ModelPicker({
   orgId,
+  brandId,
   options,
   providersWithKeys,
   value,
@@ -19,6 +20,8 @@ export function ModelPicker({
   returnToPath,
 }: {
   orgId: string;
+  /** When given, "Add one" points at that brand's own keys page (the primary path now that brand-level keys exist) instead of the org-wide one. */
+  brandId?: string;
   options: ModelOption[];
   providersWithKeys: Set<string>;
   value: { provider: string; endpoint: string } | null;
@@ -54,9 +57,9 @@ export function ModelPicker({
 
       {selected && !hasKey && (
         <p className="text-xs text-danger">
-          No {selected.provider} key saved for this org.{" "}
+          No {selected.provider} key saved for this brand or org.{" "}
           <Link
-            href={`/org/${orgId}/settings/keys?returnTo=${encodeURIComponent(returnToPath)}`}
+            href={`${brandId ? `/org/${orgId}/brands/${brandId}/settings/keys` : `/org/${orgId}/settings/keys`}?returnTo=${encodeURIComponent(returnToPath)}`}
             className="font-medium underline"
           >
             Add one

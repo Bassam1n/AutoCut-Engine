@@ -7,6 +7,7 @@ import { getScenes } from "../scenes-data";
 import { getConcept, getCastMembers, getAssetSignedUrls, getBrandCastMembers } from "../concepts-data";
 import { getModelOptions } from "@/lib/providers/models-data";
 import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
+import { getBrandSecrets } from "../../../../settings/keys/keys-data";
 import { getSceneImages, getArchivedSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
 import {
   getSceneVideos,
@@ -74,8 +75,12 @@ async function GatedCanvas({
 
   const imageModelOptions = await getModelOptions("image");
   const videoModelOptions = await getModelOptions("video");
-  const secrets = await getOrgSecrets(orgId);
-  const providersWithKeys = secrets.map((s) => s.provider);
+  // A provider counts as "has a key" if EITHER this brand or the org
+  // has one saved — matches get_brand_secret_value's own fallback
+  // chain exactly, so this warning never contradicts what generation
+  // will actually do.
+  const [orgSecrets, brandSecrets] = await Promise.all([getOrgSecrets(orgId), getBrandSecrets(orgId, brandId)]);
+  const providersWithKeys = Array.from(new Set([...orgSecrets.map((s) => s.provider), ...brandSecrets.map((s) => s.provider)]));
 
   const sceneImagesBySceneId = await getSceneImages(orgId, adId);
   const archivedSceneImagesBySceneId = await getArchivedSceneImages(orgId, adId);

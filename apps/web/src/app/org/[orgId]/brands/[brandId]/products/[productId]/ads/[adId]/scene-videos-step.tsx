@@ -160,6 +160,7 @@ export function SceneVideosStep({
       {videoModelOptions.length > 0 && (
         <ModelPicker
           orgId={orgId}
+          brandId={brandId}
           options={videoModelOptions}
           providersWithKeys={providersWithKeys}
           value={videoModel ? { provider: videoModel.provider, endpoint: videoModel.endpoint } : null}

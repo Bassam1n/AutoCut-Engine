@@ -185,6 +185,7 @@ export function SceneImagesStep({
       {imageModelOptions.length > 0 && (
         <ModelPicker
           orgId={orgId}
+          brandId={brandId}
           options={imageModelOptions}
           providersWithKeys={providersWithKeys}
           value={imageModel ? { provider: imageModel.provider, endpoint: imageModel.endpoint } : null}

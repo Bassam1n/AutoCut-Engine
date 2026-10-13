@@ -42,7 +42,7 @@ export function Sidebar({
     ...(info.isAdmin
       ? [
           { href: `/org/${orgId}/team`, label: "Team" },
-          { href: `/org/${orgId}/settings/keys`, label: "Provider keys" },
+          { href: `/org/${orgId}/settings/keys`, label: "Org-wide keys" },
         ]
       : []),
   ];

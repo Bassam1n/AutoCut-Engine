@@ -276,6 +276,7 @@ export function ConceptCastStep({
           {imageModelOptions.length > 0 && (
             <ModelPicker
               orgId={orgId}
+              brandId={brandId}
               options={imageModelOptions}
               providersWithKeys={providersWithKeys}
               value={imageModel ? { provider: imageModel.provider, endpoint: imageModel.endpoint } : null}
@@ -855,6 +856,7 @@ function RegenerateModal({
         {imageModelOptions.length > 0 && (
           <ModelPicker
             orgId={orgId}
+            brandId={brandId}
             options={imageModelOptions}
             providersWithKeys={providersWithKeys}
             value={selectedModel ? { provider: selectedModel.provider, endpoint: selectedModel.endpoint } : null}
