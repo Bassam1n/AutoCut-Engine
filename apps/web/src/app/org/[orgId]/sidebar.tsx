@@ -21,6 +21,10 @@ export function Sidebar({
   const pathname = usePathname();
 
   const links = [
+    // Task board for owners/admins; users get only their own tasks.
+    ...(info.isAdmin
+      ? [{ href: `/org/${orgId}/board`, label: "Board" }]
+      : [{ href: `/org/${orgId}/tasks`, label: "My tasks" }]),
     { href: `/org/${orgId}/brands`, label: "Brands" },
     { href: `/org/${orgId}/products`, label: "Products" },
     { href: `/org/${orgId}/creative-history`, label: "Creative history" },

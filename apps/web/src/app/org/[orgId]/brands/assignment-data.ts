@@ -5,6 +5,7 @@ export type AssignableUser = {
   id: string;
   name: string | null;
   email: string;
+  avatarPath?: string | null;
 };
 
 /**
@@ -21,11 +22,19 @@ export async function getAssignableUsers(orgId: string): Promise<AssignableUser[
       (m: { member_role: string; member_seat_active: boolean }) =>
         m.member_role === "editor" && m.member_seat_active
     )
-    .map((m: { member_user_id: string; member_full_name: string | null; member_email: string }) => ({
-      id: m.member_user_id,
-      name: m.member_full_name,
-      email: m.member_email,
-    }));
+    .map(
+      (m: {
+        member_user_id: string;
+        member_full_name: string | null;
+        member_email: string;
+        member_avatar_path: string | null;
+      }) => ({
+        id: m.member_user_id,
+        name: m.member_full_name,
+        email: m.member_email,
+        avatarPath: m.member_avatar_path,
+      })
+    );
 }
 
 /** brand_id -> active assignee user ids, for one org. */
