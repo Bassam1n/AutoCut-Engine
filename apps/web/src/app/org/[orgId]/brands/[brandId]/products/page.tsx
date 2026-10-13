@@ -6,6 +6,7 @@ import { getBrand } from "../../brands-data";
 import { getProducts } from "./products-data";
 import { PRODUCT_CATEGORY_LABELS } from "./product-categories";
 import { BackButton } from "../../../back-button";
+import { BrandNav } from "../brand-nav";
 
 export default function ProductsPage({
   params,
@@ -75,19 +76,7 @@ async function GatedBrandNav({
   const { orgId, brandId } = await params;
   await requireOrgMember(orgId);
 
-  return (
-    <div className="flex gap-2 border-b border-border pb-3">
-      <Link
-        href={`/org/${orgId}/brands/${brandId}/customers`}
-        className="rounded-lg px-3 py-1.5 text-sm font-medium text-foreground-muted transition-colors hover:bg-border/40"
-      >
-        Customers
-      </Link>
-      <span className="rounded-lg bg-accent-soft px-3 py-1.5 text-sm font-medium text-accent">
-        Products
-      </span>
-    </div>
-  );
+  return <BrandNav orgId={orgId} brandId={brandId} active="products" />;
 }
 
 async function GatedProducts({

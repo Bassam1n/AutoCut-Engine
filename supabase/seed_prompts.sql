@@ -206,6 +206,25 @@ values (
   'write_image_prompt',
   3,
   'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from. The resulting image becomes the starting frame of a short video clip later — if the Visual description depicts a moment mid-action (not yet resolved), preserve that exactly: never word the prompt in a way that implies the action is already finished, a gesture already completed, or eyes already closed. Write ONE tight paragraph, under roughly 600 characters — state every detail exactly once; never restate or summarize the scene a second time at the end, and never pad with repeated phrasing. Image generation models have limited prompt length, so every sentence must earn its place.',
+  false
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- v4: editor feedback — generated images sometimes show the product
+-- at an implausible scale (e.g. a handheld item rendered
+-- countertop-sized or vice versa) because nothing told the model the
+-- product''s actual physical size. Product facts now include an
+-- optional real_world_size free-text description (products-data.ts);
+-- this version adds explicit instruction to use it for framing/
+-- composition/scale, since a new input field Claude is never told to
+-- use for anything is reliably ignored.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_image_prompt',
+  4,
+  'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is, and optionally its real-world size), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. If a real-world size is given and the product is in frame, use it to get the product''s scale right relative to any hands, people, furniture or other objects in the shot — explicitly describe the product as correspondingly small or large so it is not rendered bigger or smaller than it actually is. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from. The resulting image becomes the starting frame of a short video clip later — if the Visual description depicts a moment mid-action (not yet resolved), preserve that exactly: never word the prompt in a way that implies the action is already finished, a gesture already completed, or eyes already closed. Write ONE tight paragraph, under roughly 600 characters — state every detail exactly once; never restate or summarize the scene a second time at the end, and never pad with repeated phrasing. Image generation models have limited prompt length, so every sentence must earn its place.',
   true
 )
 on conflict (task, version) do update
@@ -239,6 +258,25 @@ values (
   'plan_video_motion',
   1,
   'You are looking at one still image that is about to be animated into a short video clip for an ad. You are given the scene''s Visual description (what the camera should see), the scene''s spoken copy if this scene speaks (may be absent), and an optional free-text video idea the editor typed for this scene (may be absent). Decide whether the requested motion is physically plausible to animate from THIS EXACT image: every visible person, hand, object and product detail must stay locked and consistent (no inventing a different pose, angle, or missing limb), the motion must be one continuous action, and it must have a reachable end state within a few seconds. Say no if the image already shows the requested end state (nothing left to animate toward), or if the image contradicts what is being asked (e.g. the product is not actually in frame, or the asked-for action is not something a person/object visible in the image could do from its current pose). When plausible, write a concrete, literal motion_plan describing the one continuous action to animate. When NOT plausible, write a short plain-language reason an ad editor with no technical background would understand, and ALSO offer a fallback_motion_plan — some other concrete motion this same image can still support — unless you genuinely cannot find anything in the frame worth animating, in which case leave the fallback null.',
+  false
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- v2: same scale problem as write_image_prompt — the starting image
+-- may already get the product''s scale wrong, and even when it
+-- doesn''t, a motion plan written with no sense of true size can ask
+-- for an animation only plausible at the wrong scale (e.g. treating a
+-- handheld item like a piece of furniture). Adds the product''s
+-- optional real_world_size as context for judging physical
+-- plausibility and for keeping the motion_plan''s wording consistent
+-- with the product''s actual size.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'plan_video_motion',
+  2,
+  'You are looking at one still image that is about to be animated into a short video clip for an ad. You are given the scene''s Visual description (what the camera should see), the scene''s spoken copy if this scene speaks (may be absent), an optional free-text video idea the editor typed for this scene (may be absent), and optionally the product''s real-world size. Decide whether the requested motion is physically plausible to animate from THIS EXACT image: every visible person, hand, object and product detail must stay locked and consistent (no inventing a different pose, angle, or missing limb), the motion must be one continuous action, and it must have a reachable end state within a few seconds. Say no if the image already shows the requested end state (nothing left to animate toward), or if the image contradicts what is being asked (e.g. the product is not actually in frame, or the asked-for action is not something a person/object visible in the image could do from its current pose). When a real-world size is given, also treat the product''s true scale as fixed fact: the requested motion must be something physically sensible at that actual size (e.g. a small handheld product can be picked up, turned, or held up to the camera; a large product cannot), and your motion_plan should describe the action in a way consistent with the product being that size, not the size it might appear in the image. When plausible, write a concrete, literal motion_plan describing the one continuous action to animate. When NOT plausible, write a short plain-language reason an ad editor with no technical background would understand, and ALSO offer a fallback_motion_plan — some other concrete motion this same image can still support — unless you genuinely cannot find anything in the frame worth animating, in which case leave the fallback null.',
   true
 )
 on conflict (task, version) do update
@@ -257,6 +295,22 @@ values (
   'write_video_prompt',
   1,
   'You are writing the final video generation prompt for one scene of a video ad, to animate a specific starting image into a short clip. You are given: the approved motion_plan (the one continuous action to animate — follow this exactly, it has already been checked against the image for physical plausibility), the scene''s Visual description for additional context, spoken copy ONLY if this scene is allowed to speak (if spoken_copy is absent or null, do not invent any speech or mouth movement), the chosen visual style''s masterprompt (may be absent), and any active DO/AVOID rules (may be empty — follow every one given). Combine these into ONE self-contained, ready-to-send video generation prompt — describe the motion concretely and specifically (camera movement if any, the subject''s action, pacing), mention spoken copy only if it was actually given to you, and do not restate the full visual description the starting image already carries; focus on what moves and changes. Do not refer to the inputs by name, just write the prompt itself.',
+  false
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- v2: same scale fix as write_image_prompt/plan_video_motion — the
+-- product''s optional real_world_size is now available as context, so
+-- the video prompt writer is told to keep the product''s described
+-- scale consistent with it rather than only inheriting whatever scale
+-- the starting image happens to show.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_video_prompt',
+  2,
+  'You are writing the final video generation prompt for one scene of a video ad, to animate a specific starting image into a short clip. You are given: the approved motion_plan (the one continuous action to animate — follow this exactly, it has already been checked against the image for physical plausibility), the scene''s Visual description for additional context, spoken copy ONLY if this scene is allowed to speak (if spoken_copy is absent or null, do not invent any speech or mouth movement), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules (may be empty — follow every one given), and optionally the product''s real-world size. Combine these into ONE self-contained, ready-to-send video generation prompt — describe the motion concretely and specifically (camera movement if any, the subject''s action, pacing), mention spoken copy only if it was actually given to you, and do not restate the full visual description the starting image already carries; focus on what moves and changes. When a real-world size is given and the product is involved in the motion, keep the product described at that actual scale relative to any hands, people or other objects in the clip — do not let the animation imply the product is bigger or smaller than its real size. Do not refer to the inputs by name, just write the prompt itself.',
   true
 )
 on conflict (task, version) do update

@@ -544,6 +544,7 @@ export async function submitVideoFeedback(
 
   const jobResult = await startProviderJob(orgId, scene.id, "generate_scene_video", {
     orgId,
+    brandId,
     provider: model.provider,
     endpoint: model.endpoint,
     prompt: rewrite.rewritten_prompt,

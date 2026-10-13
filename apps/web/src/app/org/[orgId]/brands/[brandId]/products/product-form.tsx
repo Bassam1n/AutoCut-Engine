@@ -82,6 +82,26 @@ export function ProductForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="real_world_size" className="text-sm font-medium">
+          Real-world size
+          <span className="ml-1.5 text-xs font-normal text-foreground-muted">
+            optional
+          </span>
+        </label>
+        <input
+          id="real_world_size"
+          name="real_world_size"
+          placeholder={'e.g. "15cm tall, 8cm wide" or "about the size of a soda can"'}
+          defaultValue={product?.real_world_size ?? ""}
+          disabled={isPending}
+          className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none disabled:opacity-60"
+        />
+        <p className="text-xs text-foreground-muted">
+          Helps generated images and videos show the product at the right scale.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label htmlFor="url" className="text-sm font-medium">
           Product URL
           <span className="ml-1.5 text-xs font-normal text-foreground-muted">

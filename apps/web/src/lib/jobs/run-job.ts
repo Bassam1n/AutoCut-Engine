@@ -25,6 +25,7 @@ import type { runProviderJob } from "@/trigger/run-provider-job";
  */
 export type RunJobPayload = {
   orgId: string;
+  brandId: string;
   provider: "fal" | "kie";
   endpoint: string;
   prompt: string;

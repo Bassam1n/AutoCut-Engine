@@ -4,7 +4,7 @@ import { requireOrgMember } from "@/lib/auth";
 import { getAd } from "../ads-data";
 import { getAdScripts } from "../scripts-data";
 import { getScenes } from "../scenes-data";
-import { getConcept, getCastMembers, getAssetSignedUrls } from "../concepts-data";
+import { getConcept, getCastMembers, getAssetSignedUrls, getBrandCastMembers } from "../concepts-data";
 import { getModelOptions } from "@/lib/providers/models-data";
 import { getOrgSecrets } from "@/app/org/[orgId]/settings/keys/keys-data";
 import { getSceneImages, getArchivedSceneImages, getSceneFeedbackImages, getAssetSignedUrlsByPath } from "../scene-images-data";
@@ -64,10 +64,12 @@ async function GatedCanvas({
   const scenes = await getScenes(orgId, adId);
   const concept = await getConcept(orgId, adId);
   const castMembers = await getCastMembers(orgId, adId);
+  const brandCastMembers = await getBrandCastMembers(orgId, brandId);
 
-  const assetIds = castMembers
-    .flatMap((c) => [c.ref_asset_id, c.sheet_asset_id])
-    .filter((id): id is string => id !== null);
+  const assetIds = [
+    ...castMembers.flatMap((c) => [c.ref_asset_id, c.sheet_asset_id]),
+    ...brandCastMembers.flatMap((c) => [c.ref_asset_id, c.sheet_asset_id]),
+  ].filter((id): id is string => id !== null);
   const assetUrls = await getAssetSignedUrls(orgId, assetIds);
 
   const imageModelOptions = await getModelOptions("image");
@@ -124,6 +126,7 @@ async function GatedCanvas({
       scenes={scenes}
       concept={concept}
       castMembers={castMembers}
+      brandCastMembers={brandCastMembers}
       assetUrls={assetUrls}
       imageModelOptions={imageModelOptions}
       providersWithKeys={providersWithKeys}

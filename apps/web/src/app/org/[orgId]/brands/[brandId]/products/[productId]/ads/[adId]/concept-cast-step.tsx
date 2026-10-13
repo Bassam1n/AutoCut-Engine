@@ -7,6 +7,7 @@ import { AsyncButton } from "@/components/async-button";
 import { ModelPicker } from "@/components/model-picker";
 import {
   generateConcepts,
+  createManualConcept,
   selectConcept,
   editSelectedConcept,
   extractCast,
@@ -18,9 +19,14 @@ import {
   recordUploadedCastReference,
   type ModelChoice,
 } from "../concepts-actions";
+import {
+  createManualCastMember,
+  addBrandCastMemberToAd,
+  saveCastMemberToLibrary,
+} from "../../../../cast/cast-library-actions";
 import { generateSceneVisuals } from "../scene-visuals-actions";
 import type { Ad } from "../ads-data";
-import type { Concept, CastMember } from "../concepts-data";
+import type { Concept, CastMember, BrandCastMember } from "../concepts-data";
 import type { ConceptOption } from "@/lib/claude/schemas/concepts";
 import type { ModelOption } from "@/lib/providers/models-data";
 
@@ -31,6 +37,7 @@ export function ConceptCastStep({
   ad,
   concept,
   castMembers,
+  brandCastMembers,
   assetUrls,
   imageModelOptions,
   providersWithKeys,
@@ -42,6 +49,7 @@ export function ConceptCastStep({
   ad: Ad;
   concept: Concept | null;
   castMembers: CastMember[];
+  brandCastMembers: BrandCastMember[];
   assetUrls: Record<string, string>;
   imageModelOptions: ModelOption[];
   providersWithKeys: Set<string>;
@@ -51,8 +59,12 @@ export function ConceptCastStep({
   const [isExtracting, startExtracting] = useTransition();
   const [isStoryboarding, startStoryboarding] = useTransition();
   const [isApprovingAll, startApprovingAll] = useTransition();
+  const [isAddingCast, startAddingCast] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [imageModel, setImageModel] = useState<ModelOption | null>(imageModelOptions[0] ?? null);
+  const [isWritingOwn, setIsWritingOwn] = useState(false);
+  const [isPickingFromLibrary, setIsPickingFromLibrary] = useState(false);
+  const [isAddingManualCast, setIsAddingManualCast] = useState(false);
 
   const returnToPath = `/org/${orgId}/brands/${brandId}/products/${productId}/ads/${ad.id}`;
 
@@ -68,6 +80,15 @@ export function ConceptCastStep({
     setError(null);
     if (!imageModel) {
       setError("Pick an image model first.");
+      return;
+    }
+    // extractCast deletes every existing cast_members row for this ad
+    // before inserting fresh ones — including anything added manually
+    // or picked from the brand library, which has no AI-vs-manual flag
+    // to distinguish and preserve selectively. Warning once here, right
+    // before the destructive click, was judged simpler and safer than
+    // partially protecting some rows but not others.
+    if (castMembers.length > 0 && !window.confirm("Re-extracting cast replaces EVERY current cast member for this ad, including any added manually or from the brand library. Continue?")) {
       return;
     }
     const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie", endpoint: imageModel.endpoint };
@@ -102,6 +123,31 @@ export function ConceptCastStep({
     });
   }
 
+  // Already-added library personas shouldn't be offered again in the
+  // picker — matched by brand_cast_member_id, the same link column
+  // extractCast's auto-match path writes.
+  const addedBrandCastMemberIds = new Set(
+    castMembers.map((c) => c.brand_cast_member_id).filter((id): id is string => id !== null)
+  );
+  const pickableBrandCastMembers = brandCastMembers.filter((m) => !addedBrandCastMemberIds.has(m.id));
+
+  function onAddFromLibrary(brandCastMemberId: string) {
+    setError(null);
+    startAddingCast(async () => {
+      const result = await addBrandCastMemberToAd(orgId, brandId, productId, ad.id, brandCastMemberId);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
+  function onCreateManualCast(name: string, description: string) {
+    setError(null);
+    startAddingCast(async () => {
+      const result = await createManualCastMember(orgId, brandId, productId, ad.id, name, description);
+      if (result.ok) setIsAddingManualCast(false);
+      else setError(result.error);
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -112,17 +158,39 @@ export function ConceptCastStep({
             like, then extract and approve the cast.
           </p>
         </div>
-        <AsyncButton
-          onClick={onGenerateConcepts}
-          isPending={isGenerating}
-          pendingLabel="Generating concepts..."
-          className="shrink-0 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
-        >
-          {hasConcepts ? "Regenerate concepts" : "Generate concepts"}
-        </AsyncButton>
+        <div className="flex shrink-0 items-center gap-2">
+          {!hasConcepts && (
+            <button
+              type="button"
+              onClick={() => setIsWritingOwn(true)}
+              className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+            >
+              Write my own instead
+            </button>
+          )}
+          <AsyncButton
+            onClick={onGenerateConcepts}
+            isPending={isGenerating}
+            pendingLabel="Generating concepts..."
+            className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+          >
+            {hasConcepts ? "Regenerate concepts" : "Generate concepts"}
+          </AsyncButton>
+        </div>
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {isWritingOwn && !hasConcepts && (
+        <ManualConceptForm
+          orgId={orgId}
+          brandId={brandId}
+          productId={productId}
+          ad={ad}
+          onCancel={() => setIsWritingOwn(false)}
+          onCreated={() => setIsWritingOwn(false)}
+        />
+      )}
 
       {hasConcepts && concept && (
         <div className="flex flex-col gap-3">
@@ -164,8 +232,46 @@ export function ConceptCastStep({
               >
                 {castMembers.length > 0 ? "Re-extract cast" : "Extract cast"}
               </AsyncButton>
+              {pickableBrandCastMembers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsPickingFromLibrary((v) => !v)}
+                  className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+                >
+                  {isPickingFromLibrary ? "Hide library" : "Add from library"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsAddingManualCast((v) => !v)}
+                className="rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border/40"
+              >
+                {isAddingManualCast ? "Cancel" : "Add manually"}
+              </button>
             </div>
           </div>
+
+          {isPickingFromLibrary && (
+            <div className="flex flex-wrap gap-2 rounded-xl border border-border p-3">
+              {pickableBrandCastMembers.map((member) => (
+                <button
+                  key={member.id}
+                  type="button"
+                  disabled={isAddingCast}
+                  onClick={() => onAddFromLibrary(member.id)}
+                  className="flex items-center gap-2 rounded-lg border border-border-strong px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+                >
+                  {member.ref_asset_id && assetUrls[member.ref_asset_id] && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={assetUrls[member.ref_asset_id]} alt={member.name} className="h-6 w-6 rounded-full object-cover" />
+                  )}
+                  {member.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {isAddingManualCast && <ManualCastForm onSubmit={onCreateManualCast} isPending={isAddingCast} />}
 
           {imageModelOptions.length > 0 && (
             <ModelPicker
@@ -215,6 +321,136 @@ export function ConceptCastStep({
           Generate storyboard →
         </AsyncButton>
       )}
+    </div>
+  );
+}
+
+function ManualConceptForm({
+  orgId,
+  brandId,
+  productId,
+  ad,
+  onCancel,
+  onCreated,
+}: {
+  orgId: string;
+  brandId: string;
+  productId: string;
+  ad: Ad;
+  onCancel: () => void;
+  onCreated: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [story, setStory] = useState("");
+  const [firstFrame, setFirstFrame] = useState("");
+  const [world, setWorld] = useState("");
+  const [sceneByScene, setSceneByScene] = useState("");
+  const [standoutMoments, setStandoutMoments] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const canSubmit = title.trim() && story.trim() && world.trim();
+
+  function onSubmit() {
+    setError(null);
+    if (!canSubmit) {
+      setError("Title, story, and world are required.");
+      return;
+    }
+    const option: ConceptOption = {
+      title: title.trim(),
+      story: story.trim(),
+      first_frame: firstFrame.trim(),
+      world: world.trim(),
+      scene_by_scene: sceneByScene
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+      standout_moments: standoutMoments
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+    };
+    startTransition(async () => {
+      const result = await createManualConcept(orgId, brandId, productId, ad.id, option);
+      if (result.ok) {
+        onCreated();
+      } else {
+        setError(result.error);
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-border p-4">
+      <label className="text-xs font-medium">Title</label>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="A short, memorable name for this concept"
+        className="rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+      />
+      <label className="text-xs font-medium">Story</label>
+      <textarea
+        value={story}
+        onChange={(e) => setStory(e.target.value)}
+        rows={3}
+        placeholder="The narrative/premise this concept tells"
+        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+      />
+      <label className="text-xs font-medium">First frame</label>
+      <textarea
+        value={firstFrame}
+        onChange={(e) => setFirstFrame(e.target.value)}
+        rows={2}
+        placeholder="What the viewer sees in the very first frame"
+        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+      />
+      <label className="text-xs font-medium">World</label>
+      <textarea
+        value={world}
+        onChange={(e) => setWorld(e.target.value)}
+        rows={2}
+        placeholder="The setting/location(s) this concept takes place in"
+        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+      />
+      <label className="text-xs font-medium">Scene by scene (one beat per line)</label>
+      <textarea
+        value={sceneByScene}
+        onChange={(e) => setSceneByScene(e.target.value)}
+        rows={4}
+        placeholder={"Scene 1: ...\nScene 2: ..."}
+        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+      />
+      <label className="text-xs font-medium">Standout moments (one per line)</label>
+      <textarea
+        value={standoutMoments}
+        onChange={(e) => setStandoutMoments(e.target.value)}
+        rows={2}
+        placeholder="1-3 specific moments that make this concept memorable"
+        className="resize-none rounded-lg border border-border-strong bg-background px-3 py-2 text-sm outline-none"
+      />
+
+      {error && <p className="text-xs text-danger">{error}</p>}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={isPending}
+          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {isPending ? "Saving..." : "Use this concept"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium transition-colors hover:bg-border/40 disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
@@ -329,6 +565,49 @@ function ConceptCard({
   );
 }
 
+function ManualCastForm({
+  onSubmit,
+  isPending,
+}: {
+  onSubmit: (name: string, description: string) => void;
+  isPending: boolean;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name"
+        disabled={isPending}
+        className="rounded-lg border border-border-strong bg-background px-2.5 py-1.5 text-xs outline-none disabled:opacity-60"
+      />
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description (optional)"
+        rows={2}
+        disabled={isPending}
+        className="resize-none rounded-lg border border-border-strong bg-background px-2.5 py-1.5 text-xs outline-none disabled:opacity-60"
+      />
+      <AsyncButton
+        onClick={() => onSubmit(name, description)}
+        isPending={isPending}
+        disabled={!name.trim()}
+        pendingLabel="Adding..."
+        className="self-start rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        Add cast member
+      </AsyncButton>
+      <p className="text-[11px] text-foreground-muted">
+        Added without an image — use &quot;Upload image&quot; on the new card once it appears.
+      </p>
+    </div>
+  );
+}
+
 function CastMemberCard({
   orgId,
   brandId,
@@ -358,6 +637,17 @@ function CastMemberCard({
   const [isRegenerateOpen, setIsRegenerateOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sheetStatus, setSheetStatus] = useState<"idle" | "generating" | "failed">("idle");
+  const [isSavingToLibrary, startSavingToLibrary] = useTransition();
+  const [savedToLibrary, setSavedToLibrary] = useState(false);
+
+  function onSaveToLibrary() {
+    setError(null);
+    startSavingToLibrary(async () => {
+      const result = await saveCastMemberToLibrary(orgId, brandId, productId, ad.id, member.id);
+      if (result.ok) setSavedToLibrary(true);
+      else setError(result.error);
+    });
+  }
 
   function onGenerateSheet() {
     setError(null);
@@ -431,6 +721,17 @@ function CastMemberCard({
         >
           {sheetUrl ? "Regenerate sheet" : "Character sheet"}
         </AsyncButton>
+        {!member.brand_cast_member_id && (
+          <AsyncButton
+            onClick={onSaveToLibrary}
+            isPending={isSavingToLibrary}
+            disabled={savedToLibrary}
+            pendingLabel="Saving..."
+            className="rounded-lg border border-border-strong px-2.5 py-1 text-xs font-medium hover:bg-border/40"
+          >
+            {savedToLibrary ? "Saved to library ✓" : "Save to library"}
+          </AsyncButton>
+        )}
       </div>
       {sheetUrl && (
         // eslint-disable-next-line @next/next/no-img-element

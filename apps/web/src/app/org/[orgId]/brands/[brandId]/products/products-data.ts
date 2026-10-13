@@ -9,6 +9,7 @@ export type Product = {
   name: string;
   category: ProductCategory | null;
   what_it_is: string | null;
+  real_world_size: string | null;
   url: string | null;
   active: boolean;
   created_at: string;

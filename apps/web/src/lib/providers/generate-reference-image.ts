@@ -60,8 +60,9 @@ export async function generateReferenceImage(params: {
     return { ok: false, error: spendLimitMessage(claimError.message), code: "SPEND_LIMIT" };
   }
 
-  const { data: apiKey, error: keyError } = await service.rpc("get_org_secret_value", {
+  const { data: apiKey, error: keyError } = await service.rpc("get_brand_secret_value", {
     target_org_id: params.orgId,
+    target_brand_id: params.brandId,
     target_provider: params.provider,
   });
   if (keyError || !apiKey) {

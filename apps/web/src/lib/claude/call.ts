@@ -24,7 +24,7 @@ import { spendLimitMessage } from "@/lib/spend-limit-message";
 export async function llmCall<Schema extends z.ZodTypeAny>(
   params: LlmCallParams<Schema>
 ): Promise<LlmCallResult<z.infer<Schema>>> {
-  const { task, schema, input, orgId, imageUrls } = params;
+  const { task, schema, input, orgId, brandId, imageUrls } = params;
   const model = params.modelOverride ?? PINNED_MODEL_PER_TASK[task];
 
   const supabase = createServiceClient();
@@ -43,7 +43,7 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
     throw new LlmCallError(spendLimitMessage(claimError.message), "SPEND_LIMIT", claimError);
   }
 
-  const apiKey = await getOrgAnthropicKey(orgId);
+  const apiKey = await getOrgAnthropicKey(orgId, brandId);
   const prompt = await getActivePrompt(task);
   const inputHash = hashInput(input);
 
@@ -136,12 +136,27 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
   );
 }
 
-async function getOrgAnthropicKey(orgId: string): Promise<string> {
+/**
+ * brandId present: resolves the brand's own Anthropic key, falling
+ * back to the org's key via get_brand_secret_value's own fallback
+ * chain when this brand has none saved — see migration
+ * 00000000000051_rpc_brand_secrets.sql. brandId absent (e.g.
+ * distill-feedback-rules.ts, which clusters feedback across an
+ * entire org in one batch before any per-brand split): org-level key
+ * only, same as before this function took a brandId at all.
+ */
+async function getOrgAnthropicKey(orgId: string, brandId?: string): Promise<string> {
   const supabase = createServiceClient();
-  const { data, error } = await supabase.rpc("get_org_secret_value", {
-    target_org_id: orgId,
-    target_provider: "anthropic",
-  });
+  const { data, error } = brandId
+    ? await supabase.rpc("get_brand_secret_value", {
+        target_org_id: orgId,
+        target_brand_id: brandId,
+        target_provider: "anthropic",
+      })
+    : await supabase.rpc("get_org_secret_value", {
+        target_org_id: orgId,
+        target_provider: "anthropic",
+      });
 
   if (error || !data) {
     throw new LlmCallError(

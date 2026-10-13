@@ -344,7 +344,12 @@ export async function resolveFinalImagePrompt(
         visual: scene.visual,
         copy: scene.copy,
         brand_context: brand.brand_context,
-        product: { name: product.name, category: product.category, what_it_is: product.what_it_is },
+        product: {
+          name: product.name,
+          category: product.category,
+          what_it_is: product.what_it_is,
+          real_world_size: product.real_world_size,
+        },
         style_masterprompt: styleMasterprompt,
         active_rules: rules.map((r) => ({ kind: r.kind, text: r.text })),
         product_spec: productSpec?.spec ?? null,

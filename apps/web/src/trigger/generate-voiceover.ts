@@ -80,7 +80,7 @@ export const generateVoiceover = task({
 
     const { data: ad, error: adError } = await supabase
       .from("ads")
-      .select("id, org_id")
+      .select("id, org_id, brand_id")
       .eq("id", job.ad_id)
       .maybeSingle();
     if (adError || !ad) {
@@ -109,12 +109,18 @@ export const generateVoiceover = task({
       return { ok: false };
     }
 
-    const { data: apiKey, error: keyError } = await supabase.rpc("get_org_secret_value", {
+    // ads.brand_id is required (not nullable — see
+    // 00000000000006_brands_products.sql), so unlike run-provider-job.ts
+    // this always has a brand to resolve a brand-level key for; no
+    // org-only fallback branch is needed here the way that file needs
+    // one for a job queued before brandId existed on its payload.
+    const { data: apiKey, error: keyError } = await supabase.rpc("get_brand_secret_value", {
       target_org_id: ad.org_id,
+      target_brand_id: ad.brand_id,
       target_provider: "elevenlabs",
     });
     if (keyError || !apiKey) {
-      await failJob(supabase, job.id, "KEY_INVALID", "No elevenlabs key saved for this org.");
+      await failJob(supabase, job.id, "KEY_INVALID", "No elevenlabs key saved for this brand or org.");
       return { ok: false };
     }
 

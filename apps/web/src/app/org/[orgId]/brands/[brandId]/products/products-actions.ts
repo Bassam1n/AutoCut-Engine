@@ -19,6 +19,7 @@ export async function createProduct(
 
   const category = String(formData.get("category") ?? "").trim();
   const whatItIs = String(formData.get("what_it_is") ?? "").trim();
+  const realWorldSize = String(formData.get("real_world_size") ?? "").trim();
   const url = String(formData.get("url") ?? "").trim();
 
   const supabase = await createClient();
@@ -30,6 +31,7 @@ export async function createProduct(
       name,
       category: category || null,
       what_it_is: whatItIs || null,
+      real_world_size: realWorldSize || null,
       url: url || null,
     })
     .select("id")
@@ -54,6 +56,7 @@ export async function updateProduct(
 
   const category = String(formData.get("category") ?? "").trim();
   const whatItIs = String(formData.get("what_it_is") ?? "").trim();
+  const realWorldSize = String(formData.get("real_world_size") ?? "").trim();
   const url = String(formData.get("url") ?? "").trim();
 
   const supabase = await createClient();
@@ -63,6 +66,7 @@ export async function updateProduct(
       name,
       category: category || null,
       what_it_is: whatItIs || null,
+      real_world_size: realWorldSize || null,
       url: url || null,
     })
     .eq("org_id", orgId)

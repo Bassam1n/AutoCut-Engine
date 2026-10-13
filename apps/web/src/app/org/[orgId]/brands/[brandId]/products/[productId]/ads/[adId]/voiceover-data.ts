@@ -85,14 +85,18 @@ export type VoiceSearchFilters = {
   nextPageToken?: string;
 };
 
-async function getElevenLabsKey(orgId: string): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
+async function getElevenLabsKey(
+  orgId: string,
+  brandId: string
+): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
   const service = createServiceClient();
-  const { data: apiKey, error: keyError } = await service.rpc("get_org_secret_value", {
+  const { data: apiKey, error: keyError } = await service.rpc("get_brand_secret_value", {
     target_org_id: orgId,
+    target_brand_id: brandId,
     target_provider: "elevenlabs",
   });
   if (keyError || !apiKey) {
-    return { ok: false, error: "No ElevenLabs key saved for this org. Add one in Settings > Keys." };
+    return { ok: false, error: "No ElevenLabs key saved for this brand or org. Add one in Settings > Keys." };
   }
   return { ok: true, key: apiKey };
 }
@@ -161,11 +165,12 @@ function fromSharedVoice(v: RawSharedVoice): ElevenLabsVoice {
  */
 export async function searchElevenLabsVoices(
   orgId: string,
+  brandId: string,
   filters: VoiceSearchFilters = {}
 ): Promise<ListVoicesResult> {
   await requireOrgMember(orgId);
 
-  const keyResult = await getElevenLabsKey(orgId);
+  const keyResult = await getElevenLabsKey(orgId, brandId);
   if (!keyResult.ok) return keyResult;
 
   if (filters.voiceType === "community") {
@@ -263,6 +268,7 @@ async function searchSharedVoices(apiKey: string, filters: VoiceSearchFilters): 
  */
 export async function getElevenLabsVoiceById(
   orgId: string,
+  brandId: string,
   voiceId: string
 ): Promise<{ ok: true; voice: ElevenLabsVoice } | { ok: false; error: string }> {
   await requireOrgMember(orgId);
@@ -270,7 +276,7 @@ export async function getElevenLabsVoiceById(
   const trimmedId = voiceId.trim();
   if (!trimmedId) return { ok: false, error: "Enter a voice ID." };
 
-  const keyResult = await getElevenLabsKey(orgId);
+  const keyResult = await getElevenLabsKey(orgId, brandId);
   if (!keyResult.ok) return keyResult;
 
   let res: Response;
@@ -319,13 +325,14 @@ export async function getElevenLabsVoiceById(
  */
 export async function addSharedVoiceToAccount(
   orgId: string,
+  brandId: string,
   publicOwnerId: string,
   voiceId: string,
   name: string
 ): Promise<{ ok: true; voiceId: string } | { ok: false; error: string }> {
   await requireOrgMember(orgId);
 
-  const keyResult = await getElevenLabsKey(orgId);
+  const keyResult = await getElevenLabsKey(orgId, brandId);
   if (!keyResult.ok) return keyResult;
 
   let res: Response;

@@ -23,6 +23,7 @@ import type { AdBrief } from "./ads-data";
 import { getScenes, type Scene } from "./scenes-data";
 import { getActiveRulesForAd } from "./scene-images-data";
 import { getCurrentSceneVoiceoverAsset } from "./scene-videos-data";
+import { getProduct } from "../../products-data";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
@@ -47,7 +48,8 @@ export async function runMotionPreflight(
   orgId: string,
   scene: Scene,
   imageUrl: string,
-  speaks: boolean
+  speaks: boolean,
+  productRealWorldSize?: string | null
 ): Promise<MotionPreflightResult> {
   try {
     const result = await llmCall({
@@ -60,6 +62,7 @@ export async function runMotionPreflight(
         copy: scene.copy,
         video_idea: scene.video_idea,
         scene_speaks: speaks,
+        product_real_world_size: productRealWorldSize ?? null,
       },
     });
     const output = result.output;
@@ -107,7 +110,8 @@ export async function resolveFinalVideoPrompt(
   spokenCopy: string | null,
   styleMasterprompt: string | null,
   rules: { kind: "do" | "avoid"; text: string }[],
-  endpoint: string
+  endpoint: string,
+  productRealWorldSize?: string | null
 ): Promise<ResolveVideoPromptResult> {
   const charLimit = videoPromptCharLimitFor(endpoint);
 
@@ -129,6 +133,7 @@ export async function resolveFinalVideoPrompt(
         style_masterprompt: styleMasterprompt,
         active_rules: rules,
         shorten_instruction: shortenInstruction,
+        product_real_world_size: productRealWorldSize ?? null,
       },
     });
     return result.output.final_prompt;
@@ -240,11 +245,12 @@ export async function generateSceneVideo(
   if (!scene) return { ok: false, error: "Scene not found." };
 
   const speaks = resolveSceneSpeaks(ad.brief.speaking, scene);
+  const product = await getProduct(orgId, brandId, productId);
 
   // (a) Motion preflight — spec §5.7: run BEFORE any paid call, stop
   // entirely (no provider call, no spend) on a plain stop message
   // when it fails and offers no fallback.
-  const preflight = await runMotionPreflight(orgId, scene, sourceImageUrl, speaks);
+  const preflight = await runMotionPreflight(orgId, scene, sourceImageUrl, speaks, product?.real_world_size);
   if (!preflight.ok) return { ok: false, error: preflight.error };
   if (!preflight.isPlausible) {
     // Stop entirely — no provider call, no spend (spec §5.7) — either
@@ -348,6 +354,7 @@ async function startGenerationWithMotionPlan(
   }
 
   const rules = await getActiveRulesForAd(orgId, brandId, ad.style_id, scene.product_id);
+  const product = await getProduct(orgId, brandId, productId);
 
   // HARD SPEC REQUIREMENT (spec §5.7: "If nobody speaks, copy never
   // enters the video prompt"). speaks is resolved by
@@ -365,7 +372,8 @@ async function startGenerationWithMotionPlan(
     spokenCopy,
     styleMasterprompt,
     rules.map((r) => ({ kind: r.kind, text: r.text })),
-    model.endpoint
+    model.endpoint,
+    product?.real_world_size
   );
   if (!promptResult.ok) return { ok: false, error: promptResult.error };
 
@@ -399,6 +407,7 @@ async function startGenerationWithMotionPlan(
 
   const jobResult = await startProviderJob(orgId, scene.id, "generate_scene_video", {
     orgId,
+    brandId,
     provider: model.provider,
     endpoint: model.endpoint,
     prompt: promptResult.prompt,

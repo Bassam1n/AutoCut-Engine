@@ -90,7 +90,7 @@ export function VoiceoverStep({
       if (cancelled) return;
       setIsLoadingVoices(true);
       setVoicesError(null);
-      const result = await searchElevenLabsVoices(orgId, {
+      const result = await searchElevenLabsVoices(orgId, brandId, {
         search: searchText.trim() || undefined,
         gender: genderFilter || undefined,
         age: ageFilter || undefined,
@@ -116,7 +116,7 @@ export function VoiceoverStep({
     };
     // Any filter change starts a fresh page-1 search — only "Load
     // more" below continues pagination within the current filter set.
-  }, [orgId, searchText, genderFilter, ageFilter, voiceType, sortByMostUsed]);
+  }, [orgId, brandId, searchText, genderFilter, ageFilter, voiceType, sortByMostUsed]);
 
   // A single page (max page_size=100) under a narrow filter (e.g.
   // community + female + young) can come back thin or empty even
@@ -126,7 +126,7 @@ export function VoiceoverStep({
   async function onLoadMoreVoices() {
     if (!nextPageToken) return;
     setIsLoadingMoreVoices(true);
-    const result = await searchElevenLabsVoices(orgId, {
+    const result = await searchElevenLabsVoices(orgId, brandId, {
       search: searchText.trim() || undefined,
       gender: genderFilter || undefined,
       age: ageFilter || undefined,
@@ -144,13 +144,12 @@ export function VoiceoverStep({
     }
   }
 
-  // brandId/productId aren't needed by this step's own actions (voice
-  // listing and voiceover generation only need orgId/sceneId), but
+  // productId isn't needed by this step's own actions (voice listing
+  // and voiceover generation only need orgId/brandId/sceneId), but
   // kept in the signature for the same reason every sibling step
   // (SceneImagesStep, SceneVideosStep) takes them — a consistent prop
   // shape from studio-canvas.tsx, in case a future addition here
-  // (e.g. a "view in library" link) needs them.
-  void brandId;
+  // (e.g. a "view in library" link) needs it.
   void productId;
 
   const speakingScenes = scenes.filter((scene) => resolveSceneSpeaks(ad.brief.speaking, scene));
@@ -319,6 +318,7 @@ export function VoiceoverStep({
               <SceneVoiceoverCard
                 key={scene.id}
                 orgId={orgId}
+                brandId={brandId}
                 scene={scene}
                 brief={ad.brief}
                 voices={voices}
@@ -388,6 +388,7 @@ function GenerateAllBar({
 
 function SceneVoiceoverCard({
   orgId,
+  brandId,
   scene,
   brief,
   voices,
@@ -400,6 +401,7 @@ function SceneVoiceoverCard({
   onToggleSelected,
 }: {
   orgId: string;
+  brandId: string;
   scene: Scene;
   brief: AdBrief;
   voices: ElevenLabsVoice[];
@@ -493,7 +495,7 @@ function SceneVoiceoverCard({
     }
     setIsAddingVoice(true);
     try {
-      const result = await addSharedVoiceToAccount(orgId, voice.publicOwnerId, voice.voiceId, voice.name);
+      const result = await addSharedVoiceToAccount(orgId, brandId, voice.publicOwnerId, voice.voiceId, voice.name);
       if (!result.ok) {
         setAddVoiceError(result.error);
         return;
@@ -512,7 +514,7 @@ function SceneVoiceoverCard({
     if (!id) return;
     setIsLookingUpVoiceId(true);
     try {
-      const result = await getElevenLabsVoiceById(orgId, id);
+      const result = await getElevenLabsVoiceById(orgId, brandId, id);
       if (!result.ok) {
         setVoiceIdError(result.error);
         return;

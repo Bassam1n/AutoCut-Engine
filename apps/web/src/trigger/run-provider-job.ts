@@ -65,6 +65,7 @@ export const runProviderJob = task({
 
     const jobPayload = job.payload as {
       orgId: string;
+      brandId?: string;
       provider: "fal" | "kie";
       endpoint: string;
       prompt: string;
@@ -86,13 +87,24 @@ export const runProviderJob = task({
       return { ok: false };
     }
 
-    const { data: apiKey, error: keyError } = await supabase.rpc("get_org_secret_value", {
-      target_org_id: jobPayload.orgId,
-      target_provider: jobPayload.provider,
-    });
+    // brandId may be absent on a job queued before this field existed —
+    // get_brand_secret_value requires a non-null target_brand_id, so a
+    // missing brandId falls back to the plain org-level RPC rather than
+    // passing null through (which would fail the brand ownership
+    // lookup, not just skip it).
+    const { data: apiKey, error: keyError } = jobPayload.brandId
+      ? await supabase.rpc("get_brand_secret_value", {
+          target_org_id: jobPayload.orgId,
+          target_brand_id: jobPayload.brandId,
+          target_provider: jobPayload.provider,
+        })
+      : await supabase.rpc("get_org_secret_value", {
+          target_org_id: jobPayload.orgId,
+          target_provider: jobPayload.provider,
+        });
 
     if (keyError || !apiKey) {
-      await failJob(supabase, job.id, "KEY_INVALID", `No ${jobPayload.provider} key saved for this org.`);
+      await failJob(supabase, job.id, "KEY_INVALID", `No ${jobPayload.provider} key saved for this brand or org.`);
       return { ok: false };
     }
 

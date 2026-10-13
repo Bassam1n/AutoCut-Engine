@@ -16,7 +16,7 @@ import { saveCurrentStep } from "../ads-actions";
 import type { Ad } from "../ads-data";
 import type { AdScriptRow } from "../scripts-data";
 import type { Scene } from "../scenes-data";
-import type { Concept, CastMember } from "../concepts-data";
+import type { Concept, CastMember, BrandCastMember } from "../concepts-data";
 import type { ModelOption } from "@/lib/providers/models-data";
 import type { SceneImageAsset } from "../scene-images-data";
 import type { SceneVideoJob, SceneVoiceover, SceneVoiceoverJob } from "../scene-videos-data";
@@ -31,6 +31,7 @@ export function StudioCanvas({
   scenes,
   concept,
   castMembers,
+  brandCastMembers,
   assetUrls,
   imageModelOptions,
   providersWithKeys,
@@ -56,6 +57,7 @@ export function StudioCanvas({
   scenes: Scene[];
   concept: Concept | null;
   castMembers: CastMember[];
+  brandCastMembers: BrandCastMember[];
   assetUrls: Record<string, string>;
   imageModelOptions: ModelOption[];
   providersWithKeys: string[];
@@ -159,6 +161,7 @@ export function StudioCanvas({
             ad={ad}
             concept={concept}
             castMembers={castMembers}
+            brandCastMembers={brandCastMembers}
             assetUrls={assetUrls}
             imageModelOptions={imageModelOptions}
             providersWithKeys={new Set(providersWithKeys)}

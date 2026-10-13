@@ -165,6 +165,8 @@ export type LlmCallParams<Schema extends z.ZodTypeAny> = {
   /** Serialized into the user message. Kept as a record (not a raw string) so input hashing and redaction both have real field boundaries to work with. */
   input: Record<string, unknown>;
   orgId: string;
+  /** When given, resolves the brand's own Anthropic key first, falling back to the org's key if this brand has none saved — see getOrgAnthropicKey in call.ts. Omit for org-wide tasks with no single owning brand (e.g. feedback-rule distillation). */
+  brandId?: string;
   /** Overrides the task's pinned model — only for testing against a cheaper model; production code should rely on the pin. */
   modelOverride?: string;
   /** Publicly-fetchable image URLs (e.g. Supabase Storage public URLs) attached as vision content blocks alongside the text input — for tasks that need to look at images (e.g. product-spec generation from product photos). */

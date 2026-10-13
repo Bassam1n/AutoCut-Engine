@@ -85,6 +85,34 @@ export async function generateConcepts(
   return { ok: true };
 }
 
+/**
+ * Lets an editor who already has their own creative direction skip
+ * generation entirely (friction-audit finding: some agencies don't
+ * want to wait for/pay for a 3-option Claude pitch when the concept
+ * is already decided). Writes a one-option concepts row directly —
+ * no llmCall, no spend tracking, since this isn't a paid generation
+ * action — and auto-selects that option since there's nothing else
+ * to choose between.
+ */
+export async function createManualConcept(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string,
+  option: ConceptOption
+): Promise<ActionResult> {
+  await requireOrgMember(orgId);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("concepts")
+    .upsert({ ad_id: adId, org_id: orgId, options: [option], selected_idx: 0 }, { onConflict: "ad_id" });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads/${adId}`);
+  return { ok: true };
+}
+
 export async function selectConcept(
   orgId: string,
   brandId: string,
