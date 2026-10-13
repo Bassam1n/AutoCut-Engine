@@ -52,10 +52,17 @@ export function Sidebar({
 
   return (
     <aside className="sticky top-4 flex h-[calc(100vh-2rem)] w-64 shrink-0 flex-col self-start overflow-y-auto rounded-3xl bg-background-raised px-3 py-5 shadow-[var(--shadow-sidebar)]">
-      <div className="flex items-center gap-2.5 px-2 pb-5">
-        <div className="relative h-8 w-8 shrink-0">
-          <Image src="/logo.png" alt="" fill className="object-contain" />
-        </div>
+      <div className="flex items-center gap-3 px-2 pb-5">
+        {/* logo-mark.png is logo.png cropped to the mark (the original is
+            mostly transparent padding, which shrank the mark to ~12px). */}
+        <Image
+          src="/logo-mark.png"
+          alt=""
+          width={360}
+          height={144}
+          priority
+          className="h-10 w-auto shrink-0"
+        />
         <span className="truncate text-sm font-semibold tracking-tight">
           {info.orgName}
         </span>
