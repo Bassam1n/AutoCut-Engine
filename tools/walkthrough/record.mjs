@@ -261,7 +261,11 @@ await chapter("11", "studio-videos", "Studio · Scene videos", DEMO.owner, async
   await d.waitFilmedUntil(async () => (await p.getByText(/Generating/).count()) + (await offers()) >= (await p.getByText(/^Scene \d+$/).count()), "Checking each shot before animating", 6 * 60_000);
   if (await offers()) {
     await d.point(btn(p, "Animate this instead"), "The motion preflight checks each image first. When the shot can't do what the scene asks, it proposes a motion that fits.", 4200);
-    while (await offers()) await d.click(btn(p, "Animate this instead"), null, 1500);
+    await d.waitFilmedUntil(async () => {
+      if (!(await offers())) return true;
+      await btn(p, "Animate this instead").first().click();
+      return false;
+    }, "Animating the proposed motion", 6 * 60_000);
   }
   await d.waitFilmedUntil(async () => (await idle()) === 0, "Starting every scene", 4 * 60_000).catch(() => {});
 });
