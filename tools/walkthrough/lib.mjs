@@ -150,6 +150,20 @@ export function director(page, t0 = Date.now()) {
       await page.evaluate(() => window.__wt?.caption(null));
       await sleep(600);
     },
+    /** Like waitFilmed, but waits for `check()` (an async predicate) to return true. */
+    async waitFilmedUntil(check, caption, timeout = 240_000) {
+      await page.evaluate((t) => window.__wt?.caption(t), caption + "  (sped up)");
+      const start = (Date.now() - t0) / 1000;
+      const until = Date.now() + timeout;
+      while (!(await check().catch(() => false))) {
+        if (Date.now() > until) throw new Error(`timed out: ${caption}`);
+        await sleep(2000);
+      }
+      speedups.push({ start, end: (Date.now() - t0) / 1000 });
+      await ensureOverlay();
+      await page.evaluate(() => window.__wt?.caption(null));
+      await sleep(600);
+    },
     async goto(path) { await page.goto(APP + path, { waitUntil: "networkidle" }); await ensureOverlay(); await sleep(500); },
     async caption(text, hold = 0) { await page.evaluate((t) => window.__wt?.caption(t), text); if (hold) await sleep(hold); },
     async card(n, title, sub, hold = 2600) {

@@ -253,12 +253,21 @@ await chapter("11", "studio-videos", "Studio · Scene videos", DEMO.owner, async
   await d.point(p.getByText("Who speaks on camera?"), "Choose who speaks on camera, so lip-sync only runs where it should.", 2800);
   await d.click(btn(p, "Nobody speaks", true), "This ad has no on-camera dialogue.", 1500);
   await d.point(p.getByText("Duration").first(), "Set each scene's length, and pick which image to animate.", 2600);
-  // Generate All starts scenes a second apart from this page, so keep it open until every job is queued.
-  await d.click(btn(p, "Generate All", true), "Generate All turns every scene image into video.", 10_000);
+  await d.click(btn(p, "Generate All", true), "Generate All turns every scene image into video.", 400);
+  // Each scene runs a motion preflight first; it can stop a scene and propose a better motion.
+  // The bulk start runs from this page, so stay until every scene is generating.
+  const idle = () => btn(p, "Generate", true).count();
+  const offers = () => btn(p, "Animate this instead").count();
+  await d.waitFilmedUntil(async () => (await p.getByText(/Generating/).count()) + (await offers()) >= (await p.getByText(/^Scene \d+$/).count()), "Checking each shot before animating", 6 * 60_000);
+  if (await offers()) {
+    await d.point(btn(p, "Animate this instead"), "The motion preflight checks each image first. When the shot can't do what the scene asks, it proposes a motion that fits.", 4200);
+    while (await offers()) await d.click(btn(p, "Animate this instead"), null, 1500);
+  }
+  await d.waitFilmedUntil(async () => (await idle()) === 0, "Starting every scene", 4 * 60_000).catch(() => {});
 });
 
 if (!only.length || only.includes("12")) {
-  if (state.adUrl) await waitOffstage(DEMO.owner, state.adUrl, "video", "scene videos");
+  if (state.adUrl) await waitOffstage(DEMO.owner, state.adUrl, "role=button[name=/Scene videos\\s*(\\d+)\\/\\1/]", "scene videos", 40 * 60_000);
 }
 
 await chapter("12", "studio-export", "Studio · Export", DEMO.owner, async (d, p) => {
