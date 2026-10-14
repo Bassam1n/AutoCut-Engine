@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>AutoCut Engine: brag</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <script src="assets/audio-data.js"></script>
+    <style>
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2") format("woff2"); font-weight: 600; }
+      @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Regular.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Geist Mono"; src: url("assets/fonts/GeistMono-Medium.woff2") format("woff2"); font-weight: 500; }
+
+      :root {
+        --background: #faf9f6;
+        --raised: #ffffff;
+        --fg: #16171a;
+        --muted: #65666b;
+        --border: #e4e2dc;
+        --border-strong: #cfccc3;
+        --accent: #e8521f;
+        --accent-ink: #ffffff;
+        --accent-soft: #fbe6dc;
+        --accent-text: #b94119;
+        --dim: #6b6c71;
+        --dark: #121212;
+        --dark-fg: #f2f1ee;
+        --dark-accent: #f06a35;
+        --dark-accent-soft: #3a2017;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--background); }
+      body { font-family: "Geist", system-ui, sans-serif; color: var(--fg); -webkit-font-smoothing: antialiased; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--background); --e: 0.5; }
+      .clip { position: absolute; inset: 0; }
+      .mono { font-family: "Geist Mono", ui-monospace, monospace; }
+
+      /* Chapter chip: the storyboard's own Hook 1 / Body / CTA label */
+      .chapter {
+        position: absolute; left: 96px; top: 72px;
+        display: inline-flex; align-items: center; gap: 12px;
+        padding: 10px 22px; border-radius: 999px;
+        background: var(--accent-soft); color: var(--accent-text);
+        font-size: 26px; font-weight: 600; letter-spacing: -0.01em;
+      }
+      .chapter .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+
+      .glow {
+        position: absolute; border-radius: 50%; pointer-events: none;
+        background: radial-gradient(closest-side, rgba(232, 82, 31, 0.22), rgba(232, 82, 31, 0));
+        opacity: calc(0.45 + var(--e) * 0.55);
+      }
+
+      /* ---------- Scene 1: hook ---------- */
+      #s1-bg { position: absolute; inset: 0; background: var(--dark); }
+      #s1 .chapter { background: var(--dark-accent-soft); color: var(--dark-accent); }
+      #s1-stack {
+        position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+        display: flex; flex-direction: column; justify-content: center; padding-left: 220px;
+        color: var(--dark-fg);
+      }
+      .hook-line { display: flex; align-items: center; gap: 48px; font-weight: 600; letter-spacing: -0.045em; line-height: 1; }
+      #hook-brief { font-size: 230px; display: block; }
+      #hook-arrow { width: 360px; height: 120px; display: block; }
+      #hook-mp4 { font-size: 230px; display: block; margin-top: 28px; }
+      #hook-mp4 em { font-style: normal; color: var(--dark-accent); }
+
+      /* ---------- Scene 2: reveal ---------- */
+      #s2-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #s2 .glow { width: 1300px; height: 900px; left: 310px; top: 60px; }
+      #s2-logo { width: 520px; height: auto; display: block; }
+      #s2-name { margin-top: 56px; font-size: 104px; font-weight: 600; letter-spacing: -0.04em; display: block; }
+      #s2-line { margin-top: 18px; font-size: 46px; color: var(--muted); letter-spacing: -0.015em; display: block; }
+
+      /* ---------- Scenes 3-5: the Studio ---------- */
+      #app .glow { width: 1500px; height: 1100px; left: 500px; top: 0px; }
+      .lede {
+        position: absolute; left: 96px; top: 330px; width: 530px;
+        font-size: 68px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.04;
+      }
+      .lede .hl { color: var(--accent); }
+      .lede-sub { display: block; margin-top: 26px; font-size: 28px; font-weight: 400; color: var(--muted); letter-spacing: -0.01em; line-height: 1.35; }
+      #window {
+        position: absolute; left: 660px; top: 160px; width: 1172px; height: 760px;
+        background: var(--raised); border: 1px solid var(--border); border-radius: 22px; overflow: hidden;
+        box-shadow: 0 30px 70px -30px rgba(22, 23, 26, 0.28), 0 8px 20px -10px rgba(22, 23, 26, 0.12);
+      }
+      .chrome { height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 22px; border-bottom: 1px solid var(--border); background: var(--background); }
+      .chrome i { width: 13px; height: 13px; border-radius: 50%; background: var(--border-strong); display: block; }
+      .chrome b { margin-left: 18px; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+      .chrome b span.ac { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); color: #16171a; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+      .chrome small { margin-left: auto; font-size: 15px; color: var(--muted); }
+      .pane { position: absolute; left: 0; right: 0; top: 54px; bottom: 0; padding: 40px 44px; }
+
+      h2.step-title { font-size: 34px; font-weight: 600; letter-spacing: -0.025em; }
+      p.step-help { margin-top: 8px; font-size: 19px; color: var(--muted); line-height: 1.45; width: 900px; }
+      .row { display: flex; align-items: flex-end; gap: 16px; margin-top: 28px; }
+      .field label { display: block; font-size: 17px; font-weight: 500; margin-bottom: 8px; }
+      .field .input { width: 120px; height: 58px; border: 1px solid var(--border-strong); border-radius: 12px; font-size: 20px; display: flex; align-items: center; padding: 0 16px; background: var(--background); }
+      .btn { height: 58px; padding: 0 24px; border-radius: 12px; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; display: inline-flex; align-items: center; justify-content: center; }
+      .btn-primary { background: var(--accent); color: var(--accent-ink); }
+      .btn-outline { border: 1px solid var(--border-strong); color: var(--fg); background: var(--raised); }
+
+      .cards { display: flex; gap: 20px; margin-top: 30px; }
+      .card {
+        width: 348px; height: 340px; border: 1.5px solid var(--border); border-radius: 18px; padding: 24px;
+        display: flex; flex-direction: column; gap: 12px; background: var(--raised);
+      }
+      .card.selected { border-color: var(--accent); background: #fdf4ef; }
+      .card .variant { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+      .card .hook { font-size: 25px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+      .card .body { font-size: 18px; color: var(--muted); line-height: 1.45; }
+      .card .cta { font-size: 19px; font-weight: 600; color: var(--accent-text); }
+      .card .use { margin-top: auto; align-self: flex-start; height: 40px; width: 170px; border: 1px solid var(--border-strong); border-radius: 10px; font-size: 16px; font-weight: 500; position: relative; color: var(--fg); }
+      .swap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      .swap.b { opacity: 0; }
+
+      /* Stepper (overflow-x like the app, scrolled as steps complete) */
+      .stepper-wrap { margin: -40px -44px 0; border-bottom: 1px solid var(--border); padding: 20px 0 20px 44px; overflow: hidden; }
+      #stepper { display: flex; align-items: center; gap: 8px; width: max-content; }
+      .chip { display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 10px; border-radius: 999px; font-size: 20px; font-weight: 500; color: var(--dim); background-color: rgba(251, 230, 220, 0); }
+      .chip .n { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border-strong); font-size: 14px; font-weight: 600; position: relative; color: var(--dim); background-color: rgba(255, 255, 255, 0); }
+      .chip .count { font-size: 14px; padding: 3px 8px; border-radius: 999px; background: #efede8; color: var(--fg); opacity: 0; font-family: "Geist Mono", monospace; }
+      .arrow { width: 14px; height: 14px; display: block; }
+
+      .board-title { margin-top: 30px; display: flex; align-items: center; justify-content: space-between; }
+      .board-title small { font-size: 17px; color: var(--muted); }
+      .scene-row { margin-top: 16px; border: 1.5px solid var(--border); border-radius: 18px; padding: 18px 22px; display: flex; flex-direction: column; gap: 10px; }
+      .scene-row .top { display: flex; align-items: center; gap: 10px; }
+      .scene-row .sn { font-size: 16px; font-weight: 500; color: var(--muted); }
+      .pill { padding: 4px 12px; border-radius: 999px; font-size: 15px; font-weight: 500; }
+      .pill.hook { background: var(--accent-soft); color: var(--accent-text); }
+      .pill.route { background: #efede8; color: var(--muted); }
+      .pill.pif { margin-left: auto; background: var(--accent-soft); color: var(--accent-text); }
+      .scene-row .copy { font-size: 20px; letter-spacing: -0.01em; }
+      .scene-row .assets { display: flex; gap: 10px; }
+      .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border-strong); font-size: 15px; color: var(--dim); background-color: rgba(22, 23, 26, 0); }
+      .badge .tick { opacity: 0; }
+
+      /* Gate */
+      #gate-card {
+        position: absolute; left: 216px; top: 150px; width: 740px;
+        border: 1.5px solid var(--border); border-radius: 22px; padding: 38px 40px; background: var(--raised);
+        box-shadow: 0 24px 60px -32px rgba(22, 23, 26, 0.3);
+      }
+      .gate-tag { display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-text); }
+      .gate-tag i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: block; }
+      #gate-card h3 { margin-top: 16px; font-size: 38px; font-weight: 600; letter-spacing: -0.03em; }
+      #gate-card p { margin-top: 10px; font-size: 20px; color: var(--muted); }
+      .gate-meta { margin-top: 26px; display: flex; gap: 10px; flex-wrap: wrap; }
+      .gate-btns { margin-top: 34px; display: flex; gap: 14px; }
+      #approve { position: relative; width: 230px; }
+
+      /* ---------- Scene 6: CTA ---------- */
+      #s6 .glow { width: 1300px; height: 1000px; left: 310px; top: 40px; }
+      #export-card {
+        position: absolute; left: 410px; top: 270px; width: 1100px;
+        border: 1.5px solid var(--border); border-radius: 24px; padding: 48px 52px; background: var(--raised);
+        box-shadow: 0 30px 70px -34px rgba(22, 23, 26, 0.3);
+      }
+      .scope { margin-top: 24px; display: flex; gap: 10px; }
+      .scope span { padding: 10px 18px; border-radius: 999px; border: 1px solid var(--border-strong); font-size: 21px; color: var(--muted); }
+      .scope span.on { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; font-weight: 500; }
+      .dl-row { margin-top: 28px; display: flex; align-items: center; gap: 18px; }
+      .dl-row .zip { font-size: 22px; color: var(--muted); }
+      .files { margin-top: 26px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .file { height: 64px; border-radius: 14px; background: var(--background); border: 1px solid var(--border); display: flex; align-items: center; gap: 14px; padding: 0 20px; font-size: 23px; }
+      .file i { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); display: block; }
+      #end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #end-logo { width: 460px; height: auto; display: block; }
+      #end-name { margin-top: 48px; font-size: 92px; font-weight: 600; letter-spacing: -0.04em; display: block; }
+      #end-line { margin-top: 14px; font-size: 48px; letter-spacing: -0.02em; color: var(--muted); display: block; }
+      #end-line em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+      .cursor { position: absolute; left: 0; top: 0; width: 40px; height: 40px; display: block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="21.6" data-width="1920" data-height="1080">
+
+      <!-- Scene 1: Hook -->
+      <section id="s1" class="clip" data-start="0" data-duration="3.2" data-track-index="2">
+        <div id="s1-bg"></div>
+        <div id="s1-chip" class="chapter"><span class="dot"></span>Hook 1</div>
+        <div id="s1-stack">
+          <div class="hook-line">
+            <span id="hook-brief">Brief</span>
+            <svg id="hook-arrow" viewBox="0 0 360 120" fill="none">
+              <path id="hook-arrow-path" d="M10 60 H330 M280 18 L338 60 L280 102" stroke="#f06a35" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <span id="hook-mp4">finished <em>MP4.</em></span>
+        </div>
+      </section>
+
+      <!-- Scene 2: Reveal -->
+      <section id="s2" class="clip" data-start="2.9" data-duration="3.0" data-track-index="1">
+        <div class="glow"></div>
+        <div id="s2-center">
+          <img id="s2-logo" src="assets/img/ace-logo.png" alt="ACE logo" />
+          <span id="s2-name">AutoCut Engine</span>
+          <span id="s2-line">Video ad production for agencies.</span>
+        </div>
+      </section>
+
+      <!-- Scenes 3-5: the Studio -->
+      <section id="app" class="clip" data-start="5.5" data-duration="12.2" data-track-index="0">
+        <div class="glow"></div>
+        <div id="app-chip" class="chapter"><span class="dot"></span>Body</div>
+
+        <div id="lede-1" class="lede">Three scripts. <span class="hl">Pick one.</span>
+          <span class="lede-sub">Built from the brand, customer and product details you already set up.</span>
+        </div>
+        <div id="lede-2" class="lede">Storyboard, images, voiceover, <span class="hl">video.</span>
+          <span class="lede-sub">One step at a time, in the Studio.</span>
+        </div>
+        <div id="lede-3" class="lede">Human approval gates. <span class="hl">No self‑approval.</span>
+          <span class="lede-sub">Nothing moves on until an editor signs off.</span>
+        </div>
+
+        <div id="window">
+          <div class="chrome"><i></i><i></i><i></i><b><span class="ac">AC</span>AutoCut Engine</b><small>Northbeam Cold Brew · New ad</small></div>
+
+          <!-- Scripts step -->
+          <div id="pane-scripts" class="pane">
+            <h2 class="step-title">Scripts</h2>
+            <p class="step-help">Set the ad length and generate three script variations using the brand, customer and product details you've already set up. Pick the one that fits best.</p>
+            <div class="row">
+              <div class="field"><label>Ad length (seconds)</label><div class="input">30</div></div>
+              <div id="gen-btn" class="btn btn-primary">Generate 3 scripts</div>
+            </div>
+            <div class="cards">
+              <div id="card-1" class="card">
+                <div class="variant">Variant 1</div>
+                <div class="hook">Your 6am alarm just met its match.</div>
+                <div class="body">Slow-steeped overnight. Smooth enough to skip the sugar.</div>
+                <div class="cta">Grab a can</div>
+                <div class="use"><span class="swap a">Use this script</span></div>
+              </div>
+              <div id="card-2" class="card">
+                <div class="variant">Variant 2</div>
+                <div class="hook">Cold brew that tastes like you made it.</div>
+                <div class="body">Small batch, never bitter, ready when you are.</div>
+                <div class="cta">Try Northbeam today</div>
+                <div id="use-2" class="use"><span id="use-2-a" class="swap a">Use this script</span><span id="use-2-sel" class="swap b">Selected ✓</span></div>
+              </div>
+              <div id="card-3" class="card">
+                <div class="variant">Variant 3</div>
+                <div class="hook">Coffee, minus the queue.</div>
+                <div class="body">Pour, sip, and get on with your morning.</div>
+                <div class="cta">Find it in store</div>
+                <div class="use"><span class="swap a">Use this script</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stepper + storyboard -->
+          <div id="pane-board" class="pane">
+            <div class="stepper-wrap">
+              <div id="stepper">
+                <div class="chip" id="st-0"><span class="n"><span class="swap a">1</span><span class="swap b">✓</span></span><span class="lbl">Scripts</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-1"><span class="n"><span class="swap a">2</span><span class="swap b">✓</span></span><span class="lbl">Fine-tune the brief</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-2"><span class="n"><span class="swap a">3</span><span class="swap b">✓</span></span><span class="lbl">Scene plan</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-3"><span class="n"><span class="swap a">4</span><span class="swap b">✓</span></span><span class="lbl">Concept &amp; cast</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-4"><span class="n"><span class="swap a">5</span><span class="swap b">✓</span></span><span class="lbl">Storyboard</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-5"><span class="n"><span class="swap a">6</span><span class="swap b">✓</span></span><span class="lbl">Scene images</span><span class="count">6/6</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-6"><span class="n"><span class="swap a">7</span><span class="swap b">✓</span></span><span class="lbl">Voiceover</span><span class="count">6/6</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-7"><span class="n"><span class="swap a">8</span><span class="swap b">✓</span></span><span class="lbl">Scene videos</span><span class="count">6/6</span></div><svg class="arrow" viewBox="0 0 14 14"><path d="M3 7h8M8 3.5 11.5 7 8 10.5" stroke="#b5b3ad" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="chip" id="st-8"><span class="n"><span class="swap a">9</span><span class="swap b">✓</span></span><span class="lbl">Export</span></div>
+              </div>
+            </div>
+            <div class="board-title"><h2 class="step-title">Storyboard</h2><small>6 scenes · 30s</small></div>
+            <div id="row-1" class="scene-row">
+              <div class="top"><span class="sn">Scene 1</span><span class="pill hook">Hook 1</span><span class="pill pif">Product in frame ✓</span></div>
+              <div class="copy">Cold brew that tastes like you made it.</div>
+              <div class="assets"><span class="badge b-img">Image<span class="tick">✓</span></span><span class="badge b-vo">Voiceover<span class="tick">✓</span></span><span class="badge b-vid">Video<span class="tick">✓</span></span></div>
+            </div>
+            <div id="row-2" class="scene-row">
+              <div class="top"><span class="sn">Scene 3</span><span class="pill hook">Body</span><span class="pill pif">Product in frame ✓</span></div>
+              <div class="copy">Small batch, never bitter, ready when you are.</div>
+              <div class="assets"><span class="badge b-img">Image<span class="tick">✓</span></span><span class="badge b-vo">Voiceover<span class="tick">✓</span></span><span class="badge b-vid">Video<span class="tick">✓</span></span></div>
+            </div>
+            <div id="row-3" class="scene-row">
+              <div class="top"><span class="sn">Scene 6</span><span class="pill hook">CTA</span><span class="pill pif">Product in frame ✓</span></div>
+              <div class="copy">Try Northbeam today.</div>
+              <div class="assets"><span class="badge b-img">Image<span class="tick">✓</span></span><span class="badge b-vo">Voiceover<span class="tick">✓</span></span><span class="badge b-vid">Video<span class="tick">✓</span></span></div>
+            </div>
+          </div>
+
+          <!-- Approval gate -->
+          <div id="pane-gate" class="pane">
+            <div id="gate-card">
+              <div class="gate-tag"><i></i>Waiting on you</div>
+              <h3>Storyboard ready for review</h3>
+              <p>Northbeam Cold Brew · Variant 2 · 6 scenes</p>
+              <div class="gate-meta"><span class="pill hook">Hook 1</span><span class="pill hook">Body</span><span class="pill hook">CTA</span><span class="pill route">30s</span></div>
+              <div class="gate-btns">
+                <div class="btn btn-outline">Request changes</div>
+                <div id="approve" class="btn btn-primary"><span id="approve-a" class="swap a">Approve</span><span id="approve-ok" class="swap b">Approved ✓</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <svg id="cursor-app" class="cursor" viewBox="0 0 40 40"><path d="M6 3 L6 33 L14 25 L20 37 L25 35 L19 23 L30 23 Z" fill="#16171a" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" /></svg>
+      </section>
+
+      <!-- Scene 6: CTA -->
+      <section id="s6" class="clip" data-start="17.5" data-duration="4.1" data-track-index="1">
+        <div class="glow"></div>
+        <div id="s6-chip" class="chapter"><span class="dot"></span>CTA</div>
+        <div id="export-card">
+          <h2 class="step-title">Export</h2>
+          <div class="scope"><span class="on">Everything</span><span>Videos only</span><span>Images only</span><span>Voiceover + captions only</span></div>
+          <div class="dl-row"><div id="dl-btn" class="btn btn-primary">Download all</div><span class="zip mono">northbeam-cold-brew.zip</span></div>
+          <div class="files">
+            <div class="file mono"><i></i>01.mp4</div>
+            <div class="file mono"><i></i>01-02.mp4</div>
+            <div class="file mono"><i></i>02.mp4</div>
+            <div class="file mono"><i></i>01-image-1.png</div>
+            <div class="file mono"><i></i>01-voiceover.mp3</div>
+            <div class="file mono"><i></i>01-captions.srt</div>
+          </div>
+        </div>
+        <div id="end">
+          <img id="end-logo" src="assets/img/ace-logo.png" alt="ACE logo" />
+          <span id="end-name">AutoCut Engine</span>
+          <span id="end-line">Brief to <em>finished MP4.</em></span>
+        </div>
+        <svg id="cursor-s6" class="cursor" viewBox="0 0 40 40"><path d="M6 3 L6 33 L14 25 L20 37 L25 35 L19 23 L30 23 Z" fill="#16171a" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" /></svg>
+      </section>
+
+      <!-- Audio -->
+      <audio id="music" src="assets/music/happy-beats-business-moves-vol-1-by-ende-dot-app.mp3" data-start="0" data-duration="21.6" data-track-index="10" data-volume="0.32"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.4,"v":1},{"t":20.4,"v":1},{"t":21.6,"v":0}]}]}'></audio>
+      <audio id="sfx-hook" src="assets/sfx/impact/impactSoft_medium_001.ogg" data-start="0.28" data-duration="0.6" data-track-index="11" data-volume="0.75"></audio>
+      <audio id="sfx-mp4" src="assets/sfx/interface/drop_001.ogg" data-start="1.22" data-duration="0.6" data-track-index="12" data-volume="0.6"></audio>
+      <audio id="sfx-logo" src="assets/sfx/interface/bong_001.ogg" data-start="3.2" data-duration="0.8" data-track-index="11" data-volume="0.5"></audio>
+      <audio id="sfx-gen" src="assets/sfx/interface/click_003.ogg" data-start="6.45" data-duration="0.3" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="sfx-card1" src="assets/sfx/casino/card-slide-1.ogg" data-start="6.52" data-duration="0.6" data-track-index="12" data-volume="0.45"></audio>
+      <audio id="sfx-card2" src="assets/sfx/casino/card-slide-1.ogg" data-start="7.52" data-duration="0.6" data-track-index="12" data-volume="0.45"></audio>
+      <audio id="sfx-card3" src="assets/sfx/casino/card-slide-1.ogg" data-start="8.52" data-duration="0.6" data-track-index="12" data-volume="0.45"></audio>
+      <audio id="sfx-select" src="assets/sfx/interface/click_003.ogg" data-start="9.3" data-duration="0.3" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="sfx-step1" src="assets/sfx/interface/click_003.ogg" data-start="10.52" data-duration="0.3" data-track-index="13" data-volume="0.35"></audio>
+      <audio id="sfx-step2" src="assets/sfx/interface/click_003.ogg" data-start="12.02" data-duration="0.3" data-track-index="13" data-volume="0.35"></audio>
+      <audio id="sfx-step3" src="assets/sfx/interface/drop_001.ogg" data-start="14.02" data-duration="0.6" data-track-index="13" data-volume="0.45"></audio>
+      <audio id="sfx-approve" src="assets/sfx/interface/click_003.ogg" data-start="17.0" data-duration="0.3" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="sfx-bell" src="assets/sfx/impact/impactBell_heavy_000.ogg" data-start="17.02" data-duration="1.6" data-track-index="12" data-volume="0.55"></audio>
+      <audio id="sfx-dl" src="assets/sfx/interface/click_003.ogg" data-start="18.15" data-duration="0.3" data-track-index="11" data-volume="0.7"></audio>
+      <audio id="sfx-files" src="assets/sfx/interface/drop_001.ogg" data-start="18.35" data-duration="0.6" data-track-index="13" data-volume="0.5"></audio>
+      <audio id="sfx-end" src="assets/sfx/interface/bong_001.ogg" data-start="20.0" data-duration="0.8" data-track-index="11" data-volume="0.55"></audio>
+    </div>
+
+    <script>
+      (function () {
+        var root = document.getElementById("root");
+
+        function centerOf(id, dx, dy) {
+          var r = document.getElementById(id).getBoundingClientRect();
+          var o = root.getBoundingClientRect();
+          return { x: r.left - o.left + (dx == null ? r.width / 2 : dx), y: r.top - o.top + (dy == null ? r.height / 2 : dy) };
+        }
+
+        function build() {
+          var tl = gsap.timeline({ paused: true });
+
+          // Measure click targets before any tween applies an offset.
+          var pGen = centerOf("gen-btn");
+          var pUse2 = centerOf("use-2");
+          var pApprove = centerOf("approve");
+          var pDl = centerOf("dl-btn");
+          var stepX = [];
+          for (var i = 0; i < 9; i++) stepX.push(document.getElementById("st-" + i).offsetLeft);
+
+          // Audio-reactive: music energy drives the soft orange glows (--e).
+          var E = window.AUDIO_ENERGY;
+          var proxy = { t: 0 };
+          tl.to(proxy, {
+            t: 21.6, duration: 21.6, ease: "none",
+            onUpdate: function () {
+              var f = Math.min(E.rms.length - 1, Math.max(0, Math.floor(proxy.t * E.fps)));
+              root.style.setProperty("--e", (0.6 * E.rms[f] + 0.4 * E.bass[f]).toFixed(3));
+            }
+          }, 0);
+
+          // ---------- Scene 1: hook ----------
+          tl.fromTo("#s1-chip", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0.1);
+          tl.fromTo("#hook-brief", { opacity: 0, scale: 1.18, transformOrigin: "0% 60%" }, { opacity: 1, scale: 1, duration: 0.42, ease: "expo.out" }, 0.28);
+          tl.fromTo("#hook-arrow-path", { strokeDasharray: 600, strokeDashoffset: 600 }, { strokeDashoffset: 0, duration: 0.45, ease: "power2.inOut" }, 0.8);
+          tl.fromTo("#hook-mp4", { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.45, ease: "expo.out" }, 1.2);
+          // Dip from dark mode into the app's cream canvas.
+          tl.to("#s1-stack, #s1-chip", { opacity: 0, y: -24, duration: 0.22, ease: "power2.in" }, 2.72);
+          tl.to("#s1-bg", { opacity: 0, duration: 0.25, ease: "power1.inOut" }, 2.94);
+
+          // ---------- Scene 2: reveal ----------
+          tl.fromTo("#s2-logo", { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.6)" }, 3.2);
+          tl.fromTo("#s2-name", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 3.5);
+          tl.fromTo("#s2-line", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 3.75);
+          tl.to("#s2-center", { opacity: 0, y: -40, duration: 0.35, ease: "power2.in" }, 5.45);
+
+          // ---------- Scene 3: scripts ----------
+          tl.fromTo("#window", { opacity: 0, x: 90 }, { opacity: 1, x: 0, duration: 0.55, ease: "power3.out" }, 5.55);
+          tl.fromTo("#app-chip", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 5.65);
+          tl.fromTo("#lede-1", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 5.75);
+          tl.set("#pane-board, #pane-gate, #lede-2, #lede-3", { opacity: 0 }, 0);
+          tl.set(".card", { opacity: 0 }, 0);
+
+          tl.fromTo("#cursor-app", { opacity: 0, x: pGen.x + 160, y: pGen.y + 220 }, { opacity: 1, duration: 0.2 }, 5.95);
+          tl.to("#cursor-app", { x: pGen.x - 6, y: pGen.y - 4, duration: 0.45, ease: "power2.inOut" }, 6.0);
+          tl.to("#gen-btn", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.inOut" }, 6.45);
+          // beat-grid: script cards on every other beat so each hook can be read: 6.52, 7.52, 8.52
+          ["#card-1", "#card-2", "#card-3"].forEach(function (sel, k) {
+            tl.fromTo(sel, { opacity: 0, y: 46 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 6.52 + k);
+          });
+          tl.to("#cursor-app", { x: pUse2.x - 30, y: pUse2.y - 4, duration: 0.45, ease: "power2.inOut" }, 8.82);
+          tl.to("#use-2", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.inOut" }, 9.3);
+          tl.to("#use-2-a", { opacity: 0, duration: 0.12 }, 9.32);
+          tl.to("#use-2-sel", { opacity: 1, duration: 0.15 }, 9.32);
+          tl.to("#use-2", { backgroundColor: "#e8521f", borderColor: "#e8521f", color: "#16171a", duration: 0.15 }, 9.32);
+          tl.to("#card-2", { borderColor: "#e8521f", backgroundColor: "#fdf4ef", duration: 0.25 }, 9.32);
+          tl.to("#cursor-app", { opacity: 0, duration: 0.2 }, 9.8);
+
+          // ---------- Scene 4: stepper runs ----------
+          tl.to("#pane-scripts", { opacity: 0, duration: 0.2, ease: "power2.in" }, 9.9);
+          tl.to("#lede-1", { opacity: 0, y: -24, duration: 0.2, ease: "power2.in" }, 9.9);
+          tl.to("#pane-board", { opacity: 1, duration: 0.3 }, 10.12);
+          tl.fromTo("#lede-2", { y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 10.15);
+          ["#row-1", "#row-2", "#row-3"].forEach(function (sel, k) {
+            tl.fromTo(sel, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 10.2 + k * 0.12);
+          });
+          // Step 1 active at entry, then one chip per beat: 10.52 ... 14.02
+          var ON = { backgroundColor: "rgba(251, 230, 220, 1)", color: "#b94119" };
+          var OFF = { backgroundColor: "rgba(251, 230, 220, 0)", color: "#65666b" };
+          tl.set("#st-0", ON, 10.1);
+          tl.set("#st-0 .n", { backgroundColor: "#e8521f", borderColor: "#e8521f", color: "#16171a" }, 10.1);
+          for (var s = 1; s < 9; s++) {
+            var t = 10.52 + (s - 1) * 0.5; // beat-grid
+            var prev = "#st-" + (s - 1), cur = "#st-" + s;
+            tl.to(prev, Object.assign({ duration: 0.15 }, OFF), t);
+            tl.to(prev + " .n", { backgroundColor: "#65666b", borderColor: "#65666b", color: "#faf9f6", duration: 0.15 }, t);
+            tl.to(prev + " .swap.a", { opacity: 0, duration: 0.12 }, t);
+            tl.to(prev + " .swap.b", { opacity: 1, duration: 0.15 }, t);
+            tl.to(cur, Object.assign({ duration: 0.18 }, ON), t);
+            tl.to(cur + " .n", { backgroundColor: "#e8521f", borderColor: "#e8521f", color: "#16171a", duration: 0.18 }, t);
+            if (prev === "#st-5" || prev === "#st-6" || prev === "#st-7") tl.to(prev + " .count", { opacity: 1, duration: 0.2 }, t);
+            // Keep the active chip in view, the way the app's overflow-x strip scrolls.
+            var target = Math.max(0, Math.min(stepX[s] - 300, stepX[8] - 760));
+            tl.to("#stepper", { x: -target, duration: 0.4, ease: "power2.inOut" }, t);
+          }
+          // Per-scene assets light up as their steps finish (images at 13.02, voiceover 13.52, video 14.02).
+          var BADGE = { backgroundColor: "rgba(22, 23, 26, 1)", borderColor: "#16171a", color: "#faf9f6", duration: 0.2, stagger: 0.06 };
+          tl.to(".b-img", BADGE, 13.02);
+          tl.to(".b-img .tick", { opacity: 1, duration: 0.2, stagger: 0.06 }, 13.02);
+          tl.to(".b-vo", BADGE, 13.52);
+          tl.to(".b-vo .tick", { opacity: 1, duration: 0.2, stagger: 0.06 }, 13.52);
+          tl.to(".b-vid", BADGE, 14.02);
+          tl.to(".b-vid .tick", { opacity: 1, duration: 0.2, stagger: 0.06 }, 14.02);
+
+          // ---------- Scene 5: approval gate ----------
+          tl.to("#pane-board", { opacity: 0, duration: 0.2, ease: "power2.in" }, 14.38);
+          tl.to("#lede-2", { opacity: 0, y: -24, duration: 0.2, ease: "power2.in" }, 14.38);
+          tl.to("#pane-gate", { opacity: 1, duration: 0.25 }, 14.62);
+          tl.fromTo("#gate-card", { scale: 0.94, y: 30 }, { scale: 1, y: 0, duration: 0.5, ease: "back.out(1.4)" }, 14.6);
+          tl.fromTo("#lede-3", { y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 14.7);
+          tl.fromTo("#cursor-app", { x: pApprove.x + 260, y: pApprove.y + 200 }, { opacity: 1, duration: 0.2, immediateRender: false }, 15.7);
+          tl.to("#cursor-app", { x: pApprove.x - 20, y: pApprove.y - 4, duration: 0.7, ease: "power2.inOut" }, 15.9);
+          tl.to("#approve", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.inOut" }, 17.0);
+          tl.to("#approve-a", { opacity: 0, duration: 0.1 }, 17.02);
+          tl.to("#approve-ok", { opacity: 1, duration: 0.15 }, 17.02); // beat-locked: 17.02s
+          tl.to("#approve", { backgroundColor: "#16171a", color: "#faf9f6", duration: 0.15 }, 17.02);
+          tl.to("#window, #lede-3, #app-chip, #cursor-app", { opacity: 0, duration: 0.25, ease: "power2.in" }, 17.42);
+
+          // ---------- Scene 6: CTA ----------
+          tl.fromTo("#s6-chip", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 17.6);
+          tl.fromTo("#export-card", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 17.6);
+          tl.set("#end", { opacity: 0 }, 0);
+          tl.set(".file", { opacity: 0 }, 0);
+          tl.fromTo("#cursor-s6", { opacity: 0, x: pDl.x + 220, y: pDl.y + 260 }, { opacity: 1, duration: 0.2 }, 17.7);
+          tl.to("#cursor-s6", { x: pDl.x - 20, y: pDl.y - 4, duration: 0.42, ease: "power2.inOut" }, 17.72);
+          tl.to("#dl-btn", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.inOut" }, 18.15);
+          tl.fromTo(".file", { y: 20 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.1, ease: "power3.out" }, 18.35);
+          tl.to("#export-card, #cursor-s6, #s6-chip", { opacity: 0, y: -40, duration: 0.35, ease: "power2.in" }, 19.55);
+          tl.set("#end", { opacity: 1 }, 19.9);
+          tl.fromTo("#end-logo", { opacity: 0, scale: 0.86 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.6)" }, 19.92); // beat-locked: lands ~20.02s
+          tl.fromTo("#end-name", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 20.1);
+          tl.fromTo("#end-line", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 20.25);
+
+          window.__timelines["main"] = tl;
+        }
+
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
+        else build();
+      })();
+    </script>
+  </body>
+</html>

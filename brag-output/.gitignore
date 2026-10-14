@@ -1,0 +1,6 @@
+work/
+composition/.hyperframes/
+composition/node_modules/
+# Bundled /brag music track: license terms not documented, so not redistributed here.
+# To re-render, copy happy-beats-business-moves-vol-1-by-ende-dot-app.mp3 from the brag plugin into composition/assets/music/.
+composition/assets/music/*.mp3
