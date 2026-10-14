@@ -39,10 +39,14 @@ magic-link only.
 
 1. **Allowed domains:** `studio.autocutengine.app`,
    `wbxwkuevmjawtcnbsbfg.supabase.co` (and optionally `api.trigger.dev`).
-2. **Environment variables:** provider keys for live generation, typed into the demo owner's
-     Settings → Keys by the recorder (fields are masked on screen):
-     `DEMO_ANTHROPIC_KEY`, `DEMO_KIE_KEY` and/or `DEMO_FAL_KEY`,
-     `DEMO_ELEVENLABS_KEY`.
+2. **Provider keys** are NOT environment variables (those are visible to
+   everyone using the environment). The platform admin
+   (bassam.aziz01+m2test@gmail.com) was made a temporary owner of the demo
+   agency and pastes the keys into
+   https://studio.autocutengine.app/org/de000000-0000-4000-8000-000000000001/settings/keys
+   in their own browser. Chapter 03 then shows them as "already connected".
+   After recording, remove that temporary membership:
+   `delete from org_members where org_id = 'de000000-0000-4000-8000-000000000001' and user_id = (select id from auth.users where email = 'bassam.aziz01+m2test@gmail.com');`
 
 ## Run
 
