@@ -183,7 +183,9 @@ await chapter("05", "studio-scripts", "Studio · Scripts", DEMO.owner, async (d,
 
 await chapter("06", "studio-brief-plan", "Studio · Fine-tune & scene plan", DEMO.owner, async (d, p) => {
   await d.goto(state.adUrl);
-  await d.point(btn(p, "Start"), "Fine-tune asks a few quick questions about the viewer and the ad. Answers can be saved as a customer profile.", 3200);
+  // Choosing a script can land straight on the scene plan; step back to film fine-tune.
+  if (!(await btn(p, "Start", true).isVisible().catch(() => false))) await d.click(btn(p, /Previous step/), null, 1200);
+  await d.point(btn(p, "Start", true), "Fine-tune asks a few quick questions about the viewer and the ad. Answers can be saved as a customer profile.", 3200);
   await d.click(btn(p, /Skip for now/), "We'll skip it for this demo.", 1500);
   await d.click(btn(p, /Generate scene plan/), "The scene plan splits the script into scenes.", 400);
   await d.waitFilmed(btn(p, /Lock the plan/), "Planning scenes");
