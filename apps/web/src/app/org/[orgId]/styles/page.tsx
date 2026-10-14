@@ -1,7 +1,13 @@
 import { Suspense } from "react";
-import { requireOrgMember } from "@/lib/auth";
+import { isOrgAdmin, requireOrgMember } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { getModelOptions } from "@/lib/providers/models-data";
+import { getProvidersWithKeys } from "../settings/keys/keys-data";
 import { getVisibleStyles, getFavouriteStyleIds } from "./styles-data";
 import { StyleGallery } from "./style-gallery";
+
+// Preview generation polls the provider inline (up to ~180s).
+export const maxDuration = 180;
 
 export default function StylesPage({
   params,
@@ -48,12 +54,26 @@ async function GatedGallery({
   const { orgId } = await params;
   const user = await requireOrgMember(orgId);
 
-  const [styles, favouriteIds] = await Promise.all([
+  const supabase = await createClient();
+  const [styles, favouriteIds, orgAdmin, platformAdmin] = await Promise.all([
     getVisibleStyles(orgId),
     getFavouriteStyleIds(user.id),
+    isOrgAdmin(orgId),
+    supabase.rpc("is_platform_admin").then((r) => Boolean(r.data)),
   ]);
 
+  // Only people who can set some style's preview need the model list.
+  const canPreview = platformAdmin || (orgAdmin && styles.some((s) => s.org_id === orgId));
+  const [modelOptions, providersWithKeys] = canPreview
+    ? await Promise.all([getModelOptions("image"), getProvidersWithKeys(orgId)])
+    : [[], []];
+
   return (
-    <StyleGallery orgId={orgId} styles={styles} favouriteIds={Array.from(favouriteIds)} />
+    <StyleGallery
+      orgId={orgId}
+      styles={styles}
+      favouriteIds={Array.from(favouriteIds)}
+      preview={canPreview ? { platformAdmin, orgAdmin, modelOptions, providersWithKeys } : null}
+    />
   );
 }
