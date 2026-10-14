@@ -1,0 +1,49 @@
+name: Deploy Trigger.dev tasks
+
+# Trigger.dev runs the background jobs (scene videos) on its own
+# servers, so a push to main updates the app on Vercel but not the
+# task code. This redeploys the tasks whenever code they import
+# changes on main. Needs the repo secret TRIGGER_ACCESS_TOKEN (a
+# personal access token from Trigger.dev, Account > Tokens).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/src/**"
+      - "apps/web/trigger.config.ts"
+      - "apps/web/package.json"
+      - "apps/web/package-lock.json"
+      - ".github/workflows/trigger-deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: trigger-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: trigger.dev deploy (prod)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - name: Deploy
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TRIGGER_ACCESS_TOKEN" ]; then
+            echo "::error::Add the TRIGGER_ACCESS_TOKEN repository secret first (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          # The CLI must match the installed SDK version.
+          V=$(node -p "require('@trigger.dev/sdk/package.json').version")
+          npx --yes "trigger.dev@$V" deploy --env prod
