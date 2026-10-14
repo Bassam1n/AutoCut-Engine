@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requestOrigin } from "@/lib/site-url";
 
 export type LoginResult = { ok: true } | { ok: false; error: string };
 
@@ -47,7 +48,7 @@ export async function requestMagicLink(formData: FormData): Promise<LoginResult>
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/auth/callback`,
+      emailRedirectTo: `${await requestOrigin()}/auth/callback`,
       shouldCreateUser: true,
     },
   });

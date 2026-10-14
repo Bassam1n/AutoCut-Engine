@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { requestMagicLink } from "./actions";
 import { buttonVariants } from "@/components/button";
 
 export function LoginForm() {
+  const linkFailed = useSearchParams().get("error") === "auth_failed";
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<
     { kind: "sent" } | { kind: "error"; text: string } | null
@@ -67,6 +69,15 @@ export function LoginForm() {
       >
         {isPending ? "Sending…" : "Send sign-in link"}
       </button>
+
+      {linkFailed && !message && (
+        <p
+          role="alert"
+          className="rounded-lg border border-danger/20 bg-danger-soft px-3 py-2 text-sm text-danger"
+        >
+          That sign-in link didn&apos;t work. Links work once, in the same browser you requested them from. Send a new one.
+        </p>
+      )}
 
       {message?.kind === "error" && (
         <p
