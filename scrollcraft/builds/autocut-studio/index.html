@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AutoCut Engine · Video ad production for agencies</title>
+<meta name="description" content="AutoCut Engine is a web app for video ad agencies: scripts, storyboard, scene images, voiceover and scene videos, with a human approving every step.">
+<meta name="theme-color" content="#faf9f6">
+<meta property="og:title" content="AutoCut Engine">
+<meta property="og:description" content="Video ad production for agencies. Scripts, storyboard, images, voiceover and video, with a human approving every step.">
+<meta property="og:image" content="assets/img/og.png">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="preload" href="assets/fonts/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/Geist-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="scrollcraft.css">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- App chrome is the navigation: the Studio's own header and nine-step stepper. -->
+<header class="chrome" id="chrome">
+  <div class="chrome__bar">
+    <a class="chrome__mark" href="#top" aria-label="AutoCut Engine, back to top">
+      <span class="ac" aria-hidden="true">AC</span><span class="chrome__name">AutoCut Engine</span>
+    </a>
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <span>Northbeam Cold Brew <em>(sample)</em></span><span aria-hidden="true" class="crumbs__sep">/</span><span aria-current="page">New ad</span>
+    </nav>
+  </div>
+  <nav class="stepper" aria-label="Studio steps">
+    <ol class="stepper__list" id="stepper">
+      <li><a class="chip" href="#scripts" data-step="scripts"><span class="chip__n">1</span>Scripts</a></li>
+      <li><a class="chip" href="#storyboard" data-step="dial_in"><span class="chip__n">2</span>Fine-tune the brief</a></li>
+      <li><a class="chip" href="#storyboard" data-step="plan"><span class="chip__n">3</span>Scene plan</a></li>
+      <li><a class="chip" href="#storyboard" data-step="concept"><span class="chip__n">4</span>Concept &amp; cast</a></li>
+      <li><a class="chip" href="#storyboard" data-step="storyboard"><span class="chip__n">5</span>Storyboard</a></li>
+      <li><a class="chip" href="#media" data-step="scene_images"><span class="chip__n">6</span>Scene images<span class="chip__count" data-count="img"></span></a></li>
+      <li><a class="chip" href="#media" data-step="voiceover"><span class="chip__n">7</span>Voiceover<span class="chip__count" data-count="vo"></span></a></li>
+      <li><a class="chip" href="#media" data-step="scene_videos"><span class="chip__n">8</span>Scene videos<span class="chip__count" data-count="vid"></span></a></li>
+      <li><a class="chip" href="#approve" data-step="export"><span class="chip__n">9</span>Export</a></li>
+    </ol>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- 1 · RECOGNITION: the Studio already mid-job. Pinned; three script cards travel
+       from in front of the workspace into their slots (foreground plane). -->
+  <section id="scripts" class="act act--scripts" data-sc-act="pin" data-sc-span="1.6" aria-labelledby="hero-title">
+    <span id="top" class="anchor"></span>
+    <div data-sc-stage class="stage stage--light hero" data-hero>
+      <div class="plane plane--desk" aria-hidden="true"><img src="assets/img/ace-logo.png" alt="" width="1050" height="409"></div>
+      <div class="plane plane--light" aria-hidden="true"></div>
+
+      <div class="workspace plane--work">
+        <div class="ws-col ws-col--brief">
+          <h1 id="hero-title" class="ws-title">Video ad production for agencies.</h1>
+          <p class="ws-help">Pick a brand and a product, write a brief, and AutoCut takes it through scripts, storyboard, scene images, voiceover and scene videos. You drive every step, and nothing moves on without your approval.</p>
+          <div class="field">
+            <span class="field__label" id="brief-label">Brief</span>
+            <p class="field__box" aria-labelledby="brief-label">30 second ad for Northbeam Cold Brew. Small batch, never bitter. Morning commuters, warm and honest, product in the opening shot.</p>
+          </div>
+          <p class="notice"><span class="notice__dot" aria-hidden="true"></span>This is a sample ad running in your browser. <a href="#access">Request access</a></p>
+        </div>
+
+        <div class="ws-col ws-col--scripts">
+          <div class="ws-head">
+            <h2 class="ws-h2">Scripts</h2>
+            <span class="ws-meta">Ad length 30s · 3 variants</span>
+          </div>
+          <div class="slots" id="slots">
+            <div class="slot" data-slot="0"><span>Variant 1</span></div>
+            <div class="slot" data-slot="1"><span>Variant 2</span></div>
+            <div class="slot" data-slot="2"><span>Variant 3</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Foreground plane: the generated scripts, closer to the viewer than the workspace. -->
+      <div class="plane--cards" id="cards"></div>
+    </div>
+  </section>
+
+  <!-- 2 · CLARITY: the picked script becomes an editable storyboard. Flow + reveal. -->
+  <section id="storyboard" class="act act--board sc-section" data-sc-act="flow" aria-labelledby="board-title">
+    <div class="sc-wrap board">
+      <div class="board__head">
+        <div>
+          <h2 id="board-title" class="ws-h2 ws-h2--lg">Storyboard</h2>
+          <p class="ws-help">Variant 2, split into scenes. Edit it like the real thing: split a scene, merge it back, take the product out of frame. Everything after this step follows your changes.</p>
+        </div>
+        <p class="board__meta"><span id="board-count">6 scenes</span> · 30s</p>
+      </div>
+      <p class="banner" id="board-note" hidden></p>
+      <div class="board__rows" data-sc-reveal="up" data-sc-reveal-at="0.08 0.42">
+        <ol class="rows" id="rows"></ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · MOMENTUM (peak): every scene gets image, voiceover and video. Largest span. -->
+  <section id="media" class="act act--media" data-sc-act="pin" data-sc-span="3" aria-labelledby="media-title">
+    <div data-sc-stage class="stage stage--dark media" id="media-stage" data-sc-verify-state="">
+      <div class="media__head">
+        <div>
+          <h2 id="media-title" class="ws-h2 ws-h2--lg">Scene media</h2>
+          <p class="media__note">Simulated here. In the app each lane calls the image, voice and video models on your own provider keys, with the cost shown before you click.</p>
+        </div>
+        <dl class="lanes" aria-live="off">
+          <div><dt>Scene images</dt><dd class="nums" data-lane-total="0">0/6</dd></div>
+          <div><dt>Voiceover</dt><dd class="nums" data-lane-total="1">0/6</dd></div>
+          <div><dt>Scene videos</dt><dd class="nums" data-lane-total="2">0/6</dd></div>
+        </dl>
+      </div>
+      <ol class="tiles" id="tiles"></ol>
+      <p class="media__status" id="media-status" role="status">Queued: 6 scenes.</p>
+    </div>
+  </section>
+
+  <!-- 4 + 5 · RESPONSIBILITY, then RELIEF: the gate, and an export that stays locked
+       until a person approves. The signature move. -->
+  <section id="approve" class="act act--gate sc-section" data-sc-act="flow" aria-labelledby="gate-title">
+    <div class="sc-wrap gate-wrap">
+      <article class="gate" id="gate" data-state="waiting" data-sc-in>
+        <p class="gate__tag"><span class="gate__dot" aria-hidden="true"></span><span id="gate-tag">Waiting on you</span></p>
+        <h2 id="gate-title" class="gate__title">Ready for review</h2>
+        <p class="gate__meta" id="gate-meta">Northbeam Cold Brew (sample) · Variant 2 · 6 scenes · 30s</p>
+        <p class="gate__body">The run has stopped here. Gates only open for a signed-in person, never by timeout and never by the system approving itself.</p>
+        <div class="gate__actions" id="gate-actions">
+          <button type="button" class="btn btn--ghost" id="btn-changes" aria-expanded="false" aria-controls="changes">Request changes</button>
+          <button type="button" class="btn btn--primary" id="btn-approve">Approve</button>
+        </div>
+        <form class="changes" id="changes" hidden novalidate>
+          <label for="changes-note" class="field__label">What should change?</label>
+          <textarea id="changes-note" rows="3" placeholder="e.g. make scene 3 mention the discount" required></textarea>
+          <p class="form-error" id="changes-error" hidden>Write a note first, so the editor knows what to change.</p>
+          <button type="submit" class="btn btn--ghost">Send back to storyboard</button>
+        </form>
+        <p class="gate__stamp" id="gate-stamp" hidden></p>
+      </article>
+
+      <section class="export" id="export" aria-labelledby="export-title" data-locked="true" data-sc-in>
+        <div class="export__head">
+          <h2 id="export-title" class="ws-h2">Export</h2>
+          <span class="ws-meta" id="export-meta">Locked</span>
+        </div>
+        <div class="export__lock" id="export-lock">
+          <p><strong>Locked until a person approves this ad.</strong> Approve the review on the left to open the export.</p>
+        </div>
+        <fieldset class="scope" id="scope" disabled>
+          <legend class="field__label">Download</legend>
+          <label><input type="radio" name="scope" value="all" checked> Everything</label>
+          <label><input type="radio" name="scope" value="videos"> Videos only</label>
+          <label><input type="radio" name="scope" value="images"> Images only</label>
+          <label><input type="radio" name="scope" value="voiceover"> Voiceover + captions only</label>
+        </fieldset>
+        <ul class="files" id="files" aria-label="Files in the download"></ul>
+        <div class="export__foot">
+          <button type="button" class="btn btn--primary" id="btn-download" disabled>Download all</button>
+          <p class="ws-meta">One zip, files named by scene. This sample downloads the manifest, storyboard and captions as a text file.</p>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- 6 · READINESS: an actual input. Holds to the end of the page. -->
+  <section id="access" class="act act--access" data-sc-act="pin" data-sc-span="1.2" aria-labelledby="access-title">
+    <div data-sc-stage class="stage stage--light access">
+      <div class="access__panel" data-sc-cue="0 1 0 0" data-sc-rise="0">
+        <div class="access__intro">
+          <p class="ws-meta">First run</p>
+          <h2 id="access-title" class="ws-h2 ws-h2--lg">Set up your agency</h2>
+          <p class="ws-help">AutoCut is in early access for video ad agencies. Tell us who you are and we will get your org set up. Your team brings its own AI provider keys and pays its own AI costs.</p>
+          <p class="carry" id="carry" hidden></p>
+        </div>
+        <form class="access__form" id="access-form" action="mailto:hello@example.com" method="post" enctype="text/plain" novalidate>
+          <div class="field">
+            <label class="field__label" for="f-agency">Agency name</label>
+            <input id="f-agency" name="agency" type="text" autocomplete="organization" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-name">Your name</label>
+            <input id="f-name" name="name" type="text" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label class="field__label" for="f-email">Work email</label>
+            <input id="f-email" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="field field--short">
+            <label class="field__label" for="f-editors">Editors on your team</label>
+            <input id="f-editors" name="editors" type="number" min="1" max="500" value="3" inputmode="numeric" required>
+          </div>
+          <p class="form-error" id="access-error" role="alert" hidden></p>
+          <button type="submit" class="btn btn--primary btn--wide">Request access</button>
+          <p class="form-status" id="access-status" role="status" hidden></p>
+        </form>
+      </div>
+      <footer class="foot">
+        <img src="assets/img/ace-logo.png" alt="ACE" width="1050" height="409" class="foot__logo">
+        <p>AutoCut Engine · Video ad production for agencies</p>
+        <p>Northbeam Cold Brew is a fictional brand used for this sample.</p>
+      </footer>
+    </div>
+  </section>
+
+</main>
+
+<footer class="status" aria-label="Status">
+  <span>Sample ad · runs in your browser</span>
+  <span class="status__gate" id="status-gate"><span class="status__dot" aria-hidden="true"></span><span>Gate: waiting on you</span></span>
+</footer>
+
+<script src="scrollcraft.js"></script>
+<script>ScrollCraft.mount(document.body);</script>
+<script src="site.js"></script>
+</body>
+</html>
