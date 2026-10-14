@@ -15,6 +15,8 @@
   --danger-soft: #fbe7e5;
   /* Sidebar: the raised shadow tinted with the brand orange, offset downward like the others. */
   --shadow-sidebar: 0 2px 6px rgba(232, 82, 31, 0.12), 0 24px 48px -16px rgba(232, 82, 31, 0.38);
+  /* Chart marks: brand orange, validated against both chart surfaces (dataviz check). */
+  --chart-bar: #e8521f;
 
   /* Reference design's soft, oversized drop shadow — used on cards,
      the sidebar, buttons and dropdowns, not just on hover, so the UI

@@ -1,126 +1,137 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { requirePlatformAdmin, getCurrentUser } from "@/lib/auth";
-import { signOut } from "../actions";
-import { RegisterAgencyForm } from "./register-agency-form";
-import { MembershipTable } from "./membership-table";
-import {
-  getAllOrgsWithMembers,
-  getAllPendingInvites,
-  getAllMemberPermissions,
-} from "./membership-data";
+import { requirePlatformAdmin } from "@/lib/auth";
+import { agencyIssues, agencyStatus, getActivity, getAgencies, getDailySpend } from "./data";
+import { PageHeader, StatTile, StatusBadge, formatUsd } from "./ui";
+import { SpendChart } from "./spend-chart";
+import { ActivityList } from "./activity-list";
 
-export default function PlatformAdminPage() {
+export default function PlatformOverviewPage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-10 px-6 py-10">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-            Platform admin
-          </p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight">
-            Register a new agency
-          </h1>
-          <p className="mt-1.5 text-sm text-foreground-muted">
-            This creates the org and the owner&apos;s account. Joining an
-            existing agency after this is invite-only, managed by that
-            agency&apos;s own admins.
-          </p>
-        </div>
-
-        <div className="flex shrink-0 items-start gap-3">
-          <Link
-            href="/platform-admin/prompts"
-            className="btn-secondary"
-          >
-            Agent prompts
+    <main className="mx-auto flex max-w-6xl flex-col gap-6 px-2 py-6">
+      <PageHeader
+        title="Overview"
+        description="Every agency on AutoCut at a glance."
+        actions={
+          <Link href="/platform-admin/agencies?new=1" className="btn-primary">
+            New agency
           </Link>
-          <Suspense fallback={<SignOutSkeleton />}>
-            <AccountMenu />
-          </Suspense>
-        </div>
-      </div>
-
-      <div>
-        {/* Gate check happens inside; this suspends on the session read. */}
-        <Suspense fallback={<FormSkeleton />}>
-          <GatedForm />
-        </Suspense>
-      </div>
-
-      <div>
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Owners &amp; team members
-          </h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            Manage seat access and roles across every agency.
-          </p>
-        </div>
-
-        <Suspense fallback={<TableSkeleton />}>
-          <GatedMembershipTable />
-        </Suspense>
-      </div>
+        }
+      />
+      <Suspense fallback={<OverviewSkeleton />}>
+        <GatedOverview />
+      </Suspense>
     </main>
   );
 }
 
-function FormSkeleton() {
+function OverviewSkeleton() {
   return (
     <div className="flex flex-col gap-4">
-      <div className="h-10 animate-pulse rounded-lg bg-border" />
-      <div className="h-10 animate-pulse rounded-lg bg-border" />
-      <div className="h-10 w-32 animate-pulse rounded-lg bg-border" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-24 animate-pulse rounded-2xl bg-border" />
+        ))}
+      </div>
+      <div className="h-64 animate-pulse rounded-2xl bg-border" />
     </div>
   );
 }
 
-function TableSkeleton() {
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="h-24 animate-pulse rounded-2xl bg-border" />
-      <div className="h-24 animate-pulse rounded-2xl bg-border" />
-    </div>
-  );
-}
-
-function SignOutSkeleton() {
-  return <div className="h-9 w-20 shrink-0 animate-pulse rounded-lg bg-border" />;
-}
-
-async function AccountMenu() {
-  const user = await getCurrentUser();
-  return (
-    <div className="flex shrink-0 flex-col items-end gap-1.5">
-      <p className="text-xs text-foreground-muted">{user.email}</p>
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="btn-secondary"
-        >
-          Sign out
-        </button>
-      </form>
-    </div>
-  );
-}
-
-async function GatedForm() {
+async function GatedOverview() {
   await requirePlatformAdmin();
+  const [agencies, daily, activity] = await Promise.all([getAgencies(), getDailySpend(30), getActivity(null, 12)]);
+
+  const live = agencies.filter((a) => !a.suspended_at);
+  const seats = live.reduce((n, a) => n + a.members_active, 0);
+  const spend30 = agencies.reduce((n, a) => n + a.spend_30d, 0);
+  const spend7 = agencies.reduce((n, a) => n + a.spend_7d, 0);
+  const ads30 = agencies.reduce((n, a) => n + a.ads_30d, 0);
+  const attention = agencies
+    .map((a) => ({ agency: a, issues: agencyIssues(a) }))
+    .filter((x) => x.issues.length > 0 && !x.agency.suspended_at);
+  const topSpenders = [...agencies].filter((a) => a.spend_30d > 0).sort((a, b) => b.spend_30d - a.spend_30d).slice(0, 5);
+
   return (
-    <div className="card p-6">
-      <RegisterAgencyForm />
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label="Agencies"
+          value={String(live.length)}
+          hint={agencies.length > live.length ? `${agencies.length - live.length} suspended` : "All active"}
+        />
+        <StatTile label="Active seats" value={String(seats)} hint="Across active agencies" />
+        <StatTile label="Spend, last 30 days" value={formatUsd(spend30)} hint={`${formatUsd(spend7)} in the last 7 days`} />
+        <StatTile label="Ads created, last 30 days" value={String(ads30)} />
+      </div>
+
+      <section className="card flex flex-col gap-3 p-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-sm font-semibold">Daily spend, all agencies</h2>
+          <span className="text-xs text-foreground-muted">Last 30 days, provider cost estimates</span>
+        </div>
+        <SpendChart data={daily} />
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+        <section className="card flex flex-col p-5">
+          <h2 className="mb-3 text-sm font-semibold">Needs attention</h2>
+          {attention.length === 0 ? (
+            <p className="text-sm text-foreground-muted">Nothing needs attention right now.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {attention.map(({ agency, issues }) => (
+                <li key={agency.org_id} className="border-t border-border first:border-t-0">
+                  <Link
+                    href={`/platform-admin/agencies/${agency.org_id}`}
+                    className="-mx-2 flex items-start justify-between gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-border/30"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">{agency.org_name}</span>
+                      <span className="block text-xs text-foreground-muted">{issues.join(" · ")}</span>
+                    </span>
+                    <StatusBadge status={agencyStatus(agency)} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="card flex flex-col p-5">
+          <h2 className="mb-3 text-sm font-semibold">Top spenders, last 30 days</h2>
+          {topSpenders.length === 0 ? (
+            <p className="text-sm text-foreground-muted">No spend in the last 30 days.</p>
+          ) : (
+            <ol className="flex flex-col gap-2.5">
+              {topSpenders.map((a) => (
+                <li key={a.org_id} className="flex items-center gap-3 text-sm">
+                  <Link href={`/platform-admin/agencies/${a.org_id}`} className="min-w-0 flex-1 truncate hover:underline">
+                    {a.org_name}
+                  </Link>
+                  <span className="relative h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-border">
+                    <span
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ width: `${(a.spend_30d / topSpenders[0].spend_30d) * 100}%`, background: "var(--chart-bar)" }}
+                    />
+                  </span>
+                  <span className="w-20 shrink-0 text-right tabular-nums">{formatUsd(a.spend_30d)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      </div>
+
+      <section className="card flex flex-col p-5">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold">Recent activity</h2>
+          <Link href="/platform-admin/activity" className="text-xs font-medium text-accent hover:underline">
+            See all
+          </Link>
+        </div>
+        <ActivityList rows={activity} showAgency />
+      </section>
     </div>
   );
-}
-
-async function GatedMembershipTable() {
-  await requirePlatformAdmin();
-  const [members, invites, permissions] = await Promise.all([
-    getAllOrgsWithMembers(),
-    getAllPendingInvites(),
-    getAllMemberPermissions(),
-  ]);
-  return <MembershipTable members={members} invites={invites} permissions={permissions} />;
 }

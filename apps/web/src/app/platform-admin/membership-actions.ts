@@ -23,7 +23,7 @@ export async function toggleSeatActive(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/platform-admin");
+  revalidatePath("/platform-admin", "layout");
   return { ok: true };
 }
 
@@ -43,7 +43,7 @@ export async function changeRole(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/platform-admin");
+  revalidatePath("/platform-admin", "layout");
   return { ok: true };
 }
 
@@ -61,7 +61,7 @@ export async function setOrgSeatCap(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/platform-admin");
+  revalidatePath("/platform-admin", "layout");
   return { ok: true };
 }
 
@@ -75,7 +75,7 @@ export async function revokeInvite(inviteId: string): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/platform-admin");
+  revalidatePath("/platform-admin", "layout");
   return { ok: true };
 }
 
@@ -101,7 +101,7 @@ export async function changeMemberEmail(
     new_email: result.email,
   });
 
-  revalidatePath("/platform-admin");
+  revalidatePath("/platform-admin", "layout");
   return { ok: true };
 }
 
@@ -125,6 +125,6 @@ export async function setMemberAdAccess(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/platform-admin");
+  revalidatePath("/platform-admin", "layout");
   return { ok: true };
 }

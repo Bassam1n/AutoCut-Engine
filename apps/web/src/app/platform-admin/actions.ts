@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+import { generateSignInLink } from "@/lib/invite-link";
 import { requirePlatformAdmin } from "@/lib/auth";
 
 export type RegisterAgencyResult =
@@ -50,25 +50,17 @@ export async function registerAgency(
     return { ok: false, error: rpcError?.message ?? "Could not register agency." };
   }
 
-  const service = createServiceClient();
-  const { data: linkData, error: linkError } = await service.auth.admin.generateLink({
-    type: "invite",
-    email: ownerEmail,
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/auth/callback`,
-    },
-  });
-
-  if (linkError || !linkData) {
+  const link = await generateSignInLink(ownerEmail.toLowerCase());
+  if (!link.ok) {
     return {
       ok: false,
-      error: `Org created, but link generation failed: ${linkError?.message}. The pending invite row still exists — you can retry generating a link for this email.`,
+      error: `Agency created, but the invite link couldn't be generated: ${link.error}. Open the agency and use "New link" on the pending invite.`,
     };
   }
 
   return {
     ok: true,
     orgId: rpcResult.org_id,
-    inviteLink: linkData.properties.action_link,
+    inviteLink: link.link,
   };
 }

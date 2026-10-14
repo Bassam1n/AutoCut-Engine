@@ -46,20 +46,36 @@ async function AccountBadge() {
     redirect(`/org/${orgId}/brands`);
   }
 
+  const supabase = await createClient();
+  const [{ data: isPlatformAdmin }, { data: suspended }] = await Promise.all([
+    supabase.rpc("is_platform_admin"),
+    supabase.rpc("my_suspended_orgs"),
+  ]);
+  if (isPlatformAdmin) {
+    redirect("/platform-admin");
+  }
+
   return (
-    <div className="card flex items-center justify-between p-4">
-      <p className="text-sm">
-        Signed in as{" "}
-        <span className="font-medium">{user.email}</span>
-      </p>
-      <form action={signOut}>
-        <button
-          type="submit"
-          className="btn-secondary"
-        >
-          Sign out
-        </button>
-      </form>
+    <div className="flex flex-col gap-4">
+      {(suspended ?? []).map((org: { org_id: string; org_name: string }) => (
+        <div key={org.org_id} className="card border-danger/40 p-4">
+          <p className="text-sm font-medium">{org.org_name} is suspended</p>
+          <p className="mt-1 text-sm text-foreground-muted">
+            Access to this agency has been paused by AutoCut. Your work is safe;
+            contact your account manager to restore it.
+          </p>
+        </div>
+      ))}
+      <div className="card flex items-center justify-between p-4">
+        <p className="text-sm">
+          Signed in as <span className="font-medium">{user.email}</span>
+        </p>
+        <form action={signOut}>
+          <button type="submit" className="btn-secondary">
+            Sign out
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
