@@ -109,12 +109,13 @@ await chapter("01", "sign-in", "Signing in", null, async (d, p) => {
 
 await chapter("02", "home", "Your workspace", DEMO.owner, async (d, p) => {
   await d.card("02", "Your workspace", "Signed in as Maya, the agency owner.");
-  await d.goto(`${ORG}/brands`);
+  await d.goto(`${ORG}/board`);
   await d.point(p.locator("aside").first(), "The sidebar holds everything: work, brands, the asset library, and settings.", 2800);
-  await d.point(p.getByRole("link", { name: /create ad/i }), "Start a new ad from anywhere with Create ad.", 2200);
+  await d.point(btn(p, /create ad/i), "Start a new ad from anywhere with Create ad.", 2200);
   await d.point(p.getByRole("button", { name: /notifications/i }), "The bell collects review requests, approvals and requested changes.", 2400);
   await d.point(p.locator("select").first(), "Switch between brands, or view all of them at once.", 2400);
   await d.point(p.getByRole("button", { name: /refresh/i }).first(), "Refresh pulls in your teammates' latest changes.", 2000);
+  await d.goto(`${ORG}/brands`);
   await d.point(p.locator("main"), "Brands: one workspace per client, each with its own products, customers, cast and keys.", 3000);
 });
 
@@ -161,7 +162,7 @@ await chapter("04", "brands", "Brands, products & customers", DEMO.owner, async 
 await chapter("05", "studio-scripts", "Studio · Scripts", DEMO.owner, async (d, p) => {
   await d.card("05", "The Studio", "One ad, nine steps. A person approves every one.");
   await d.goto(`${ORG}/brands`);
-  await d.click(p.getByRole("link", { name: /create ad/i }).or(btn(p, /create ad/i)), "Create ad: pick a brand…", 1000);
+  await d.click(btn(p, /create ad/i), "Create ad: pick a brand…", 1000);
   await d.click(btn(p, "Northbeam Cold Brew", true), null, 900);
   await d.click(btn(p, "Original Cold Brew 250ml", true), "…then the product.", 1400);
   await d.point(p.getByRole("heading", { name: "Pick a style to start" }), "Pick a visual style. It sets the look of every image and video.", 2400);

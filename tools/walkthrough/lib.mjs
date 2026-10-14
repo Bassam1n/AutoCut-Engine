@@ -160,6 +160,14 @@ export function director(page, t0 = Date.now()) {
     },
     async point(locator, caption, hold = 1800) {
       const el = locator.first();
+      // Pointing is decoration: a missing target shows the caption alone
+      // instead of failing the whole chapter.
+      if (!(await el.waitFor({ state: "visible", timeout: 8000 }).then(() => true, () => false))) {
+        console.error(`  ! point target not found: ${locator}`);
+        if (caption) await page.evaluate((t) => window.__wt?.caption(t), caption);
+        await sleep(hold);
+        return;
+      }
       await el.scrollIntoViewIfNeeded();
       const box = await moveTo(el);
       await page.evaluate((r) => window.__wt?.highlight(r), box);
