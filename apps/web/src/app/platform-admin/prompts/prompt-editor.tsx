@@ -13,6 +13,7 @@ const TASK_LABELS: Record<string, string> = {
   extract_cast: "Cast extraction",
   generate_scene_visuals: "Storyboard / Visual Director",
   suggest_scene_styles: "Suggest scene styles",
+  plan_scene_image_from_chat: "Scene images chat",
 };
 
 /** Fallback label from the task id, e.g. "rewrite_scene_visual" -> "Rewrite scene visual". */

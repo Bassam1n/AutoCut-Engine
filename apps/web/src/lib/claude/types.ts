@@ -152,6 +152,10 @@ export const PINNED_MODEL_PER_TASK = {
   // from a fixed catalog is classification with light creative
   // judgment, not open writing — Sonnet is the right pin.
   suggest_scene_styles: "claude-sonnet-5-5",
+  // Deciding what a scene should SHOW from a loose editor ask ("scene 3
+  // is the CTA") is creative direction, same tier as the Visual
+  // Director — Opus.
+  plan_scene_image_from_chat: "claude-opus-5-5",
   // Voiceover Studio's "Suggest voice + delivery" assist: describing a
   // tone in words and adding inline delivery/emotion tags to a short
   // line is closer to write_image_prompt/rewrite_tweak_prompt's

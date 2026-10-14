@@ -20,6 +20,7 @@ import {
 } from "../scene-images-actions";
 import { submitImageFeedback } from "../feedback-actions";
 import { SceneFeedbackPanel } from "./scene-feedback-panel";
+import { SceneImageChat } from "./scene-image-chat";
 import { LibraryPanel, LIBRARY_ASSET_DRAG_TYPE } from "./library-panel";
 import { saveToLibrary, addLibraryItemToScene } from "@/app/org/[orgId]/library/library-actions";
 import type { Ad } from "../ads-data";
@@ -199,6 +200,8 @@ export function SceneImagesStep({
         />
       )}
 
+      <SceneImageChat orgId={orgId} brandId={brandId} productId={productId} adId={ad.id} />
+
       <GenerateAllBar
         isStaggering={isStaggering}
         selectedCount={selectedSceneIds.size}
@@ -212,7 +215,9 @@ export function SceneImagesStep({
         <div className="flex flex-col gap-4">
           {scenes.map((scene) => (
             <SceneImageCard
-              key={scene.id}
+              // Re-keyed on the override so a prompt written by the
+              // chat (server side) replaces the card's local copy.
+              key={`${scene.id}:${scene.image_prompt_override ?? ""}`}
               orgId={orgId}
               brandId={brandId}
               productId={productId}
