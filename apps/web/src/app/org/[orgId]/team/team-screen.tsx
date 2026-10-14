@@ -10,6 +10,7 @@ import type {
 import {
   inviteMember,
   resendOrgInvite,
+  shareableInviteLink,
   toggleOrgMemberSeatActive,
   changeOrgMemberRole,
   changeOrgMemberEmail,
@@ -23,29 +24,48 @@ import type { InviteResult } from "./team-actions";
 
 type InviteDelivery = Extract<InviteResult, { ok: true }>;
 
-/** Shared outcome block: emailed / copy link / existing account. */
-function DeliveryInfo({ delivery, email }: { delivery: InviteDelivery; email: string }) {
+/**
+ * What happened after an invite or resend, plus an explicit
+ * "share a link instead" for WhatsApp. Supabase keeps one live token per
+ * person, so the shared link replaces the emailed one (said in the UI).
+ */
+function DeliveryInfo({ orgId, delivery, email }: { orgId: string; delivery: InviteDelivery; email: string }) {
+  const [isPending, startTransition] = useTransition();
+  const [link, setLink] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  function getLink() {
+    setNote(null);
+    startTransition(async () => {
+      const result = await shareableInviteLink(orgId, email);
+      if (result.ok) setLink(result.link);
+      else
+        setNote(
+          result.userExists
+            ? "They already have an AutoCut account, so there's no link to share. They can sign in at the login page and the invite attaches automatically."
+            : result.error
+        );
+    });
+  }
+
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border bg-background px-3 py-2.5">
       <p className="text-xs text-foreground-muted">
-        {delivery.emailed
-          ? `We emailed ${email} a sign-in link.`
-          : `The email to ${email} couldn't be sent.`}{" "}
-        {delivery.link
-          ? "You can also send them this link yourself (WhatsApp-safe, works once):"
-          : delivery.userExists
-            ? "They already have an AutoCut account — the invite attaches the moment they next sign in at the login page."
-            : ""}
+        {link
+          ? "Send them this link. It replaces the one we emailed, so tell them to use this one."
+          : delivery.emailed
+            ? `We emailed ${email} a sign-in link.`
+            : `We couldn't email ${email}${delivery.emailError ? ` (${delivery.emailError})` : ""}. Share a link with them instead.`}
       </p>
-      {delivery.link && (
+      {link ? (
         <div className="flex gap-2">
-          <input readOnly value={delivery.link} onFocus={(e) => e.currentTarget.select()} className="field field-sm min-w-0 flex-1 font-mono" />
+          <input readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="field field-sm min-w-0 flex-1 font-mono" />
           <button
             type="button"
             className="btn-secondary btn-sm"
             onClick={() => {
-              navigator.clipboard.writeText(delivery.link!).then(() => {
+              navigator.clipboard.writeText(link).then(() => {
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               });
@@ -54,7 +74,12 @@ function DeliveryInfo({ delivery, email }: { delivery: InviteDelivery; email: st
             {copied ? "Copied" : "Copy"}
           </button>
         </div>
+      ) : (
+        <button type="button" onClick={getLink} disabled={isPending} className="self-start text-xs font-medium text-accent hover:underline disabled:opacity-60">
+          {isPending ? "Creating link..." : "Share a link instead (e.g. WhatsApp)"}
+        </button>
       )}
+      {note && <p className="text-xs text-foreground-muted">{note}</p>}
     </div>
   );
 }
@@ -414,7 +439,7 @@ function InviteRow({
           </span>
         )}
       </span>
-      {delivery && <DeliveryInfo delivery={delivery} email={invite.email} />}
+      {delivery && <DeliveryInfo orgId={orgId} delivery={delivery} email={invite.email} />}
       {error && <span className="text-xs text-danger">{error}</span>}
     </li>
   );
@@ -476,7 +501,7 @@ function InviteForm({ orgId, disabled }: { orgId: string; disabled: boolean }) {
         </button>
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
-      {sent && <DeliveryInfo delivery={sent.delivery} email={sent.email} />}
+      {sent && <DeliveryInfo orgId={orgId} delivery={sent.delivery} email={sent.email} />}
     </form>
   );
 }

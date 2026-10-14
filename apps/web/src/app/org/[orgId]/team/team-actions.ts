@@ -5,34 +5,24 @@ import { createClient } from "@/lib/supabase/server";
 import { requireOrgAdmin, requireOrgOwner } from "@/lib/auth";
 import { changeUserEmail } from "@/lib/change-email";
 import { generateNewAccountInviteLink } from "@/lib/invite-link";
-import { requestOrigin } from "@/lib/site-url";
+import { sendSignInEmail } from "@/lib/send-signin-email";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-export type InviteResult =
-  | { ok: true; link: string | null; emailed: boolean; userExists: boolean }
-  | { ok: false; error: string };
+export type InviteResult = { ok: true; emailed: boolean; emailError: string | null } | { ok: false; error: string };
+export type ShareLinkResult = { ok: true; link: string } | { ok: false; userExists: boolean; error: string };
 
-/**
- * Emails the invitee a sign-in link (magic link through our SMTP) and,
- * for brand-new accounts only, returns a copyable /auth/accept link the
- * owner can send over WhatsApp. Both best-effort: the invite row is
- * already stored, and the invitee can always request a link themselves
- * on /login (their email is now "known" to the sign-in gate).
- */
-async function deliverInvite(email: string): Promise<{ link: string | null; emailed: boolean; userExists: boolean }> {
+/** Fails quietly into emailed=false: the invite row exists either way. */
+async function emailInvite(email: string) {
+  const sent = await sendSignInEmail(email);
+  return { emailed: sent.ok, emailError: sent.ok ? null : sent.error };
+}
+
+/** Owner may only act on an unaccepted invite in THIS org. */
+async function hasPendingInvite(orgId: string, email: string): Promise<boolean> {
   const supabase = await createClient();
-  const { error: emailError } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${await requestOrigin()}/auth/callback`, shouldCreateUser: true },
-  });
-
-  const linkResult = await generateNewAccountInviteLink(email);
-  return {
-    link: linkResult.ok ? linkResult.link : null,
-    emailed: !emailError,
-    userExists: !linkResult.ok && linkResult.userExists,
-  };
+  const { data } = await supabase.rpc("list_org_pending_invites", { target_org_id: orgId });
+  return (data ?? []).some((i: { email: string }) => i.email.toLowerCase() === email);
 }
 
 type AssignableRole = "admin" | "editor";
@@ -68,25 +58,31 @@ export async function inviteMember(
 
   if (error) return { ok: false, error: friendlyError(error.message) };
 
-  const delivery = await deliverInvite(email.trim().toLowerCase());
+  const delivery = await emailInvite(email.trim().toLowerCase());
   revalidatePath(`/org/${orgId}/team`);
   return { ok: true, ...delivery };
 }
 
-/** Fresh link + email for an invite that's still pending (links expire). */
+/** Re-sends the sign-in email for an invite that's still pending (links expire). */
 export async function resendOrgInvite(orgId: string, email: string): Promise<InviteResult> {
   await requireOrgOwner(orgId);
-  const supabase = await createClient();
+  const normalized = email.trim().toLowerCase();
+  if (!(await hasPendingInvite(orgId, normalized))) return { ok: false, error: "No pending invite for that email." };
+  return { ok: true, ...(await emailInvite(normalized)) };
+}
 
-  // Only for an unaccepted invite in THIS org — never an arbitrary email.
-  const { data: invites, error } = await supabase.rpc("list_org_pending_invites", { target_org_id: orgId });
-  if (error) return { ok: false, error: error.message };
-  const match = (invites ?? []).some(
-    (i: { email: string }) => i.email.toLowerCase() === email.trim().toLowerCase()
-  );
-  if (!match) return { ok: false, error: "No pending invite for that email." };
-
-  return { ok: true, ...(await deliverInvite(email.trim().toLowerCase())) };
+/**
+ * A copyable link to send over WhatsApp instead of email. Supabase keeps
+ * one live token per person, so this REPLACES whatever link was emailed
+ * (the UI says so). New accounts only; see generateNewAccountInviteLink.
+ */
+export async function shareableInviteLink(orgId: string, email: string): Promise<ShareLinkResult> {
+  await requireOrgOwner(orgId);
+  const normalized = email.trim().toLowerCase();
+  if (!(await hasPendingInvite(orgId, normalized))) {
+    return { ok: false, userExists: false, error: "No pending invite for that email." };
+  }
+  return generateNewAccountInviteLink(normalized);
 }
 
 export async function toggleOrgMemberSeatActive(

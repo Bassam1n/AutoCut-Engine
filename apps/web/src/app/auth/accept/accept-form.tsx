@@ -46,7 +46,7 @@ export function AcceptForm() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-foreground-muted">
-        You&apos;ve been invited to an agency workspace. Press continue to sign in on this device.
+        Press continue to sign in on this device.
       </p>
       <button type="button" onClick={continueSignIn} disabled={isPending} className="btn-primary w-full">
         {isPending ? "Signing in..." : "Continue"}

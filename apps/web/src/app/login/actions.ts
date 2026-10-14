@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { requestOrigin } from "@/lib/site-url";
+import { sendSignInEmail } from "@/lib/send-signin-email";
 
 export type LoginResult = { ok: true } | { ok: false; error: string };
 
@@ -45,16 +45,9 @@ export async function requestMagicLink(formData: FormData): Promise<LoginResult>
     return { ok: true };
   }
 
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${await requestOrigin()}/auth/callback`,
-      shouldCreateUser: true,
-    },
-  });
-
-  if (error) {
-    return { ok: false, error: error.message };
+  const sent = await sendSignInEmail(email);
+  if (!sent.ok) {
+    return { ok: false, error: sent.error };
   }
 
   return { ok: true };
