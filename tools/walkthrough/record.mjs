@@ -285,13 +285,17 @@ await chapter("13", "board", "The board", DEMO.owner, async (d, p) => {
   await d.point(p.locator("main"), "Owners and admins see the whole pipeline. Columns are fully customisable.", 3000);
   await d.point(p.getByLabel("Filter by assignee"), "Filter by assignee or brand.", 2200);
   await d.click(btn(p, "New task", true), "Create a task, assign it, set a due date, and link the ad.", 1200);
-  await d.type(p.getByLabel("Title"), "Northbeam morning spot — final cut", { delay: 30 });
-  await d.point(p.getByLabel("Ad"), "Linking the ad lets reviewers jump straight to it.", 2200);
+  await d.type(p.getByLabel("Title"), "Northbeam commute spot — final cut", { delay: 30 });
+  const modalSelect = (option) => p.locator("select").filter({ has: p.locator("option", { hasText: option }) });
+  await modalSelect("No brand").selectOption({ label: "Northbeam Cold Brew" }).catch(() => {});
+  await d.point(modalSelect("No ad linked"), "Linking the ad lets reviewers jump straight to it.", 1600);
+  await modalSelect("No ad linked").selectOption({ value: state.adUrl.split("/").pop() });
+  await d.sleep(1000);
   await d.click(btn(p, /Create task/), null, 1500);
   await d.point(btn(p, /options/).first(), "Rename, reorder or remove columns from each column's menu.", 2400);
   await d.point(btn(p, /Add column/), "Add your own columns too.", 2000);
   // Move the linked task to In review with the edit modal's Column select.
-  await d.click(p.getByRole("button", { name: /Northbeam morning spot/ }), "Moving a task to In review starts a review round.", 1200);
+  await d.click(p.getByRole("button", { name: /Northbeam commute spot/ }), "Moving a task to In review starts a review round.", 1200);
   await p.getByLabel("Column").selectOption({ label: "In review" }).catch(() => {});
   await d.click(btn(p, "Save", true), "Drag cards between columns, or change the column here.", 2200);
 });
@@ -300,7 +304,8 @@ await chapter("14", "review", "Reviews & revisions", DEMO.owner, async (d, p) =>
   await d.card("14", "Reviews & revisions", "Scene-by-scene feedback, attached to the exact shot.");
   await d.goto(`${ORG}/board`);
   await d.click(btn(p, /notifications/i), "Reviewers get notified in the app — and in Slack, if connected.", 1500);
-  await d.click(p.getByText(/review/i).first(), null, 1500);
+  await d.click(btn(p, /Ready for review: Northbeam commute spot/), null, 1500);
+  await d.click(p.getByText("Review now"), "Review now opens the ad, scene by scene.", 2500);
   await d.point(p.getByRole("radiogroup").first(), "Approve each scene, or request changes.", 2400);
   await d.click(p.getByRole("radio", { name: "Request changes" }).nth(1), null, 800);
   await d.type(p.getByPlaceholder(/Make the bottle bigger/), "Show the can label clearly in the last shot.", { delay: 30, caption: "Say exactly what should change." });
