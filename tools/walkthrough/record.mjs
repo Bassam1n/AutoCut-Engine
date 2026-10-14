@@ -239,24 +239,21 @@ await chapter("09", "studio-images", "Studio · Scene images", DEMO.owner, async
 await chapter("10", "studio-voiceover", "Studio · Voiceover", DEMO.owner, async (d, p) => {
   await d.goto(state.adUrl);
   await d.point(p.getByPlaceholder(/Search voices/), "Browse the ElevenLabs voice library: search and filter by gender, age and library.", 3000);
-  await d.click(btn(p, /Suggest voice/).first(), "Or let AutoCut suggest a voice and delivery that fit the scene.", 400);
-  await d.waitFilmed(p.getByText(/Thinking/).first(), "Choosing a voice", 15_000).catch(() => {});
-  await p.getByText(/Thinking/).first().waitFor({ state: "hidden", timeout: 120_000 }).catch(() => {});
-  // Generate All starts scenes a second apart from this page, so keep it open until every job is queued.
-  await d.click(btn(p, "Generate All", true), "Generate the voiceover for every scene, with captions.", 10_000);
+  await d.point(p.locator("select").first(), null, 1200);
+  await d.click(btn(p, /Preview/).first(), "Preview any voice before you pick it.", 2400);
+  await d.point(btn(p, /Suggest voice/).first(), "Or let AutoCut suggest a voice and delivery that fit the scene.", 2600);
+  // Shown, not pressed: this demo skips generating the voiceover.
+  await d.point(btn(p, /Generate voiceover/).first(), "Pick a voice per scene and generate voiceover with captions (ElevenLabs).", 3200);
+  await d.click(btn(p, /Continue to Scene videos/), "Voiceover is optional. On to scene videos.", 1500);
 });
-
-if (!only.length || only.includes("11")) {
-  if (state.adUrl) await waitOffstage(DEMO.owner, state.adUrl, "audio", "voiceover");
-}
 
 await chapter("11", "studio-videos", "Studio · Scene videos", DEMO.owner, async (d, p) => {
   await d.goto(state.adUrl);
-  await d.caption("A few minutes later: every scene has its voiceover, with a captions file.", 2800);
-  await d.point(p.locator("audio").first(), "Play it back right here.", 2200);
-  await d.click(btn(p, /Continue to Scene videos/), null, 1500);
+  if (await btn(p, /Continue to Scene videos/).isVisible().catch(() => false)) await d.click(btn(p, /Continue to Scene videos/), null, 1500);
   await d.point(p.getByText("Who speaks on camera?"), "Choose who speaks on camera, so lip-sync only runs where it should.", 2800);
+  await d.click(btn(p, "Nobody speaks", true), "This ad has no on-camera dialogue.", 1500);
   await d.point(p.getByText("Duration").first(), "Set each scene's length, and pick which image to animate.", 2600);
+  // Generate All starts scenes a second apart from this page, so keep it open until every job is queued.
   await d.click(btn(p, "Generate All", true), "Generate All turns every scene image into video.", 10_000);
 });
 
