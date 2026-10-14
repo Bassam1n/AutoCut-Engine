@@ -148,6 +148,10 @@ export const PINNED_MODEL_PER_TASK = {
   // uses is the same Visual Director editorial judgment, just scoped
   // to a single row instead of the whole board — same Opus pin.
   rewrite_scene_visual: "claude-opus-5-5",
+  // Matching each scene's job (hook, mechanism, proof, CTA) to a style
+  // from a fixed catalog is classification with light creative
+  // judgment, not open writing — Sonnet is the right pin.
+  suggest_scene_styles: "claude-sonnet-5-5",
   // Voiceover Studio's "Suggest voice + delivery" assist: describing a
   // tone in words and adding inline delivery/emotion tags to a short
   // line is closer to write_image_prompt/rewrite_tweak_prompt's

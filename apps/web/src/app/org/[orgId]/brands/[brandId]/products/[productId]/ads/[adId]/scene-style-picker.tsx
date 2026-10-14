@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setSceneStyle } from "../scene-style-actions";
+import { applySceneStyles, setSceneStyle, suggestSceneStyles, type StyleSuggestion } from "../scene-style-actions";
 
 export type StyleChoice = { id: string; name: string; preview_image_url: string | null };
 
@@ -147,5 +147,100 @@ export function SceneStylePicker({ sceneId, styleId }: { sceneId: string; styleI
       )}
       {error && <span className="text-xs text-danger">{error}</span>}
     </span>
+  );
+}
+
+/**
+ * "Suggest styles": Claude proposes a style per scene (or keeping the
+ * ad's default) with a reason. Nothing changes until the editor applies
+ * one suggestion or all of them.
+ */
+export function SuggestStylesPanel({ currentStyles }: { currentStyles: Record<string, string | null> }) {
+  const ctx = useContext(SceneStyleContext);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [suggestions, setSuggestions] = useState<StyleSuggestion[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  if (!ctx) return null;
+
+  const styleById = new Map(ctx.styles.map((s) => [s.id, s]));
+  const adStyle = ctx.adStyleId ? styleById.get(ctx.adStyleId) : undefined;
+  const pending = (suggestions ?? []).filter((s) => (currentStyles[s.sceneId] ?? null) !== s.styleId);
+
+  function suggest() {
+    setError(null);
+    startTransition(async () => {
+      const result = await suggestSceneStyles(ctx!.orgId, ctx!.brandId, ctx!.productId, ctx!.adId);
+      if (result.ok) setSuggestions(result.suggestions);
+      else setError(result.error);
+    });
+  }
+
+  function apply(changes: StyleSuggestion[]) {
+    setError(null);
+    startTransition(async () => {
+      const result = await applySceneStyles(
+        ctx!.orgId,
+        ctx!.brandId,
+        ctx!.productId,
+        ctx!.adId,
+        changes.map((c) => ({ sceneId: c.sceneId, styleId: c.styleId }))
+      );
+      if (result.ok) router.refresh();
+      else setError(result.error);
+    });
+  }
+
+  return (
+    <div className="card-inset flex flex-col gap-3 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-medium">Scene styles</p>
+          <p className="text-xs text-foreground-muted">
+            Mix looks within one ad, like a UGC hook, an anatomy cutaway and a clean packshot.
+          </p>
+        </div>
+        <button type="button" onClick={suggest} disabled={isPending} className="btn-secondary btn-sm">
+          {isPending && !suggestions ? "Thinking..." : suggestions ? "Suggest again" : "✨ Suggest styles"}
+        </button>
+      </div>
+
+      {suggestions && (
+        <>
+          <ul className="flex flex-col divide-y divide-border">
+            {suggestions.map((s) => {
+              const style = s.styleId ? styleById.get(s.styleId) : adStyle;
+              const applied = (currentStyles[s.sceneId] ?? null) === s.styleId;
+              return (
+                <li key={s.sceneId} className="flex items-center gap-3 py-2">
+                  <StyleThumb style={style} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs">
+                      <span className="font-medium">Scene {s.sceneNumber}:</span>{" "}
+                      {s.styleId ? style?.name : `keep ad style (${adStyle?.name ?? "none"})`}
+                    </p>
+                    <p className="text-xs text-foreground-muted">{s.reason}</p>
+                  </div>
+                  {applied ? (
+                    <span className="text-xs text-foreground-muted">Applied</span>
+                  ) : (
+                    <button type="button" onClick={() => apply([s])} disabled={isPending} className="btn-ghost btn-xs">
+                      Apply
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {pending.length > 0 && (
+            <button type="button" onClick={() => apply(pending)} disabled={isPending} className="btn-primary btn-sm self-start">
+              {isPending ? "Applying..." : `Apply all (${pending.length})`}
+            </button>
+          )}
+          <p className="text-xs text-foreground-muted">Already-generated images keep their look until you regenerate that scene.</p>
+        </>
+      )}
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
   );
 }

@@ -12,7 +12,15 @@ const TASK_LABELS: Record<string, string> = {
   generate_concepts: "Concept pitch",
   extract_cast: "Cast extraction",
   generate_scene_visuals: "Storyboard / Visual Director",
+  suggest_scene_styles: "Suggest scene styles",
 };
+
+/** Fallback label from the task id, e.g. "rewrite_scene_visual" -> "Rewrite scene visual". */
+function taskLabel(task: string): string {
+  if (TASK_LABELS[task]) return TASK_LABELS[task];
+  const words = task.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 export function PromptEditorList({
   tasks,
@@ -56,7 +64,7 @@ function PromptEditorCard({ task, active }: { task: string; active: PromptVersio
     <div className="card-inset flex flex-col gap-2 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold">{TASK_LABELS[task] ?? task}</p>
+          <p className="text-sm font-semibold">{taskLabel(task)}</p>
           <p className="text-xs text-foreground-muted">
             task: {task}
             {active && <span className="ml-2">— active version {active.version}</span>}

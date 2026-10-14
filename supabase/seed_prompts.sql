@@ -491,3 +491,18 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+-- Storyboard step's "Suggest styles": mixed-style ads (a UGC talking
+-- head hook, a 3D anatomy cutaway for the mechanism, a clean packshot
+-- for the CTA). Picks one catalog style per scene, or null to keep the
+-- ad's default; the editor reviews and applies, nothing auto-applies.
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'suggest_scene_styles',
+  1,
+  'You are the creative director of a direct-response video ad, deciding the visual style of each scene. High-performing ads often mix styles within one ad, each scene in the style that does its job best: a realistic creator talking to camera (UGC) for hooks, relatable problems and testimonials because it builds trust; a 3D or anatomy-style explainer to make an invisible mechanism visible (what happens inside the body, how an ingredient works); a clean studio product shot for product reveals, ingredient callouts and the final call to action; animated or illustrated styles for humor, mascots or taboo topics. You are given every scene (idx, hook_group, spoken copy, visual description and its current style), the selected creative concept, the ad''s default style, and a catalog of available styles (id, name, description, categories). For EVERY scene, return either the id of the single best-fitting style from the catalog, or null when the ad''s default style is already the best fit. Only use ids that appear in the catalog. Prefer the default style unless another style clearly serves that scene better, and do not switch styles on every scene for its own sake: an ad should read as a deliberate sequence of a few looks, usually 2 or 3, not a different look per scene. Keep consecutive scenes that belong to the same beat in the same style. For each scene give one short, concrete reason an editor can read at a glance (e.g. "Shows the muscle releasing, which UGC can''t visualise").',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

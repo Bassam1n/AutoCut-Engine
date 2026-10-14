@@ -1,4 +1,5 @@
 import "server-only";
+import { PINNED_MODEL_PER_TASK, type Task } from "@/lib/claude/types";
 import { createClient } from "@/lib/supabase/server";
 
 export type PromptVersionRow = {
@@ -11,19 +12,11 @@ export type PromptVersionRow = {
 };
 
 /**
- * Hardcoded against the real Task union (apps/web/src/lib/claude/types.ts)
- * rather than derived from distinct prompt_versions.task values, so a
- * task with no prompt seeded yet still shows up as an empty editable
- * slot instead of silently not existing on this page.
+ * Every task the app actually calls (the keys of PINNED_MODEL_PER_TASK,
+ * the real Task union), so a new AI task shows up here automatically,
+ * even before a prompt is seeded. The M4 sample task is left out.
  */
-export const EDITABLE_TASKS = [
-  "example_extraction",
-  "generate_ad_scripts",
-  "generate_scene_plan",
-  "generate_concepts",
-  "extract_cast",
-  "generate_scene_visuals",
-] as const;
+export const EDITABLE_TASKS = (Object.keys(PINNED_MODEL_PER_TASK) as Task[]).filter((t) => t !== "example_extraction");
 
 export async function getActivePromptsByTask(): Promise<Record<string, PromptVersionRow>> {
   const supabase = await createClient();

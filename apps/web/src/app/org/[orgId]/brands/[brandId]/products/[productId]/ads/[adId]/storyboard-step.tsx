@@ -1,6 +1,6 @@
 "use client";
 
-import { SceneStylePicker } from "./scene-style-picker";
+import { SceneStylePicker, SuggestStylesPanel } from "./scene-style-picker";
 import { useState, useTransition } from "react";
 import {
   toggleProductInFrame,
@@ -60,6 +60,8 @@ export function StoryboardStep({
           <SceneRail scenes={scenes} activeSceneId={activeSceneId} onJump={setActiveSceneId} />
 
           <ChatPatch orgId={orgId} brandId={brandId} productId={productId} ad={ad} />
+
+          <SuggestStylesPanel currentStyles={Object.fromEntries(scenes.map((s) => [s.id, s.style_id]))} />
 
           <div className="flex flex-col gap-3">
             {scenes.map((scene, i) => (
@@ -293,7 +295,7 @@ function StoryboardRow({
               {scene.route}
             </span>
           )}
-          <SceneStylePicker sceneId={scene.id} styleId={scene.style_id} />
+          <SceneStylePicker key={scene.style_id ?? "ad"} sceneId={scene.id} styleId={scene.style_id} />
         </div>
         <button
           type="button"
