@@ -183,3 +183,25 @@ export function describeAction(action: string): string {
 export function serverNow(): number {
   return Date.now();
 }
+
+export type AccessRequest = {
+  id: string;
+  agency: string;
+  name: string;
+  email: string;
+  editors: number | null;
+  note: string | null;
+  status: "new" | "contacted" | "closed";
+  created_at: string;
+};
+
+export async function getAccessRequests(): Promise<AccessRequest[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("access_requests")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   { href: "/platform-admin", label: "Overview", exact: true },
   { href: "/platform-admin/agencies", label: "Agencies" },
+  { href: "/platform-admin/requests", label: "Access requests" },
   { href: "/platform-admin/activity", label: "Activity" },
   { href: "/platform-admin/prompts", label: "Agent prompts" },
   { href: "/platform-admin/admins", label: "Platform admins" },
