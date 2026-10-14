@@ -10,6 +10,7 @@ import { LlmCallError } from "@/lib/claude/types";
 import { WriteImagePromptSchema } from "@/lib/claude/schemas/write-image-prompt";
 import { GenerateProductSpecSchema } from "@/lib/claude/schemas/generate-product-spec";
 import { generateReferenceImage } from "@/lib/providers/generate-reference-image";
+import { getEffectiveSceneStyle } from "@/lib/scene-style";
 import { getAd } from "./ads-data";
 import { getScenes, type Scene } from "./scenes-data";
 import { getCastMembers } from "./concepts-data";
@@ -170,22 +171,16 @@ export async function assembleSceneReferences(
   // widening this function's parameters since only an ad_id is needed.
   let styleRefUrls: string[] = [];
   const { data: adRow } = await supabase.from("ads").select("style_id").eq("id", scene.ad_id).maybeSingle();
-  if (adRow?.style_id) {
-    const { data: styleRow } = await supabase
-      .from("styles")
-      .select("reference_asset_id")
-      .eq("id", adRow.style_id)
+  const sceneStyle = await getEffectiveSceneStyle(supabase, adRow?.style_id ?? null, scene.style_id);
+  if (sceneStyle.referenceAssetId) {
+    const { data: styleAsset } = await service
+      .from("assets")
+      .select("storage_path")
+      .eq("org_id", orgId)
+      .eq("id", sceneStyle.referenceAssetId)
       .maybeSingle();
-    if (styleRow?.reference_asset_id) {
-      const { data: styleAsset } = await service
-        .from("assets")
-        .select("storage_path")
-        .eq("org_id", orgId)
-        .eq("id", styleRow.reference_asset_id)
-        .maybeSingle();
-      if (styleAsset?.storage_path) {
-        styleRefUrls = await signRenderPaths(service, [styleAsset.storage_path]);
-      }
+    if (styleAsset?.storage_path) {
+      styleRefUrls = await signRenderPaths(service, [styleAsset.storage_path]);
     }
   }
   tiers.push(styleRefUrls.map((url) => ({ tier: "style reference" as const, url })));
@@ -336,22 +331,15 @@ export async function resolveFinalImagePrompt(
   ]);
   if (!brand || !product) return { ok: false, error: "Brand or product not found." };
 
-  let styleMasterprompt: string | null = null;
-  if (ad.style_id) {
-    const { data: style } = await supabase
-      .from("styles")
-      .select("masterprompt")
-      .eq("id", ad.style_id)
-      .maybeSingle();
-    styleMasterprompt = style?.masterprompt ?? null;
-  }
+  const sceneStyle = await getEffectiveSceneStyle(supabase, ad.style_id, scene.style_id);
+  const styleMasterprompt = sceneStyle.masterprompt;
 
   if (scene.product_id) {
     await ensureProductSpec(orgId, scene.product_id);
   }
   const productSpec = scene.product_id ? await getLatestProductSpec(orgId, scene.product_id) : null;
 
-  const rules = await getActiveRulesForAd(orgId, brandId, ad.style_id, scene.product_id);
+  const rules = await getActiveRulesForAd(orgId, brandId, sceneStyle.styleId, scene.product_id);
 
   try {
     const result = await llmCall({

@@ -1,5 +1,6 @@
 "use server";
 
+import { getEffectiveSceneStyle } from "@/lib/scene-style";
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -197,13 +198,10 @@ export async function submitImageFeedback(
   if (!brand || !product) return { ok: false, error: "Brand or product not found." };
 
   const supabase = await createClient();
-  let styleMasterprompt: string | null = null;
-  if (ad.style_id) {
-    const { data: style } = await supabase.from("styles").select("masterprompt").eq("id", ad.style_id).maybeSingle();
-    styleMasterprompt = style?.masterprompt ?? null;
-  }
+  const sceneStyle = await getEffectiveSceneStyle(supabase, ad.style_id, scene.style_id);
+  const styleMasterprompt = sceneStyle.masterprompt;
 
-  const rules = await getActiveRulesForAd(orgId, brandId, ad.style_id, scene.product_id);
+  const rules = await getActiveRulesForAd(orgId, brandId, sceneStyle.styleId, scene.product_id);
 
   const task = mode === "tweak" ? "rewrite_tweak_prompt" : "rewrite_rework_prompt";
   let rewrite;
@@ -482,13 +480,10 @@ export async function submitVideoFeedback(
   if (!brand) return { ok: false, error: "Brand not found." };
 
   const supabase = await createClient();
-  let styleMasterprompt: string | null = null;
-  if (ad.style_id) {
-    const { data: style } = await supabase.from("styles").select("masterprompt").eq("id", ad.style_id).maybeSingle();
-    styleMasterprompt = style?.masterprompt ?? null;
-  }
+  const sceneStyle = await getEffectiveSceneStyle(supabase, ad.style_id, scene.style_id);
+  const styleMasterprompt = sceneStyle.masterprompt;
 
-  const rules = await getActiveRulesForAd(orgId, brandId, ad.style_id, scene.product_id);
+  const rules = await getActiveRulesForAd(orgId, brandId, sceneStyle.styleId, scene.product_id);
 
   const task = mode === "tweak" ? "rewrite_tweak_prompt" : "rewrite_rework_prompt";
   let rewrite;

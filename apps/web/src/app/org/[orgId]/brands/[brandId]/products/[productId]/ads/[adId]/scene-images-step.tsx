@@ -1,5 +1,6 @@
 "use client";
 
+import { SceneStylePicker } from "./scene-style-picker";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -398,6 +399,7 @@ function SceneImageCard({
             aria-label={`Select scene ${scene.idx + 1} for Generate Selected`}
           />
           <span className="text-xs font-medium text-foreground-muted">Scene {scene.idx + 1}</span>
+          <SceneStylePicker sceneId={scene.id} styleId={scene.style_id} />
           {spend && spend.usd > 0 && (
             <span
               title={`${spend.count} generation${spend.count === 1 ? "" : "s"}`}

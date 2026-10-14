@@ -1,5 +1,6 @@
 "use server";
 
+import { getEffectiveSceneStyle } from "@/lib/scene-style";
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -352,13 +353,10 @@ async function startGenerationWithMotionPlan(
 ): Promise<GenerateSceneVideoResult> {
   const supabase = await createClient();
 
-  let styleMasterprompt: string | null = null;
-  if (ad.style_id) {
-    const { data: style } = await supabase.from("styles").select("masterprompt").eq("id", ad.style_id).maybeSingle();
-    styleMasterprompt = style?.masterprompt ?? null;
-  }
+  const sceneStyle = await getEffectiveSceneStyle(supabase, ad.style_id, scene.style_id);
+  const styleMasterprompt = sceneStyle.masterprompt;
 
-  const rules = await getActiveRulesForAd(orgId, brandId, ad.style_id, scene.product_id);
+  const rules = await getActiveRulesForAd(orgId, brandId, sceneStyle.styleId, scene.product_id);
   const product = await getProduct(orgId, brandId, productId);
 
   // HARD SPEC REQUIREMENT (spec §5.7: "If nobody speaks, copy never

@@ -21,6 +21,8 @@ export type Scene = {
   image_prompt_override: string | null;
   /** Spec §5.7 "Optional video idea text per scene" — free text that steers this scene's motion/animation, independent of Visual/copy. Nullable (migration 42). */
   video_idea: string | null;
+  /** Per-scene style override (migration 61); null inherits the ad's style. Resolve with getEffectiveSceneStyle(). */
+  style_id: string | null;
   created_at: string;
   updated_at: string;
 };

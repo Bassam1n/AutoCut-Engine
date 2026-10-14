@@ -276,6 +276,7 @@ export async function duplicateAd(
         route: s.route,
         speaker: s.speaker,
         video_idea: s.video_idea,
+        style_id: s.style_id,
       }))
     );
     if (error) return { ok: false, error: error.message };

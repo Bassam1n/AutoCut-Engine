@@ -1,5 +1,6 @@
 "use server";
 
+import { getEffectiveSceneStyle } from "@/lib/scene-style";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireOrgMember } from "@/lib/auth";
@@ -88,6 +89,16 @@ export async function generateSceneVisuals(
   if (!contextResult.ok) return contextResult;
   const { selectedConcept, castMembers, styleMasterprompt } = contextResult.context;
 
+  // Mixed-style ads: scenes with their own style carry it inline, so the
+  // storyboard describes e.g. a UGC talking head and a 3D anatomy cutaway
+  // in the right visual language each (scenes.style_id, migration 61).
+  const overrideIds = Array.from(new Set(scenes.map((s) => s.style_id).filter((id): id is string => !!id && id !== ad.style_id)));
+  const overrides = new Map(
+    await Promise.all(
+      overrideIds.map(async (id) => [id, await getEffectiveSceneStyle(supabase, ad.style_id, id)] as const)
+    )
+  );
+
   let output;
   try {
     const result = await llmCall({
@@ -95,10 +106,24 @@ export async function generateSceneVisuals(
       schema: SceneVisualsSchema,
       orgId,
       input: {
-        scenes: scenes.map((s) => ({ idx: s.idx, hook_group: s.hook_group, copy: s.copy })),
+        scenes: scenes.map((s) => {
+          const own = s.style_id ? overrides.get(s.style_id) : undefined;
+          return {
+            idx: s.idx,
+            hook_group: s.hook_group,
+            copy: s.copy,
+            ...(own ? { scene_style: { name: own.name, masterprompt: own.masterprompt } } : {}),
+          };
+        }),
         concept: selectedConcept,
         cast: castMembers.map((c) => ({ name: c.name, description: c.description })),
         style_masterprompt: styleMasterprompt,
+        ...(overrides.size > 0
+          ? {
+              style_note:
+                "style_masterprompt is the ad's default look. A scene with scene_style must be described in THAT style instead (e.g. a realistic talking head next to a 3D anatomy cutaway); keep the cast recognisable across styles.",
+            }
+          : {}),
       },
     });
     output = result.output;
@@ -164,7 +189,8 @@ export async function rewriteSceneVisual(
 
   const contextResult = await getVisualContext(orgId, adId, ad);
   if (!contextResult.ok) return contextResult;
-  const { selectedConcept, castMembers, styleMasterprompt } = contextResult.context;
+  const { selectedConcept, castMembers } = contextResult.context;
+  const styleMasterprompt = (await getEffectiveSceneStyle(await createClient(), ad.style_id, scene.style_id)).masterprompt;
 
   let output;
   try {

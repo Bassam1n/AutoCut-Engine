@@ -1,5 +1,6 @@
 "use client";
 
+import { SceneStyleProvider, type StyleChoice } from "./scene-style-picker";
 import { useState } from "react";
 import { Stepper, type StudioStep, type SceneStepProgress } from "./stepper";
 import { ScriptsStep } from "./scripts-step";
@@ -50,6 +51,7 @@ export function StudioCanvas({
   activeSceneVoiceoverJobsBySceneId,
   sceneSpendBySceneId,
   revision,
+  styles,
 }: {
   orgId: string;
   brandId: string;
@@ -79,6 +81,8 @@ export function StudioCanvas({
   sceneSpendBySceneId: Record<string, SceneSpendTotal>;
   /** Reviewer's requested changes from the latest review round, if any. */
   revision: ActiveRevision | null;
+  /** Styles a scene can switch to (built-in + this org's), for per-scene styles. */
+  styles: StyleChoice[];
 }) {
   const [step, setStep] = useState<StudioStep>(() => ad.current_step ?? initialStep(ad, scripts, scenes));
   const adsListHref = `/org/${orgId}/brands/${brandId}/products/${productId}/ads`;
@@ -107,6 +111,7 @@ export function StudioCanvas({
   }
 
   return (
+    <SceneStyleProvider value={{ orgId, brandId, productId, adId: ad.id, adStyleId: ad.style_id, styles }}>
     <div className="flex min-h-screen flex-col">
       <Stepper
         currentStep={step}
@@ -257,6 +262,7 @@ export function StudioCanvas({
         {step === "export" && <ExportStep orgId={orgId} ad={ad} scenes={scenes} />}
       </div>
     </div>
+    </SceneStyleProvider>
   );
 }
 

@@ -313,7 +313,7 @@ export async function duplicateScene(
 
   const { data: scene, error: fetchError } = await supabase
     .from("scenes")
-    .select("idx, copy, visual, hook_group, duration_s, route, speaker, video_idea")
+    .select("idx, copy, visual, hook_group, duration_s, route, speaker, video_idea, style_id")
     .eq("org_id", orgId)
     .eq("id", sceneId)
     .maybeSingle();
@@ -348,6 +348,7 @@ export async function duplicateScene(
     route: scene.route,
     speaker: scene.speaker,
     video_idea: scene.video_idea,
+    style_id: scene.style_id,
   });
   if (insertError) return { ok: false, error: insertError.message };
 

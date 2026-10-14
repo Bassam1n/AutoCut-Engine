@@ -1,5 +1,6 @@
 "use client";
 
+import { SceneStylePicker } from "./scene-style-picker";
 import { useState, useTransition } from "react";
 import {
   toggleProductInFrame,
@@ -292,6 +293,7 @@ function StoryboardRow({
               {scene.route}
             </span>
           )}
+          <SceneStylePicker sceneId={scene.id} styleId={scene.style_id} />
         </div>
         <button
           type="button"
