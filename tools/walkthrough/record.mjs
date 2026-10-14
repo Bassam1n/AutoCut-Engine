@@ -56,7 +56,7 @@ async function chapter(num, slug, title, as, body) {
   try {
     await body(d, page);
   } catch (err) {
-    console.error(`  ✖ ${num} failed: ${err.message.split("\n")[0]}`);
+    console.error(`  ✖ ${num} failed at ${page.url()}: ${err.message.split("\n")[0]}`);
     await page.screenshot({ path: `${ERR}${num}-${slug}.png` }).catch(() => {});
   }
   await d.caption(null).catch(() => {});
@@ -165,9 +165,12 @@ await chapter("05", "studio-scripts", "Studio · Scripts", DEMO.owner, async (d,
   await d.click(btn(p, /create ad/i), "Create ad: pick a brand…", 1000);
   await d.click(btn(p, "Northbeam Cold Brew", true), null, 900);
   await d.click(btn(p, "Original Cold Brew 250ml", true), "…then the product.", 1400);
+  // Style preview images 404 in production; show plain tiles rather than broken-image icons.
+  await p.evaluate(() => document.querySelectorAll("main img").forEach((i) => { if (!i.naturalWidth) i.style.visibility = "hidden"; }));
   await d.point(p.getByRole("heading", { name: "Pick a style to start" }), "Pick a visual style. It sets the look of every image and video.", 2400);
-  await d.click(p.locator("main button").filter({ hasNotText: "Start this ad" }).first(), null, 800);
+  await d.click(btn(p, /Lifestyle B-Roll/), null, 800);
   await d.click(btn(p, "Start this ad"), "Start this ad opens the Studio.", 2000);
+  await p.waitForURL(/\/ads\/[0-9a-f-]{36}/, { timeout: 60_000 });
   state.adUrl = new URL(p.url()).pathname; save();
   await d.point(p.getByText("Scripts", { exact: true }).first(), "The stepper tracks the nine steps. Finished steps get a check mark.", 2600);
   await d.point(p.getByText("Cost so far"), "Cost so far adds up what every generation on this ad has cost.", 2600);
