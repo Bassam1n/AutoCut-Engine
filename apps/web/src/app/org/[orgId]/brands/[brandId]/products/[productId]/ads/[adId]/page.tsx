@@ -19,6 +19,8 @@ import { StudioCanvas } from "./studio-canvas";
 import { CostBreakdown } from "./cost-breakdown";
 import { getAdSpend, groupSpendByScene } from "../spend-data";
 import { getActiveRevision } from "./revision-data";
+import { createServiceClient } from "@/lib/supabase/service";
+import { recoverUnsavedSceneVideos } from "@/lib/jobs/finalize-scene-video";
 import { getVisibleStyles } from "@/app/org/[orgId]/styles/styles-data";
 
 // Scene-image generation (scene-images-actions.ts) polls a provider
@@ -61,6 +63,11 @@ async function GatedCanvas({
 
   const ad = await getAd(orgId, productId, adId);
   if (!ad) notFound();
+
+  // Save any scene video that finished while nobody had this page open
+  // (the runner doesn't save results itself until it's redeployed), so
+  // a paid generation is never left orphaned.
+  await recoverUnsavedSceneVideos(createServiceClient(), orgId, adId);
 
   const scripts = await getAdScripts(orgId, adId);
   const scenes = await getScenes(orgId, adId);

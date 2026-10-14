@@ -4,6 +4,7 @@ import { KieAdapter } from "@/lib/providers/kie";
 import { FalAdapter } from "@/lib/providers/fal";
 import { ProviderAdapterError, type ProviderAdapter, type SubmitParams } from "@/lib/providers/types";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
+import { finalizeSceneVideo } from "@/lib/jobs/finalize-scene-video";
 
 /**
  * The minimal durable job runner spec §3/§6 (M7 "done when: a job
@@ -230,6 +231,14 @@ export const runProviderJob = task({
       .from("jobs")
       .update({ status: "succeeded", payload: { ...jobPayload, resultUrls } })
       .eq("id", job.id);
+
+    // Save scene videos here, durably, instead of relying on an open
+    // browser tab to finalize them (a closed tab used to orphan a paid
+    // result). Best effort: the page-load recovery retries on failure.
+    if (job.kind === "generate_scene_video") {
+      const saved = await finalizeSceneVideo(supabase, job.id);
+      if (!saved.ok) logger.error("Scene video not saved; page load will retry", { jobId: job.id, error: saved.error });
+    }
 
     return { ok: true, resultUrls };
   },

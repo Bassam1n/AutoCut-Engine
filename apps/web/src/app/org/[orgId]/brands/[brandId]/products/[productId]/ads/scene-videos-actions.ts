@@ -1,5 +1,6 @@
 "use server";
 
+import { finalizeSceneVideo } from "@/lib/jobs/finalize-scene-video";
 import { getEffectiveSceneStyle } from "@/lib/scene-style";
 import "server-only";
 import { revalidatePath } from "next/cache";
@@ -602,62 +603,11 @@ export async function finalizeSceneVideoJob(orgId: string, jobId: string): Promi
   if (!(await canAccessJob(orgId, jobId))) return { ok: false, error: "Job not found." };
 
   const service = createServiceClient();
-  const { data: job, error: jobError } = await service
-    .from("jobs")
-    .select("id, org_id, ad_id, scene_id, status, payload")
-    .eq("id", jobId)
-    .eq("org_id", orgId)
-    .maybeSingle();
-  if (jobError || !job) return { ok: false, error: jobError?.message ?? "Job not found." };
-  if (job.status !== "succeeded") return { ok: false, error: "Job has not succeeded." };
+  const { data: job } = await service.from("jobs").select("org_id").eq("id", jobId).maybeSingle();
+  if (!job || job.org_id !== orgId) return { ok: false, error: "Job not found." };
 
-  const payload = job.payload as { resultUrls?: string[]; savedAssetId?: string; endpoint?: string };
-  if (payload.savedAssetId) {
-    return { ok: true, assetId: payload.savedAssetId };
-  }
-
-  const resultUrl = payload.resultUrls?.[0];
-  if (!resultUrl) return { ok: false, error: "Job succeeded but has no result URL." };
-  if (!job.ad_id || !job.scene_id) return { ok: false, error: "Job is missing ad/scene association." };
-
-  const videoRes = await fetch(resultUrl);
-  if (!videoRes.ok) return { ok: false, error: "Could not download the generated video." };
-  const videoBytes = await videoRes.arrayBuffer();
-
-  const { data: existingVersions } = await service
-    .from("assets")
-    .select("version")
-    .eq("org_id", orgId)
-    .eq("scene_id", job.scene_id)
-    .eq("kind", "video")
-    .order("version", { ascending: false })
-    .limit(1);
-  const nextVersion = (existingVersions?.[0]?.version ?? 0) + 1;
-
-  const storagePath = `${orgId}/renders/${job.ad_id}/${job.scene_id}/${Date.now()}.mp4`;
-  const { error: uploadError } = await service.storage
-    .from("renders")
-    .upload(storagePath, videoBytes, { contentType: "video/mp4" });
-  if (uploadError) return { ok: false, error: uploadError.message };
-
-  const { data: assetRow, error: assetError } = await service
-    .from("assets")
-    .insert({
-      org_id: orgId,
-      ad_id: job.ad_id,
-      scene_id: job.scene_id,
-      kind: "video",
-      version: nextVersion,
-      storage_path: storagePath,
-      source: `${payload.endpoint ?? "unknown"}`,
-    })
-    .select("id")
-    .single();
-  if (assetError) return { ok: false, error: assetError.message };
-
-  await service.from("jobs").update({ payload: { ...payload, savedAssetId: assetRow.id } }).eq("id", jobId);
-
-  return { ok: true, assetId: assetRow.id };
+  const result = await finalizeSceneVideo(service, jobId);
+  return result.ok ? { ok: true, assetId: result.assetId } : { ok: false, error: result.error };
 }
 
 /** Restores an archived video asset (spec §5.8: "an 'archived videos' strip lets the editor restore them"). */
