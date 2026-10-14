@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useTransition } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setSceneStyle } from "../scene-style-actions";
 
@@ -22,9 +22,25 @@ export function SceneStyleProvider({ value, children }: { value: Ctx; children: 
   return <SceneStyleContext.Provider value={value}>{children}</SceneStyleContext.Provider>;
 }
 
+/** Small style thumbnail, or a lettered tile when no preview exists yet. */
+function StyleThumb({ style, size }: { style: StyleChoice | undefined; size: "sm" | "lg" }) {
+  const dims = size === "sm" ? "h-5 w-4 rounded" : "h-20 w-16 rounded-lg";
+  if (style?.preview_image_url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={style.preview_image_url} alt="" className={`${dims} shrink-0 object-cover`} loading="lazy" />;
+  }
+  return (
+    <span className={`${dims} flex shrink-0 items-center justify-center bg-accent-soft text-[10px] font-semibold text-accent`}>
+      {style?.name.slice(0, 1) ?? "?"}
+    </span>
+  );
+}
+
 /**
  * Per-scene style: "Ad style" inherits the ad's look; picking another
- * style makes just this scene render in it (mixed-style ads).
+ * style makes just this scene render in it (mixed-style ads). A custom
+ * popover instead of a native <select> so every option shows its
+ * preview image — editors pick a look by seeing it, not by name.
  */
 export function SceneStylePicker({ sceneId, styleId }: { sceneId: string; styleId: string | null }) {
   const ctx = useContext(SceneStyleContext);
@@ -32,12 +48,37 @@ export function SceneStylePicker({ sceneId, styleId }: { sceneId: string; styleI
   const [isPending, startTransition] = useTransition();
   const [value, setValue] = useState(styleId ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLSpanElement>(null);
+
+  // Close on outside click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   if (!ctx) return null;
 
-  const adStyleName = ctx.styles.find((s) => s.id === ctx.adStyleId)?.name ?? "none";
+  const adStyle = ctx.styles.find((s) => s.id === ctx.adStyleId);
   const custom = value !== "" && value !== ctx.adStyleId;
+  const current = custom ? ctx.styles.find((s) => s.id === value) : adStyle;
+  const options: { id: string; label: string; style: StyleChoice | undefined; note?: string }[] = [
+    { id: "", label: adStyle?.name ?? "No style", style: adStyle, note: "Ad style" },
+    ...ctx.styles.filter((s) => s.id !== ctx.adStyleId).map((s) => ({ id: s.id, label: s.name, style: s })),
+  ];
 
   function change(next: string) {
+    setOpen(false);
+    if (next === value) return;
     const previous = value;
     setValue(next);
     setError(null);
@@ -53,24 +94,57 @@ export function SceneStylePicker({ sceneId, styleId }: { sceneId: string; styleI
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <select
-        aria-label="Scene style"
-        value={value}
+    <span ref={rootRef} className="relative inline-flex items-center gap-1.5">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Scene style: ${current?.name ?? "none"}${custom ? "" : " (ad style)"}`}
         disabled={isPending}
-        onChange={(e) => change(e.target.value)}
+        onClick={() => setOpen((o) => !o)}
         title="Style for this scene. Mix styles across scenes, e.g. a UGC talking head then a 3D anatomy cutaway."
-        className={`field field-sm max-w-44 py-1 text-xs ${custom ? "border-accent text-accent" : ""}`}
+        className={`inline-flex max-w-52 items-center gap-1.5 rounded-lg border px-1.5 py-1 text-xs transition-colors disabled:opacity-60 ${
+          custom ? "border-accent text-accent" : "border-border-strong text-foreground hover:bg-border/40"
+        }`}
       >
-        <option value="">Ad style ({adStyleName})</option>
-        {ctx.styles
-          .filter((s) => s.id !== ctx.adStyleId)
-          .map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-      </select>
+        <StyleThumb style={current} size="sm" />
+        <span className="truncate">{custom ? current?.name : `Ad style (${adStyle?.name ?? "none"})`}</span>
+        <svg viewBox="0 0 12 12" className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true">
+          <path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Scene style"
+          className="card absolute left-0 top-full z-40 mt-1.5 max-h-[70vh] w-[min(460px,85vw)] overflow-y-auto p-2"
+        >
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+            {options.map((o) => {
+              const selected = o.id === value || (o.id === "" && !custom);
+              return (
+                <button
+                  key={o.id || "ad"}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => change(o.id)}
+                  className={`flex items-center gap-2 rounded-xl border p-1.5 text-left transition-colors ${
+                    selected ? "border-accent bg-accent-soft" : "border-transparent hover:bg-border/40"
+                  }`}
+                >
+                  <StyleThumb style={o.style} size="lg" />
+                  <span className="min-w-0">
+                    {o.note && <span className="block text-[10px] font-medium uppercase tracking-wide text-accent">{o.note}</span>}
+                    <span className="block text-xs font-medium leading-snug">{o.label}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {error && <span className="text-xs text-danger">{error}</span>}
     </span>
   );
