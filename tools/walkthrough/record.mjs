@@ -188,16 +188,16 @@ await chapter("06", "studio-brief-plan", "Studio · Fine-tune & scene plan", DEM
   await d.point(btn(p, "Start", true), "Fine-tune asks a few quick questions about the viewer and the ad. Answers can be saved as a customer profile.", 3200);
   await d.click(btn(p, /Skip for now/), "We'll skip it for this demo.", 1500);
   await d.click(btn(p, /Generate scene plan/), "The scene plan splits the script into scenes.", 400);
-  await d.waitFilmed(btn(p, /Lock the plan/), "Planning scenes");
+  await d.waitFilmed(p.getByText("Scene 1", { exact: true }), "Planning scenes");
   await d.point(p.getByText(/Scene 1/).first(), "Every scene is editable: rewrite copy, split, duplicate or merge scenes.", 3000);
   await d.point(btn(p, /Pin idea note/).first(), "Pin notes to steer a scene — an idea, or a rule it must follow.", 2600);
   await d.click(btn(p, /Lock the plan/), "Lock the plan when it reads right.", 1500);
-  const cont = btn(p, /Continue/);
-  if (await cont.first().isVisible().catch(() => false)) await d.click(cont, null, 1200);
+  await d.click(btn(p, /Continue/), null, 1200);
 });
 
 await chapter("07", "studio-concept", "Studio · Concept & cast", DEMO.owner, async (d, p) => {
   await d.goto(state.adUrl);
+  if (await btn(p, /Continue/).isVisible().catch(() => false)) await d.click(btn(p, /Continue/), null, 1200);
   await d.click(btn(p, /Generate concepts/), "Concepts are creative directions for the whole ad.", 400);
   await d.waitFilmed(btn(p, "Use this concept"), "Generating concepts");
   await d.point(btn(p, "Refine").first(), "Refine a concept, or write your own.", 2200);
@@ -227,10 +227,10 @@ await chapter("09", "studio-images", "Studio · Scene images", DEMO.owner, async
   await d.point(p.getByText("Images per scene"), "Choose how many options to generate per scene.", 2200);
   await d.point(btn(p, "Browse library"), "Or reuse saved images from the library.", 2000);
   await d.click(btn(p, "Generate All", true), "Generate All runs every scene at once on your own keys.", 400);
-  await d.waitFilmed(p.locator("main img").nth(2), "Generating scene images", 6 * 60_000);
+  await d.waitFilmed(p.locator("img:not(aside img)").nth(2), "Generating scene images", 6 * 60_000);
   await d.sleep(4000);
   await d.goto(state.adUrl);
-  await d.point(p.locator("main img").first(), "Every scene gets its own options. Keep the best ones.", 2600);
+  await d.point(p.locator("img:not(aside img)").first(), "Every scene gets its own options. Keep the best ones.", 2600);
   await d.point(btn(p, /Give feedback/).first(), "Give feedback to tweak or rework an image — the AI can remember the correction for next time.", 3200);
   await d.point(btn(p, /Edit prompt/).first(), "Power users can see and override the exact prompt.", 2400);
   await d.click(btn(p, /Continue to scene videos/), "Next: voiceover.", 1500);
@@ -259,13 +259,13 @@ await chapter("11", "studio-videos", "Studio · Scene videos", DEMO.owner, async
 });
 
 if (!only.length || only.includes("12")) {
-  if (state.adUrl) await waitOffstage(DEMO.owner, state.adUrl, "main video", "scene videos");
+  if (state.adUrl) await waitOffstage(DEMO.owner, state.adUrl, "video", "scene videos");
 }
 
 await chapter("12", "studio-export", "Studio · Export", DEMO.owner, async (d, p) => {
   await d.goto(state.adUrl);
   await d.caption("Video models take a while — here's the result.", 2600);
-  await d.point(p.locator("main video").first(), "Every scene, animated from its approved image.", 3000);
+  await d.point(p.locator("video").first(), "Every scene, animated from its approved image.", 3000);
   await d.click(btn(p, /Continue to Export/), null, 1500);
   await d.point(p.locator("select").first(), "Export everything, or just images, videos, or voiceover with captions.", 2800);
   await d.point(btn(p, "Download zip"), "One zip, files named by scene.", 2600);
