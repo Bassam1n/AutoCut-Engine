@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
@@ -14,6 +14,7 @@ export function AcceptForm() {
   const rawType = params.get("type") ?? "";
   const type = (VALID_TYPES as string[]).includes(rawType) ? (rawType as EmailOtpType) : null;
 
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +36,8 @@ export function AcceptForm() {
       // First sign-in: attach the pending invite (org + role). Harmless
       // no-op error on every later sign-in — see auth/callback/route.ts.
       await supabase.rpc("accept_invite");
-      window.location.assign("/");
+      router.push("/");
+      router.refresh();
     });
   }
 

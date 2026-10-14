@@ -4,8 +4,36 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireOrgAdmin, requireOrgOwner } from "@/lib/auth";
 import { changeUserEmail } from "@/lib/change-email";
+import { generateNewAccountInviteLink } from "@/lib/invite-link";
+import { requestOrigin } from "@/lib/site-url";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+export type InviteResult =
+  | { ok: true; link: string | null; emailed: boolean; userExists: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Emails the invitee a sign-in link (magic link through our SMTP) and,
+ * for brand-new accounts only, returns a copyable /auth/accept link the
+ * owner can send over WhatsApp. Both best-effort: the invite row is
+ * already stored, and the invitee can always request a link themselves
+ * on /login (their email is now "known" to the sign-in gate).
+ */
+async function deliverInvite(email: string): Promise<{ link: string | null; emailed: boolean; userExists: boolean }> {
+  const supabase = await createClient();
+  const { error: emailError } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: `${await requestOrigin()}/auth/callback`, shouldCreateUser: true },
+  });
+
+  const linkResult = await generateNewAccountInviteLink(email);
+  return {
+    link: linkResult.ok ? linkResult.link : null,
+    emailed: !emailError,
+    userExists: !linkResult.ok && linkResult.userExists,
+  };
+}
 
 type AssignableRole = "admin" | "editor";
 
@@ -28,20 +56,37 @@ export async function inviteMember(
   orgId: string,
   email: string,
   role: AssignableRole
-): Promise<ActionResult> {
+): Promise<InviteResult> {
   await requireOrgOwner(orgId);
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("invite_member", {
     target_org_id: orgId,
-    invitee_email: email,
+    invitee_email: email.trim(),
     invitee_role: role,
   });
 
   if (error) return { ok: false, error: friendlyError(error.message) };
 
+  const delivery = await deliverInvite(email.trim().toLowerCase());
   revalidatePath(`/org/${orgId}/team`);
-  return { ok: true };
+  return { ok: true, ...delivery };
+}
+
+/** Fresh link + email for an invite that's still pending (links expire). */
+export async function resendOrgInvite(orgId: string, email: string): Promise<InviteResult> {
+  await requireOrgOwner(orgId);
+  const supabase = await createClient();
+
+  // Only for an unaccepted invite in THIS org — never an arbitrary email.
+  const { data: invites, error } = await supabase.rpc("list_org_pending_invites", { target_org_id: orgId });
+  if (error) return { ok: false, error: error.message };
+  const match = (invites ?? []).some(
+    (i: { email: string }) => i.email.toLowerCase() === email.trim().toLowerCase()
+  );
+  if (!match) return { ok: false, error: "No pending invite for that email." };
+
+  return { ok: true, ...(await deliverInvite(email.trim().toLowerCase())) };
 }
 
 export async function toggleOrgMemberSeatActive(

@@ -9,6 +9,7 @@ import type {
 } from "./team-data";
 import {
   inviteMember,
+  resendOrgInvite,
   toggleOrgMemberSeatActive,
   changeOrgMemberRole,
   changeOrgMemberEmail,
@@ -18,6 +19,45 @@ import {
 import { buttonVariants } from "@/components/button";
 import { Avatar } from "@/components/avatar";
 import { ASSIGNABLE_ORG_ROLES, ROLE_LABELS } from "@/lib/roles";
+import type { InviteResult } from "./team-actions";
+
+type InviteDelivery = Extract<InviteResult, { ok: true }>;
+
+/** Shared outcome block: emailed / copy link / existing account. */
+function DeliveryInfo({ delivery, email }: { delivery: InviteDelivery; email: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-border bg-background px-3 py-2.5">
+      <p className="text-xs text-foreground-muted">
+        {delivery.emailed
+          ? `We emailed ${email} a sign-in link.`
+          : `The email to ${email} couldn't be sent.`}{" "}
+        {delivery.link
+          ? "You can also send them this link yourself (WhatsApp-safe, works once):"
+          : delivery.userExists
+            ? "They already have an AutoCut account — the invite attaches the moment they next sign in at the login page."
+            : ""}
+      </p>
+      {delivery.link && (
+        <div className="flex gap-2">
+          <input readOnly value={delivery.link} onFocus={(e) => e.currentTarget.select()} className="field field-sm min-w-0 flex-1 font-mono" />
+          <button
+            type="button"
+            className="btn-secondary btn-sm"
+            onClick={() => {
+              navigator.clipboard.writeText(delivery.link!).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              });
+            }}
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type AssignableRole = (typeof ASSIGNABLE_ORG_ROLES)[number];
 
@@ -321,6 +361,17 @@ function InviteRow({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [revoked, setRevoked] = useState(false);
+  const [delivery, setDelivery] = useState<InviteDelivery | null>(null);
+
+  function onResend() {
+    setError(null);
+    setDelivery(null);
+    startTransition(async () => {
+      const result = await resendOrgInvite(orgId, invite.email);
+      if (result.ok) setDelivery(result);
+      else setError(result.error);
+    });
+  }
 
   function onRevoke() {
     setError(null);
@@ -337,23 +388,34 @@ function InviteRow({
   if (revoked) return null;
 
   return (
-    <li className="flex items-center justify-between text-sm">
-      <span className="text-foreground-muted">
-        {invite.email} ({ROLE_LABELS[invite.role]})
-      </span>
-      {canManage && (
-        <span className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onRevoke}
-            disabled={isPending}
-            className="text-xs font-medium text-danger hover:underline disabled:opacity-60"
-          >
-            Revoke
-          </button>
-          {error && <span className="text-xs text-danger">{error}</span>}
+    <li className="flex flex-col gap-2 text-sm">
+      <span className="flex items-center justify-between">
+        <span className="text-foreground-muted">
+          {invite.email} ({ROLE_LABELS[invite.role]})
         </span>
-      )}
+        {canManage && (
+          <span className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onResend}
+              disabled={isPending}
+              className="text-xs font-medium text-accent hover:underline disabled:opacity-60"
+            >
+              {isPending ? "Sending..." : "Resend link"}
+            </button>
+            <button
+              type="button"
+              onClick={onRevoke}
+              disabled={isPending}
+              className="text-xs font-medium text-danger hover:underline disabled:opacity-60"
+            >
+              Revoke
+            </button>
+          </span>
+        )}
+      </span>
+      {delivery && <DeliveryInfo delivery={delivery} email={invite.email} />}
+      {error && <span className="text-xs text-danger">{error}</span>}
     </li>
   );
 }
@@ -363,16 +425,16 @@ function InviteForm({ orgId, disabled }: { orgId: string; disabled: boolean }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AssignableRole>("editor");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [sent, setSent] = useState<{ delivery: InviteDelivery; email: string } | null>(null);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSuccess(false);
+    setSent(null);
     startTransition(async () => {
       const result = await inviteMember(orgId, email, role);
       if (result.ok) {
-        setSuccess(true);
+        setSent({ delivery: result, email });
         setEmail("");
       } else {
         setError(result.error);
@@ -414,9 +476,7 @@ function InviteForm({ orgId, disabled }: { orgId: string; disabled: boolean }) {
         </button>
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
-      {success && (
-        <p className="text-sm text-accent">Invite sent. They&apos;ll get a sign-in link once accepted.</p>
-      )}
+      {sent && <DeliveryInfo delivery={sent.delivery} email={sent.email} />}
     </form>
   );
 }
