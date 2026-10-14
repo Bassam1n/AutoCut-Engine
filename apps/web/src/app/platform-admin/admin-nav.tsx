@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/platform-admin/agencies", label: "Agencies" },
   { href: "/platform-admin/requests", label: "Access requests" },
   { href: "/platform-admin/activity", label: "Activity" },
+  { href: "/platform-admin/styles", label: "Styles" },
   { href: "/platform-admin/prompts", label: "Agent prompts" },
   { href: "/platform-admin/admins", label: "Platform admins" },
 ];
