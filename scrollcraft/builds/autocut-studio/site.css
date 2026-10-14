@@ -52,10 +52,7 @@ body { font-size: 1rem; }
 }
 .chrome__bar { height: 52px; display: flex; align-items: center; gap: 22px; padding-inline: 20px; }
 .chrome__mark { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; letter-spacing: -0.01em; }
-.ac {
-  width: 28px; height: 28px; border-radius: 8px; background: var(--sc-accent); color: var(--sc-ink);
-  display: grid; place-items: center; font-size: 11px; font-weight: 700;
-}
+.chrome__logo { display: block; height: 24px; width: auto; flex-shrink: 0; }
 .crumbs { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--sc-ink-soft); min-width: 0; }
 .crumbs em { font-style: normal; color: var(--sc-ink-soft); }
 .crumbs [aria-current] { color: var(--sc-ink); font-weight: 500; }

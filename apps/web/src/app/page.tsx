@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -9,9 +10,7 @@ export default function HomePage() {
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col px-6 py-10">
       {/* Static shell: no session read here, prerenders instantly. */}
       <div className="mb-10 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-xs font-semibold text-accent-ink">
-          AC
-        </div>
+        <Image src="/logo-mark.png" alt="" width={360} height={144} priority className="h-8 w-auto" />
         <span className="text-base font-semibold tracking-tight">
           AutoCut Engine
         </span>
