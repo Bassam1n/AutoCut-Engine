@@ -305,10 +305,12 @@ await chapter("14", "review", "Reviews & revisions", DEMO.owner, async (d, p) =>
   await d.goto(`${ORG}/board`);
   await d.click(btn(p, /notifications/i), "Reviewers get notified in the app — and in Slack, if connected.", 1500);
   await d.click(btn(p, /Ready for review: Northbeam commute spot/), null, 1500);
-  await d.click(p.getByText("Review now"), "Review now opens the ad, scene by scene.", 2500);
-  await d.point(p.getByRole("radiogroup").first(), "Approve each scene, or request changes.", 2400);
+  // With an ad linked the notification opens the review directly; otherwise it opens the task first.
+  if (await p.getByText("Review now").isVisible().catch(() => false)) await d.click(p.getByText("Review now"), null, 2500);
+  await d.caption("The review opens the ad scene by scene: copy, image and video side by side.", 2800);
+  await d.point(p.getByRole("radiogroup").filter({ hasText: "Request changes" }).first(), "Approve each scene, or request changes.", 2400);
   await d.click(p.getByRole("radio", { name: "Request changes" }).nth(1), null, 800);
-  await d.type(p.getByPlaceholder(/Make the bottle bigger/), "Show the can label clearly in the last shot.", { delay: 30, caption: "Say exactly what should change." });
+  await d.type(p.getByPlaceholder(/Make the bottle bigger/).or(p.locator("main textarea")).first(), "Show the can label clearly in the last shot.", { delay: 30, caption: "Say exactly what should change." });
   await d.click(btn(p, /Request changes \(/), "Submitting sends the task to Revisions and notifies the editor.", 2500);
 });
 

@@ -5,7 +5,7 @@
 // that record.mjs writes.
 
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const RAW = new URL("./out/raw/", import.meta.url).pathname;
@@ -34,11 +34,13 @@ for (const clip of clips) {
   const meta = existsSync(src.replace(/\.webm$/, ".json")) ? JSON.parse(readFileSync(src.replace(/\.webm$/, ".json"), "utf8")) : {};
   const base = "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=0xfaf9f6,fps=30,format=yuv420p";
   const speedups = (meta.speedups ?? []).filter((r) => r.end - r.start > 2).sort((a, b) => a.start - b.start);
-  let args;
+  const encode = ["-c:v", "libx264", "-preset", "medium", "-crf", "20", "-an"];
   if (speedups.length === 0) {
-    args = ["-vf", base];
+    execFileSync("ffmpeg", ["-y", "-v", "error", "-i", src, "-vf", base, ...encode, dst]);
   } else {
     // Cut into normal / fast segments, speed the fast ones 8x, rejoin.
+    // One ffmpeg pass per segment: a single filter graph that trims the
+    // same input several times buffers the whole decoded clip in memory.
     const segs = [];
     let cursor = 0;
     for (const r of speedups) {
@@ -47,13 +49,18 @@ for (const clip of clips) {
       cursor = r.end;
     }
     segs.push({ a: cursor, b: null, fast: false });
-    const parts = segs.map((g, i) =>
-      `[0:v]trim=start=${g.a}${g.b === null ? "" : `:end=${g.b}`},setpts=${g.fast ? "(PTS-STARTPTS)/8" : "PTS-STARTPTS"},${base}[s${i}]`);
-    const joined = segs.map((_, i) => `[s${i}]`).join("") + `concat=n=${segs.length}:v=1:a=0[v]`;
-    args = ["-filter_complex", parts.join(";") + ";" + joined, "-map", "[v]"];
+    const segFiles = segs.map((g, i) => {
+      const out = dst.replace(/\.mp4$/, `.seg${i}.mp4`);
+      const range = ["-ss", String(g.a), ...(g.b === null ? [] : ["-to", String(g.b)])];
+      execFileSync("ffmpeg", ["-y", "-v", "error", ...range, "-i", src,
+        "-vf", `setpts=${g.fast ? "(PTS-STARTPTS)/8" : "PTS-STARTPTS"},${base}`, ...encode, out]);
+      return out;
+    });
+    const segList = dst.replace(/\.mp4$/, ".segs.txt");
+    writeFileSync(segList, segFiles.map((f) => `file '${f}'`).join("\n"));
+    execFileSync("ffmpeg", ["-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", segList, "-c", "copy", dst]);
+    for (const f of [...segFiles, segList]) rmSync(f);
   }
-  execFileSync("ffmpeg", ["-y", "-v", "error", "-i", src, ...args,
-    "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-an", dst]);
   if (meta.title) chapterLines.push(`${stamp(t)} ${meta.title}`);
   t += duration(dst);
   normalized.push(dst);
