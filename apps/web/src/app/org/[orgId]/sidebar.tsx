@@ -39,6 +39,7 @@ export function Sidebar({
     // Spend & guard: owner and admin only; the audit log and Resume
     // inside it are owner-only.
     ...(info.isAdmin ? [{ href: `/org/${orgId}/settings/spend`, label: "Spend & guard" }] : []),
+    ...(info.isAdmin ? [{ href: `/org/${orgId}/settings/plan`, label: "Plan & usage" }] : []),
     // Rules is visible to every member for the same reason Spend &
     // guard is — rules_select (migration 10) has no admin
     // restriction, and an editor benefits from seeing why generations

@@ -1,5 +1,6 @@
 "use server";
 
+import { storageFullError } from "@/lib/storage-quota";
 import { getEffectiveSceneStyle } from "@/lib/scene-style";
 import "server-only";
 import { revalidatePath } from "next/cache";
@@ -104,6 +105,8 @@ export async function reserveFeedbackRoundReferenceUploadPath(
   fileName: string
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   await requireOrgMember(orgId);
+  const storageFull = await storageFullError(orgId);
+  if (storageFull) return { ok: false, error: storageFull };
 
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${orgId}/feedback_round/${adId}/${sceneId}/${Date.now()}_${safeName}`;

@@ -1,5 +1,6 @@
 "use server";
 
+import { storageFullError } from "@/lib/storage-quota";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -117,6 +118,8 @@ export async function reserveProductRefPath(
   fileName: string
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   await requireCanManageBrandContent(orgId);
+  const storageFull = await storageFullError(orgId);
+  if (storageFull) return { ok: false, error: storageFull };
 
   const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${orgId}/products/${productId}/${Date.now()}_${safeName}`;

@@ -1,13 +1,6 @@
 // Agency types and pure helpers, kept out of data.ts (server-only) so client components can use them.
-export type Plan = "trial" | "starter" | "pro" | "enterprise" | "custom";
-export const PLANS: Plan[] = ["trial", "starter", "pro", "enterprise", "custom"];
-export const PLAN_LABELS: Record<Plan, string> = {
-  trial: "Trial",
-  starter: "Starter",
-  pro: "Pro",
-  enterprise: "Enterprise",
-  custom: "Custom",
-};
+import type { BillingState, Plan } from "@/lib/plans";
+export { PLANS, PLAN_LABELS, type Plan } from "@/lib/plans";
 
 export type AgencySummary = {
   org_id: string;
@@ -35,6 +28,12 @@ export type AgencySummary = {
   spend_30d: number;
   keys_count: number;
   last_activity: string | null;
+  brand_cap: number | null;
+  storage_quota_gb: number | null;
+  storage_bytes: number;
+  paid_until: string | null;
+  /** Computed server-side from paid_until and today's date. */
+  billing_state: BillingState;
 };
 
 export type AgencyStatus = "suspended" | "paused" | "invite_pending" | "active";
@@ -49,6 +48,13 @@ export function agencyStatus(a: AgencySummary): AgencyStatus {
 /** Things worth a platform admin's attention, most urgent first. */
 export function agencyIssues(a: AgencySummary): string[] {
   const issues: string[] = [];
+  if (a.billing_state === "lapsed") issues.push("Subscription lapsed: generation is off");
+  else if (a.billing_state === "grace") issues.push("Payment overdue (in the 7 day grace period)");
+  else if (a.billing_state === "due_soon") issues.push("Payment due within 7 days");
+  if (a.storage_quota_gb !== null && a.storage_bytes >= a.storage_quota_gb * 1e9 * 0.9) {
+    issues.push(a.storage_bytes >= a.storage_quota_gb * 1e9 ? "Storage full" : "Storage over 90% full");
+  }
+  if (a.brand_cap !== null && a.brands_count >= a.brand_cap) issues.push("Brand limit reached");
   if (a.paused) issues.push("Paused by spend guard");
   if (!a.owner_accepted) issues.push("Owner hasn't accepted the invite");
   if (a.seat_cap === null) issues.push("No seat cap set (they can't invite anyone)");

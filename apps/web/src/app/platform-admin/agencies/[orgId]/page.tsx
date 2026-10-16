@@ -9,6 +9,8 @@ import {
   getAgencies,
   getAgencyBrands,
   getAgencyMembers,
+  getAgencyPayments,
+  serverNow,
   getDailySpend,
   getSpendBreakdown,
   type AgencySummary,
@@ -17,11 +19,14 @@ import { PlanBadge, StatTile, StatusBadge, formatDate, formatRelative, formatUsd
 import { SpendChart } from "../../spend-chart";
 import { ActivityList } from "../../activity-list";
 import { AgencyQuickActions, AgencySettingsPanel, MembersPanel } from "./agency-panels";
+import { BillingPanel } from "./billing-panel";
+import { formatSeats } from "@/lib/plans";
 
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "members", label: "Members" },
   { id: "brands", label: "Brands" },
+  { id: "billing", label: "Plan & billing" },
   { id: "usage", label: "Usage" },
   { id: "activity", label: "Activity" },
   { id: "settings", label: "Settings" },
@@ -104,6 +109,7 @@ async function GatedAgency({
       {tab === "overview" && <OverviewTab agency={agency} />}
       {tab === "members" && <MembersTab agency={agency} />}
       {tab === "brands" && <BrandsTab orgId={orgId} />}
+      {tab === "billing" && <BillingTab agency={agency} />}
       {tab === "usage" && <UsageTab orgId={orgId} />}
       {tab === "activity" && <ActivityTab orgId={orgId} limit={150} />}
       {tab === "settings" && <AgencySettingsPanel agency={agency} />}
@@ -120,10 +126,10 @@ async function OverviewTab({ agency }: { agency: AgencySummary }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           label="Seats"
-          value={`${agency.members_active} / ${agency.seat_cap ?? "none"}`}
+          value={`${agency.members_active} / ${formatSeats(agency.seat_cap)}`}
           hint={agency.pending_invites > 0 ? `${agency.pending_invites} invite${agency.pending_invites === 1 ? "" : "s"} pending` : undefined}
         />
-        <StatTile label="Brands" value={String(agency.brands_count)} />
+        <StatTile label="Brands" value={`${agency.brands_count} / ${agency.brand_cap ?? "Unlimited"}`} />
         <StatTile label="Ads" value={String(agency.ads_total)} hint={`${agency.ads_30d} in the last 30 days`} />
         <StatTile label="Spend, last 30 days" value={formatUsd(agency.spend_30d)} hint={`${formatUsd(agency.spend_24h)} in the last 24 hours`} />
       </div>
@@ -285,4 +291,10 @@ async function ActivityTab({ orgId, limit }: { orgId: string; limit: number }) {
       <ActivityList rows={rows} showAgency={false} />
     </section>
   );
+}
+
+async function BillingTab({ agency }: { agency: AgencySummary }) {
+  const payments = await getAgencyPayments(agency.org_id);
+  const today = new Date(serverNow()).toISOString().slice(0, 10);
+  return <BillingPanel agency={agency} payments={payments} today={today} />;
 }

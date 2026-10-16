@@ -53,7 +53,7 @@ export async function generateReferenceImage(params: {
   // ..." exception string is translated to plain language here
   // rather than passed straight through — see spend-limit-message.ts
   // for why.
-  const { error: claimError } = await service.rpc("claim_paid_job", {
+  const { error: claimError } = await service.rpc("claim_paid_media_job", {
     target_org_id: params.orgId,
   });
   if (claimError) {

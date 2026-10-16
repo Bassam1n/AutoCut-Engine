@@ -109,3 +109,70 @@ export async function revokePlatformAdmin(userId: string): Promise<ActionResult>
   revalidatePath("/platform-admin/admins");
   return { ok: true };
 }
+
+export async function setAgencyPlan(
+  orgId: string,
+  plan: Plan,
+  seatCap: number | null,
+  brandCap: number | null,
+  storageQuotaGb: number | null
+): Promise<ActionResult> {
+  await requirePlatformAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_set_org_plan", {
+    target_org_id: orgId,
+    new_plan: plan,
+    new_seat_cap: seatCap,
+    new_brand_cap: brandCap,
+    new_storage_quota_gb: storageQuotaGb,
+  });
+  if (error) return { ok: false, error: error.message };
+  refresh(orgId);
+  return { ok: true };
+}
+
+export type PaymentInput = {
+  amount: number;
+  currency: string;
+  paidOn: string;
+  periodEnd: string;
+  method: "cash" | "bank_transfer" | "card" | "other";
+  note: string;
+};
+
+export async function recordPayment(orgId: string, input: PaymentInput): Promise<ActionResult> {
+  await requirePlatformAdmin();
+  if (!(input.amount >= 0)) return { ok: false, error: "Enter the amount received." };
+  if (!input.periodEnd) return { ok: false, error: "Pick the date this payment covers until." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_record_payment", {
+    target_org_id: orgId,
+    pay_amount: input.amount,
+    pay_currency: input.currency || "USD",
+    pay_paid_on: input.paidOn,
+    pay_period_end: input.periodEnd,
+    pay_method: input.method,
+    pay_note: input.note,
+  });
+  if (error) return { ok: false, error: error.message };
+  refresh(orgId);
+  return { ok: true };
+}
+
+export async function voidPayment(orgId: string, paymentId: string): Promise<ActionResult> {
+  await requirePlatformAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_void_payment", { target_payment_id: paymentId });
+  if (error) return { ok: false, error: error.message };
+  refresh(orgId);
+  return { ok: true };
+}
+
+export async function setPaidUntil(orgId: string, paidUntil: string | null): Promise<ActionResult> {
+  await requirePlatformAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_set_paid_until", { target_org_id: orgId, new_paid_until: paidUntil });
+  if (error) return { ok: false, error: error.message };
+  refresh(orgId);
+  return { ok: true };
+}

@@ -64,7 +64,12 @@ export async function createBrand(orgId: string, formData: FormData): Promise<Ac
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    if (error.message.includes("brand_cap_reached")) {
+      return { ok: false, error: "Your plan's brand limit is reached. Archive a brand or ask AutoCut to move you to a bigger plan." };
+    }
+    return { ok: false, error: error.message };
+  }
 
   const assignError = await saveAssignees(orgId, data.id, formData);
   if (assignError) return { ok: false, error: `Brand created, but assigning users failed: ${assignError}` };

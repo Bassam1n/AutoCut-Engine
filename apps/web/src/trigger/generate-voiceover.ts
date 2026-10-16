@@ -103,7 +103,7 @@ export const generateVoiceover = task({
 
     // Same spend guard every other paid call in this app goes through
     // (claim_paid_job) before any real provider cost is incurred.
-    const { error: claimError } = await supabase.rpc("claim_paid_job", { target_org_id: ad.org_id });
+    const { error: claimError } = await supabase.rpc("claim_paid_media_job", { target_org_id: ad.org_id });
     if (claimError) {
       await failJob(supabase, job.id, "SPEND_LIMIT", spendLimitMessage(claimError.message));
       return { ok: false };

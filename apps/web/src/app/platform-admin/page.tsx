@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth";
-import { agencyIssues, agencyStatus, getActivity, getAgencies, getDailySpend } from "./data";
+import { agencyIssues, agencyStatus, getActivity, getAgencies, getDailySpend, serverNow } from "./data";
+import { PLAN_DEFAULTS, addDays, daysBetween } from "@/lib/plans";
 import { PageHeader, StatTile, StatusBadge, formatUsd } from "./ui";
 import { SpendChart } from "./spend-chart";
 import { ActivityList } from "./activity-list";
@@ -50,6 +51,14 @@ async function GatedOverview() {
   const attention = agencies
     .map((a) => ({ agency: a, issues: agencyIssues(a) }))
     .filter((x) => x.issues.length > 0 && !x.agency.suspended_at);
+  const today = new Date(serverNow()).toISOString().slice(0, 10);
+  const horizon = addDays(today, 14);
+  const renewals = live
+    .filter((a) => a.paid_until !== null && a.paid_until <= horizon)
+    .sort((a, b) => (a.paid_until ?? "").localeCompare(b.paid_until ?? ""));
+  const mrr = live
+    .filter((a) => a.billing_state !== "not_enforced" && a.billing_state !== "lapsed" && a.plan !== "trial")
+    .reduce((n, a) => n + (PLAN_DEFAULTS[a.plan].priceUsd ?? 0), 0);
   const topSpenders = [...agencies].filter((a) => a.spend_30d > 0).sort((a, b) => b.spend_30d - a.spend_30d).slice(0, 5);
 
   return (
@@ -64,6 +73,39 @@ async function GatedOverview() {
         <StatTile label="Spend, last 30 days" value={formatUsd(spend30)} hint={`${formatUsd(spend7)} in the last 7 days`} />
         <StatTile label="Ads created, last 30 days" value={String(ads30)} />
       </div>
+
+      <section className="card flex flex-col gap-3 p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold">Renewals, next 14 days and overdue</h2>
+          <span className="text-xs text-foreground-muted">
+            Monthly revenue at list price: <span className="font-medium text-foreground tabular-nums">{formatUsd(mrr)}</span>
+          </span>
+        </div>
+        {renewals.length === 0 ? (
+          <p className="text-sm text-foreground-muted">No payments due in the next 14 days.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border">
+            {renewals.map((a) => {
+              const days = daysBetween(today, a.paid_until!);
+              const price = PLAN_DEFAULTS[a.plan].priceUsd;
+              return (
+                <li key={a.org_id} className="flex items-center gap-3 py-2 text-sm">
+                  <Link href={`/platform-admin/agencies/${a.org_id}?tab=billing`} className="min-w-0 flex-1 truncate hover:underline">
+                    {a.org_name}
+                  </Link>
+                  <span className="shrink-0 text-xs text-foreground-muted">
+                    {PLAN_DEFAULTS[a.plan].label}
+                    {price ? ` · $${price}` : ""}
+                  </span>
+                  <span className={`w-36 shrink-0 text-right text-xs ${days < 0 ? "text-danger" : ""}`}>
+                    {days < 0 ? `${-days} day${days === -1 ? "" : "s"} overdue` : days === 0 ? "Due today" : `Due in ${days} day${days === 1 ? "" : "s"}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section className="card flex flex-col gap-3 p-5">
         <div className="flex items-baseline justify-between gap-3">

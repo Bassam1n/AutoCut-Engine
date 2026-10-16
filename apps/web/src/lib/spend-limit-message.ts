@@ -22,6 +22,16 @@
  * no safety benefit.
  */
 export function spendLimitMessage(rawMessage: string): string {
+  const unpaid = rawMessage.match(/^org_unpaid:\s*([\s\S]*)$/);
+  if (unpaid) {
+    return `Generation is off because ${unpaid[1]}. Your agency owner can renew it with AutoCut; your work is still here.`;
+  }
+  if (/^org_storage_full:/.test(rawMessage)) {
+    return "Your agency's storage is full, so new images and videos can't be saved. Remove old ads or ask your owner to move to a bigger plan (Settings, Plan & usage).";
+  }
+  if (/^org_suspended:/.test(rawMessage)) {
+    return "This agency's account is suspended. Contact AutoCut to restore it.";
+  }
   const match = rawMessage.match(/^org_paused:\s*([\s\S]*)$/);
   if (match) {
     return `Spend paused: ${match[1]}. An org owner or admin can resume spending from Settings → Spend & guard.`;

@@ -82,7 +82,7 @@ export const runProviderJob = task({
     // spending anything — a paused org's job shouldn't be able to
     // reach a real provider call just because it came in through the
     // async runner instead of the inline path.
-    const { error: claimError } = await supabase.rpc("claim_paid_job", { target_org_id: jobPayload.orgId });
+    const { error: claimError } = await supabase.rpc("claim_paid_media_job", { target_org_id: jobPayload.orgId });
     if (claimError) {
       await failJob(supabase, job.id, "SPEND_LIMIT", spendLimitMessage(claimError.message));
       return { ok: false };

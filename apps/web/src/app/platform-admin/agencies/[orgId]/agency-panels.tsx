@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/modal";
 import { ROLE_LABELS, type OrgRole } from "@/lib/roles";
-import { PLANS, PLAN_LABELS, type AgencySummary, type Plan } from "../../model";
+import type { AgencySummary } from "../../model";
 import type { AgencyInvite, AgencyMember } from "../../data";
 import {
   inviteToAgency,
@@ -20,7 +20,6 @@ import {
   changeRole,
   revokeInvite,
   setMemberAdAccess,
-  setOrgSeatCap,
   toggleSeatActive,
 } from "../../membership-actions";
 
@@ -452,7 +451,6 @@ function DetailsCard({ agency }: { agency: AgencySummary }) {
   const { isPending, error, run } = useAction();
   const [saved, setSaved] = useState(false);
   const [name, setName] = useState(agency.org_name);
-  const [plan, setPlan] = useState<Plan>(agency.plan);
   const [notes, setNotes] = useState(agency.internal_notes ?? "");
 
   return (
@@ -461,24 +459,13 @@ function DetailsCard({ agency }: { agency: AgencySummary }) {
       onSubmit={(e) => {
         e.preventDefault();
         setSaved(false);
-        run(() => updateAgency(agency.org_id, name, plan, notes), () => setSaved(true));
+        run(() => updateAgency(agency.org_id, name, agency.plan, notes), () => setSaved(true));
       }}
     >
       <h2 className="text-sm font-semibold">Agency details</h2>
       <label className="flex flex-col gap-1.5">
         <span className="text-xs font-medium">Name</span>
         <input required value={name} onChange={(e) => setName(e.target.value)} className="field" />
-      </label>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium">Plan</span>
-        <select value={plan} onChange={(e) => setPlan(e.target.value as Plan)} className="field">
-          {PLANS.map((p) => (
-            <option key={p} value={p}>
-              {PLAN_LABELS[p]}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-foreground-muted">A label for your records. It doesn&apos;t change limits on its own.</span>
       </label>
       <label className="flex flex-col gap-1.5">
         <span className="text-xs font-medium">Internal notes</span>
@@ -498,7 +485,6 @@ function DetailsCard({ agency }: { agency: AgencySummary }) {
 function LimitsCard({ agency }: { agency: AgencySummary }) {
   const { isPending, error, run } = useAction();
   const [saved, setSaved] = useState(false);
-  const [seatCap, setSeatCap] = useState(agency.seat_cap === null ? "" : String(agency.seat_cap));
   const [warn, setWarn] = useState(String(agency.warn_usd ?? 300));
   const [stop, setStop] = useState(String(agency.stop_usd ?? 600));
 
@@ -508,22 +494,11 @@ function LimitsCard({ agency }: { agency: AgencySummary }) {
       onSubmit={(e) => {
         e.preventDefault();
         setSaved(false);
-        const cap = seatCap.trim() === "" ? null : Number.parseInt(seatCap, 10);
-        run(async () => {
-          if (cap !== agency.seat_cap) {
-            const capResult = await setOrgSeatCap(agency.org_id, cap);
-            if (!capResult.ok) return capResult;
-          }
-          return setSpendLimits(agency.org_id, Number.parseFloat(warn), Number.parseFloat(stop));
-        }, () => setSaved(true));
+        run(() => setSpendLimits(agency.org_id, Number.parseFloat(warn), Number.parseFloat(stop)), () => setSaved(true));
       }}
     >
-      <h2 className="text-sm font-semibold">Limits</h2>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-xs font-medium">Seat cap</span>
-        <input type="number" min={1} value={seatCap} onChange={(e) => setSeatCap(e.target.value)} placeholder="No cap" className="field" />
-        <span className="text-xs text-foreground-muted">Active members plus pending invites. Without a cap the owner can&apos;t invite anyone.</span>
-      </label>
+      <h2 className="text-sm font-semibold">Spend limits</h2>
+      <p className="-mt-2 text-xs text-foreground-muted">Seats, brands and storage are set on the Plan &amp; billing tab.</p>
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium">Daily warning (USD)</span>

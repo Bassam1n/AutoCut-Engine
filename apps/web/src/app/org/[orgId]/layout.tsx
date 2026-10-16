@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireOrgMember } from "@/lib/auth";
 import { getSidebarInfo } from "./sidebar-data";
 import { Sidebar } from "./sidebar";
+import { BillingBanner } from "./billing-banner";
 
 export default function OrgLayout({
   children,
@@ -13,7 +14,12 @@ export default function OrgLayout({
       <Suspense fallback={<SidebarSkeleton />}>
         <GatedSidebar params={params} />
       </Suspense>
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <Suspense fallback={null}>
+          <GatedBillingBanner params={params} />
+        </Suspense>
+        {children}
+      </div>
     </div>
   );
 }
@@ -45,4 +51,10 @@ async function GatedSidebar({
   if (!info) notFound();
 
   return <Sidebar orgId={orgId} info={info} />;
+}
+
+async function GatedBillingBanner({ params }: { params: Promise<{ orgId: string }> }) {
+  const { orgId } = await params;
+  await requireOrgMember(orgId);
+  return <BillingBanner orgId={orgId} />;
 }

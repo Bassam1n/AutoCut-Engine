@@ -4,21 +4,38 @@ import { createClient } from "@/lib/supabase/server";
 // Every function here calls a platform-admin-only RPC (migration 58),
 // which raises for anyone else. Pages also gate with requirePlatformAdmin.
 
+import { billingState } from "@/lib/plans";
 import type { AgencySummary } from "./model";
 export { PLANS, PLAN_LABELS, agencyIssues, agencyStatus, type AgencyStatus, type AgencySummary, type Plan } from "./model";
 
 export async function getAgencies(): Promise<AgencySummary[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("platform_org_overview");
+  const [{ data, error }, billing] = await Promise.all([
+    supabase.rpc("platform_org_overview"),
+    supabase.rpc("platform_org_billing"),
+  ]);
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row: AgencySummary) => ({
+  if (billing.error) throw new Error(billing.error.message);
+  type BillingRow = { org_id: string; brand_cap: number | null; storage_quota_gb: number | null; storage_bytes: number; paid_until: string | null };
+  const billingByOrg = new Map<string, BillingRow>((billing.data ?? []).map((b: BillingRow) => [b.org_id, b]));
+  const today = new Date(serverNow()).toISOString().slice(0, 10);
+  return (data ?? []).map((row: AgencySummary) => {
+    const b = billingByOrg.get(row.org_id);
+    const paidUntil = b?.paid_until ?? null;
+    return {
     ...row,
+    brand_cap: b?.brand_cap ?? null,
+    storage_quota_gb: b?.storage_quota_gb ?? null,
+    storage_bytes: Number(b?.storage_bytes ?? 0),
+    paid_until: paidUntil,
+    billing_state: billingState(paidUntil, today),
     spend_24h: Number(row.spend_24h),
     spend_7d: Number(row.spend_7d),
     spend_30d: Number(row.spend_30d),
     warn_usd: row.warn_usd === null ? null : Number(row.warn_usd),
     stop_usd: row.stop_usd === null ? null : Number(row.stop_usd),
-  }));
+    };
+  });
 }
 
 export type DailySpend = { day: string; usd: number; events: number };
@@ -150,6 +167,10 @@ export function describeAction(action: string): string {
   const labels: Record<string, string> = {
     agency_registered: "Agency registered",
     agency_updated: "Agency details updated",
+    plan_changed: "Plan changed",
+    payment_recorded: "Payment recorded",
+    payment_voided: "Payment voided",
+    paid_until_changed: "Paid until date changed",
     agency_suspended: "Agency suspended",
     agency_reactivated: "Agency reactivated",
     org_created: "Organization created",
@@ -204,4 +225,28 @@ export async function getAccessRequests(): Promise<AccessRequest[]> {
     .limit(500);
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export type Payment = {
+  id: string;
+  amount: number;
+  currency: string;
+  paid_on: string;
+  period_end: string;
+  method: "cash" | "bank_transfer" | "card" | "other";
+  note: string | null;
+  created_at: string;
+  voided_at: string | null;
+};
+
+export async function getAgencyPayments(orgId: string): Promise<Payment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("billing_payments")
+    .select("id, amount, currency, paid_on, period_end, method, note, created_at, voided_at")
+    .eq("org_id", orgId)
+    .order("paid_on", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((p) => ({ ...p, amount: Number(p.amount) })) as Payment[];
 }

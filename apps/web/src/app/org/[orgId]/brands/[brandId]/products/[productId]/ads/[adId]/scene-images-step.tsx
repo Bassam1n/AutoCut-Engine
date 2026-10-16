@@ -845,7 +845,8 @@ function ArchivedImagesStrip({
   return (
     <div className="flex flex-col gap-1.5 border-t border-border pt-3">
       <span className="text-xs font-medium text-foreground-muted">
-        Archived images — archived when scene {scene.idx + 1}&apos;s image was replaced by Tweak/Rework
+        Archived images: replaced by Tweak or Rework on scene {scene.idx + 1}. Deleted after 90 days unless restored or
+        saved to the Library.
       </span>
       <div className="flex flex-wrap gap-2">
         {archivedImages.map((asset) => {
