@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Tutorial } from "@/lib/tutorials";
 
@@ -76,14 +76,42 @@ export function TutorialPlayer({
   }, [index, tutorial.steps]);
 
   const box = step.box;
-  // Tooltip beside the hotspot: to its right when there's room, else to its left.
-  const placeRight = box ? box.x + box.w < 0.6 : true;
-  const tooltipStyle: React.CSSProperties = box
-    ? {
-        top: `${Math.min(Math.max(box.y * 100, 2), 62)}%`,
-        ...(placeRight ? { left: `${(box.x + box.w) * 100 + 1.5}%` } : { right: `${(1 - box.x) * 100 + 1.5}%` }),
+  const frameRef = useRef<HTMLDivElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null);
+
+  // Place the tooltip where it fits inside the screenshot: right of the
+  // hotspot, then left, then below, then above; always clamped in frame.
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    const tip = tipRef.current;
+    if (!frame || !tip) return;
+    const place = () => {
+      const W = frame.clientWidth;
+      const H = frame.clientHeight;
+      const tw = tip.offsetWidth;
+      const th = tip.offsetHeight;
+      const m = 10;
+      const gap = 16;
+      const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi));
+      if (!box) {
+        setTipPos({ left: (W - tw) / 2, top: (H - th) / 2 });
+        return;
       }
-    : { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
+      const bx = box.x * W, by = box.y * H, bw = box.w * W, bh = box.h * H;
+      const top = clamp(by, m, H - th - m);
+      const left = clamp(bx, m, W - tw - m);
+      if (bx + bw + gap + tw <= W - m) setTipPos({ left: bx + bw + gap, top });
+      else if (bx - gap - tw >= m) setTipPos({ left: bx - gap - tw, top });
+      else if (by + bh + gap + th <= H - m) setTipPos({ left, top: by + bh + gap });
+      else if (by - gap - th >= m) setTipPos({ left, top: by - gap - th });
+      else setTipPos({ left: W - tw - m, top: H - th - m });
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(frame);
+    return () => ro.disconnect();
+  }, [box, index, finished]);
 
   const appHref = tutorial.appPath?.replace("{org}", orgId) ?? null;
 
@@ -113,7 +141,7 @@ export function TutorialPlayer({
           </button>
         </div>
 
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-background shadow-2xl">
+        <div ref={frameRef} className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-background shadow-2xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={step.image} alt="" className="absolute inset-0 h-full w-full object-cover" draggable={false} />
 
@@ -150,8 +178,9 @@ export function TutorialPlayer({
 
           {!finished && (
             <div
-              className="absolute hidden w-[min(320px,38%)] flex-col gap-3 rounded-2xl bg-accent p-4 text-white shadow-xl sm:flex"
-              style={tooltipStyle}
+              ref={tipRef}
+              className="absolute hidden w-[min(320px,38%)] flex-col gap-3 rounded-2xl bg-accent p-4 text-white shadow-xl transition-[left,top] duration-300 sm:flex"
+              style={tipPos ? { left: tipPos.left, top: tipPos.top } : { left: 0, top: 0, visibility: "hidden" }}
             >
               <TooltipBody step={step} index={index} total={total} onPrev={prev} onNext={next} />
             </div>
