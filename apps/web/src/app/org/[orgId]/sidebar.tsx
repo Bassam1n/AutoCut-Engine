@@ -36,6 +36,7 @@ export function Sidebar({
     // gate this behind info.isAdmin the way Team/Provider keys are.
     { href: `/org/${orgId}/library`, label: "Library" },
     { href: `/org/${orgId}/styles`, label: "Styles" },
+    { href: `/org/${orgId}/tutorials`, label: "Tutorials" },
     // Spend & guard: owner and admin only; the audit log and Resume
     // inside it are owner-only.
     ...(info.isAdmin ? [{ href: `/org/${orgId}/settings/spend`, label: "Spend & guard" }] : []),

@@ -4,6 +4,7 @@ import { requireOrgMember } from "@/lib/auth";
 import { getSidebarInfo } from "./sidebar-data";
 import { Sidebar } from "./sidebar";
 import { BillingBanner } from "./billing-banner";
+import { WelcomePrompt } from "./tutorials/welcome-prompt";
 
 export default function OrgLayout({
   children,
@@ -56,5 +57,10 @@ async function GatedSidebar({
 async function GatedBillingBanner({ params }: { params: Promise<{ orgId: string }> }) {
   const { orgId } = await params;
   await requireOrgMember(orgId);
-  return <BillingBanner orgId={orgId} />;
+  return (
+    <>
+      <BillingBanner orgId={orgId} />
+      <WelcomePrompt orgId={orgId} />
+    </>
+  );
 }

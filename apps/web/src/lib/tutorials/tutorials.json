@@ -1,0 +1,839 @@
+{
+  "capturedAt": "2026-10-16",
+  "tutorials": [
+    {
+      "id": "workspace-tour",
+      "title": "Tour your workspace",
+      "description": "The board, brands, products, library, styles and rules: what each part of AutoCut is for.",
+      "category": "Getting started",
+      "roles": [
+        "owner",
+        "admin",
+        "editor"
+      ],
+      "minutes": 4,
+      "appPath": "/org/{org}/board",
+      "steps": [
+        {
+          "image": "/tutorials/workspace-tour/01.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.16,
+            "w": 0.1611,
+            "h": 0.0444
+          },
+          "title": "Your board",
+          "body": "Every ad your agency is working on is a card here, from To do to Done. Filter by person or brand at the top.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/02.jpg",
+          "box": {
+            "x": 0.6438,
+            "y": 0.1906,
+            "w": 0.1353,
+            "h": 0.0222
+          },
+          "title": "Work moves left to right",
+          "body": "When an editor finishes an ad it moves to In review. Approving it sends it to Done; requesting changes sends it back.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/03.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.1067,
+            "w": 0.1611,
+            "h": 0.04
+          },
+          "title": "Start a new ad",
+          "body": "Every ad starts here. You pick the brand and product, and AutoCut walks you through the rest.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/04.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.2089,
+            "w": 0.1611,
+            "h": 0.0444
+          },
+          "title": "Open Brands",
+          "body": "Click Brands to see your clients.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/workspace-tour/05.jpg",
+          "box": {
+            "x": 0.5986,
+            "y": 0.1956,
+            "w": 0.2458,
+            "h": 0.0822
+          },
+          "title": "One workspace per client",
+          "body": "Each brand keeps its own audience, products, recurring cast and provider keys, so clients never mix.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/06.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.2578,
+            "w": 0.1611,
+            "h": 0.0444
+          },
+          "title": "Open Products",
+          "body": "Click Products.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/workspace-tour/07.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.3378,
+            "w": 0.5,
+            "h": 0.0889
+          },
+          "title": "Everything you advertise",
+          "body": "Each product has its facts, size and reference photos. Generated images use them to get the product right.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/08.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.3556,
+            "w": 0.1611,
+            "h": 0.0444
+          },
+          "title": "Open the Library",
+          "body": "Click Library.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/workspace-tour/09.jpg",
+          "box": {
+            "x": 0.2556,
+            "y": 0.0844,
+            "w": 0.6778,
+            "h": 0.0311
+          },
+          "title": "Your best work, reusable",
+          "body": "Save strong images and videos here and drop them into any future ad. Library items are never auto-deleted.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/10.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.4044,
+            "w": 0.1611,
+            "h": 0.0444
+          },
+          "title": "Open Styles",
+          "body": "Click Styles.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/workspace-tour/11.jpg",
+          "box": {
+            "x": 0.2556,
+            "y": 0.0844,
+            "w": 0.6778,
+            "h": 0.0311
+          },
+          "title": "Looks you can pick",
+          "body": "A style is a visual look, like Creator UGC or Anatomy Glow. Every style shows a preview of what it produces.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/12.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.5511,
+            "w": 0.1611,
+            "h": 0.0444
+          },
+          "title": "Open Rules",
+          "body": "Click Rules.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/workspace-tour/13.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.0844,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "AutoCut learns from feedback",
+          "body": "When your team gives the same feedback more than once, it becomes a rule, so the mistake isn't repeated in new ads.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/14.jpg",
+          "box": {
+            "x": 0.1528,
+            "y": 0.0444,
+            "w": 0.0222,
+            "h": 0.0356
+          },
+          "title": "Notifications",
+          "body": "The bell tells you when something needs your review, was approved, or needs changes.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/workspace-tour/15.jpg",
+          "box": {
+            "x": 0.025,
+            "y": 0.8128,
+            "w": 0.15,
+            "h": 0.0489
+          },
+          "title": "Your profile",
+          "body": "Change your name and photo here, and switch between light and dark mode below. You're all set.",
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "set-up-brand",
+      "title": "Set up a client brand",
+      "description": "Add a brand and fill in the context that keeps every script and image on brand.",
+      "category": "Getting started",
+      "roles": [
+        "owner",
+        "admin"
+      ],
+      "minutes": 3,
+      "appPath": "/org/{org}/brands/new",
+      "steps": [
+        {
+          "image": "/tutorials/set-up-brand/01.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.1422,
+            "w": 0.0714,
+            "h": 0.04
+          },
+          "title": "Add a brand",
+          "body": "Click New brand to add a client.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/set-up-brand/02.jpg",
+          "box": {
+            "x": 0.4111,
+            "y": 0.2089,
+            "w": 0.3667,
+            "h": 0.0422
+          },
+          "title": "Name it",
+          "body": "Use the client's brand name. You can add a logo link below it.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/03.jpg",
+          "box": {
+            "x": 0.4111,
+            "y": 0.4544,
+            "w": 0.3667,
+            "h": 0.0644
+          },
+          "title": "Who it speaks to",
+          "body": "Describe the buyer in a sentence or two. Scripts and hooks are written for this audience.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/04.jpg",
+          "box": {
+            "x": 0.4111,
+            "y": 0.5656,
+            "w": 0.3667,
+            "h": 0.0644
+          },
+          "title": "How it sounds",
+          "body": "Warm, direct, playful: the voice every script is written in.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/05.jpg",
+          "box": {
+            "x": 0.4111,
+            "y": 0.6767,
+            "w": 0.3667,
+            "h": 0.0644
+          },
+          "title": "Facts that must stay true",
+          "body": "Anything that must never be misstated, like ingredients, sizes or guarantees.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/06.jpg",
+          "box": {
+            "x": 0.4111,
+            "y": 0.7878,
+            "w": 0.3667,
+            "h": 0.0644
+          },
+          "title": "How it looks",
+          "body": "Colours, light and mood. This steers every generated image.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/07.jpg",
+          "box": {
+            "x": 0.4111,
+            "y": 0.8989,
+            "w": 0.3667,
+            "h": 0.0644
+          },
+          "title": "What the frame should contain",
+          "body": "Describe what should be in the shot instead of listing don'ts. Image models tend to draw whatever a 'no' list names.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/08.jpg",
+          "box": {
+            "x": 0.4111,
+            "y": 0.6378,
+            "w": 0.3667,
+            "h": 0.0644
+          },
+          "title": "Claims rules",
+          "body": "What can and can't be claimed. Scripts follow this, which keeps ads compliant.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/09.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.3678,
+            "w": 0.1154,
+            "h": 0.04
+          },
+          "title": "Audience profiles",
+          "body": "Add the brand's buyer types, with their problems and the words they use. Scripts are written to them.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/10.jpg",
+          "box": {
+            "x": 0.4793,
+            "y": 0.2089,
+            "w": 0.069,
+            "h": 0.0356
+          },
+          "title": "Recurring characters",
+          "body": "The cast library keeps the same people looking the same across every ad for this brand.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/set-up-brand/11.jpg",
+          "box": {
+            "x": 0.5538,
+            "y": 0.2089,
+            "w": 0.0546,
+            "h": 0.0356
+          },
+          "title": "Brand keys",
+          "body": "A brand can use its own provider keys, so its AI costs are billed separately from your other clients.",
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "add-product",
+      "title": "Add a product and photos",
+      "description": "Product facts, real size and reference photos: the three things that make generated images accurate.",
+      "category": "Getting started",
+      "roles": [
+        "owner",
+        "admin",
+        "editor"
+      ],
+      "minutes": 2,
+      "appPath": "/org/{org}/products",
+      "steps": [
+        {
+          "image": "/tutorials/add-product/01.jpg",
+          "box": {
+            "x": 0.7639,
+            "y": 0.0622,
+            "w": 0.0805,
+            "h": 0.04
+          },
+          "title": "New product",
+          "body": "Add products here or from inside a brand.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/add-product/02.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.3378,
+            "w": 0.5,
+            "h": 0.0889
+          },
+          "title": "Open a product",
+          "body": "Click a product to see what it holds.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/add-product/03.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.4289,
+            "w": 0.5,
+            "h": 0.0422
+          },
+          "title": "What it is",
+          "body": "One clear line. Claude uses it in every script and image prompt for this product.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/add-product/04.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.5178,
+            "w": 0.5,
+            "h": 0.0422
+          },
+          "title": "Real size",
+          "body": "This keeps the product the right size next to hands and people in generated images.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/add-product/05.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.88,
+            "w": 0.5,
+            "h": 0.0222
+          },
+          "title": "Reference photos",
+          "body": "Upload 3 or 4 clean photos from different angles, on a plain background. Every image of this product is generated from them.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/add-product/06.jpg",
+          "box": {
+            "x": 0.8047,
+            "y": 0.0622,
+            "w": 0.0398,
+            "h": 0.04
+          },
+          "title": "Its ads",
+          "body": "Every ad made for this product lives here, including archived ones.",
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "ad-pipeline",
+      "title": "Make an ad, step by step",
+      "description": "From brief to export: scripts, scene plan, cast, storyboard, images, voiceover and videos.",
+      "category": "Creating ads",
+      "roles": [
+        "owner",
+        "admin",
+        "editor"
+      ],
+      "minutes": 3,
+      "appPath": "/org/{org}/board",
+      "steps": [
+        {
+          "image": "/tutorials/ad-pipeline/01.jpg",
+          "box": {
+            "x": 0.0194,
+            "y": 0.1067,
+            "w": 0.1611,
+            "h": 0.04
+          },
+          "title": "Create an ad",
+          "body": "Click Create ad.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/ad-pipeline/02.jpg",
+          "box": {
+            "x": 0.3667,
+            "y": 0.4433,
+            "w": 0.2667,
+            "h": 0.1133
+          },
+          "title": "Pick the brand and product",
+          "body": "Choose the brand, then the product. Next you pick the ad's main style and AutoCut opens the ad.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/03.jpg",
+          "box": {
+            "x": 0.2,
+            "y": 0.0644,
+            "w": 0.7889,
+            "h": 0.0548
+          },
+          "title": "Every ad has these steps",
+          "body": "Here's a finished ad. Steps run left to right; once a step is done you can click back to it any time.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/04.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.5659,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "1. Scripts",
+          "body": "Set the length and Claude writes three script variants from the brand, audience and product. Pick one or regenerate.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/05.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.577,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "2. Fine-tune the brief",
+          "body": "Tighten the hook, the offer and the tone before the script is split into scenes.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/06.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.577,
+            "w": 0.426,
+            "h": 0.0311
+          },
+          "title": "3. Scene plan",
+          "body": "The script becomes short scenes, each with its line. Split, merge or reorder them, then lock the plan.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/07.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.577,
+            "w": 0.3878,
+            "h": 0.0311
+          },
+          "title": "4. Concept and cast",
+          "body": "Pick a creative concept and the people in it. Cast members keep the same face in every scene.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/08.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.577,
+            "w": 0.4119,
+            "h": 0.0311
+          },
+          "title": "5. Storyboard",
+          "body": "Each scene gets a shot description and its own style. Claude can suggest the best style per scene.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/09.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.577,
+            "w": 0.415,
+            "h": 0.0311
+          },
+          "title": "6. Scene images",
+          "body": "Generate 1 to 4 images per scene and keep the best. You see the cost before anything runs.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/10.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.577,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "7. Voiceover",
+          "body": "Record the script in a voice you choose, with captions timed to it.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/11.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.577,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "8. Scene videos",
+          "body": "Each image becomes a short clip. Videos take a few minutes and keep running if you close the tab.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/ad-pipeline/12.jpg",
+          "box": {
+            "x": 0.5399,
+            "y": 0.7215,
+            "w": 0.0695,
+            "h": 0.0311
+          },
+          "title": "9. Export",
+          "body": "Download everything or pick exactly what you want, then finish the cut in your editing tool. That's the whole ad.",
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "styles-and-claude",
+      "title": "Mix styles and ask Claude",
+      "description": "Give each scene its own look, let Claude suggest styles, and ask Claude to write a scene's image prompt.",
+      "category": "Creating ads",
+      "roles": [
+        "owner",
+        "admin",
+        "editor"
+      ],
+      "minutes": 2,
+      "appPath": null,
+      "steps": [
+        {
+          "image": "/tutorials/styles-and-claude/01.jpg",
+          "box": {
+            "x": 0.7468,
+            "y": 0.8681,
+            "w": 0.0887,
+            "h": 0.0333
+          },
+          "title": "Let Claude suggest styles",
+          "body": "Claude reads every scene and suggests the best style for each, with a reason. Nothing changes until you apply it.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/styles-and-claude/02.jpg",
+          "box": {
+            "x": 0.5038,
+            "y": 0.9626,
+            "w": 0.1331,
+            "h": 0.0333
+          },
+          "title": "A style per scene",
+          "body": "Each scene can have its own look, like a UGC hook, then a 3D anatomy cutaway, then a clean product shot. Click to change it.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/styles-and-claude/03.jpg",
+          "box": {
+            "x": 0.5038,
+            "y": 0.2159,
+            "w": 0.3194,
+            "h": 0.5689
+          },
+          "title": "Pick by preview",
+          "body": "Every style shows what it looks like. Pick one for just this scene, or keep the ad's style.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/styles-and-claude/04.jpg",
+          "box": {
+            "x": 0.3535,
+            "y": 0.8581,
+            "w": 0.4087,
+            "h": 0.0644
+          },
+          "title": "Ask Claude in plain words",
+          "body": "Say what a scene should show, like \"scene 6 is the CTA, write a prompt for it\". Claude writes it in that scene's style.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/styles-and-claude/05.jpg",
+          "box": {
+            "x": 0.7692,
+            "y": 0.4837,
+            "w": 0.0634,
+            "h": 0.0333
+          },
+          "title": "See a scene's prompt",
+          "body": "Each scene card has its image prompt. Click Edit prompt.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/styles-and-claude/06.jpg",
+          "box": {
+            "x": 0.3563,
+            "y": 0.9509,
+            "w": 0.1388,
+            "h": 0.0178
+          },
+          "title": "The prompt lands here",
+          "body": "Claude's prompt appears in this box. Edit it if you like, save, then regenerate the scene. Nothing is generated until you do.",
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "review-approve",
+      "title": "Review and approve",
+      "description": "How ads move through review, and how reviewers request changes scene by scene.",
+      "category": "Team and review",
+      "roles": [
+        "owner",
+        "admin"
+      ],
+      "minutes": 1,
+      "appPath": "/org/{org}/board",
+      "steps": [
+        {
+          "image": "/tutorials/review-approve/01.jpg",
+          "box": {
+            "x": 0.641,
+            "y": 0.2244,
+            "w": 0.1847,
+            "h": 0.0836
+          },
+          "title": "Open a task in review",
+          "body": "Click a card in In review.",
+          "click": true
+        },
+        {
+          "image": "/tutorials/review-approve/02.jpg",
+          "box": {
+            "x": 0.516,
+            "y": 0.7133,
+            "w": 0.0467,
+            "h": 0.0178
+          },
+          "title": "Open the review",
+          "body": "A task in review links to its ad and review round. Review now opens it.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/review-approve/03.jpg",
+          "box": {
+            "x": 0.7395,
+            "y": 0.2967,
+            "w": 0.1376,
+            "h": 0.0333
+          },
+          "title": "Review scene by scene",
+          "body": "Approve each scene or flag it with a note. One click sends the whole review: everything approved moves the task to Done, any flag sends it back to Revisions.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/review-approve/04.jpg",
+          "box": {
+            "x": 0.3563,
+            "y": 0.4226,
+            "w": 0.4764,
+            "h": 0.0222
+          },
+          "title": "The editor sees exactly what to fix",
+          "body": "Flagged scenes come back highlighted, with the reviewer's note already in the feedback box.",
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "team-and-roles",
+      "title": "Invite your team",
+      "description": "Invite editors and admins, choose their role, and decide which brands they work on.",
+      "category": "Team and review",
+      "roles": [
+        "owner"
+      ],
+      "minutes": 1,
+      "appPath": "/org/{org}/team",
+      "steps": [
+        {
+          "image": "/tutorials/team-and-roles/01.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.0844,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "Your team",
+          "body": "Everyone in your agency, their role and their brands.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/team-and-roles/02.jpg",
+          "box": {
+            "x": 0.359,
+            "y": 0.8522,
+            "w": 0.3485,
+            "h": 0.0422
+          },
+          "title": "Invite by email",
+          "body": "Enter their work email. They get a sign-in link; if email is slow you can share a link instead.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/team-and-roles/03.jpg",
+          "box": {
+            "x": 0.5906,
+            "y": 0.4778,
+            "w": 0.0528,
+            "h": 0.0333
+          },
+          "title": "Pick a role",
+          "body": "Admins manage brands and see spend. Users work on the brands you assign them.",
+          "click": false
+        }
+      ]
+    },
+    {
+      "id": "keys-spend-plan",
+      "title": "Keys, spend and your plan",
+      "description": "Connect your AI providers, set spend limits, and see your plan's usage.",
+      "category": "Settings",
+      "roles": [
+        "owner"
+      ],
+      "minutes": 1,
+      "appPath": "/org/{org}/settings/keys",
+      "steps": [
+        {
+          "image": "/tutorials/keys-spend-plan/01.jpg",
+          "box": {
+            "x": 0.3896,
+            "y": 0.2122,
+            "w": 0.0503,
+            "h": 0.0267
+          },
+          "title": "Connect your providers",
+          "body": "AutoCut runs on your own AI keys, so you pay providers directly with no markup. Anthropic writes, kie.ai or fal.ai make images and video.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/keys-spend-plan/02.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.0844,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "Spend guard",
+          "body": "AutoCut tracks the last 24 hours of spend. It warns you at one limit and pauses generation at another, until an owner resumes it.",
+          "click": false
+        },
+        {
+          "image": "/tutorials/keys-spend-plan/03.jpg",
+          "box": {
+            "x": 0.3444,
+            "y": 0.0844,
+            "w": 0.5,
+            "h": 0.0311
+          },
+          "title": "Plan and usage",
+          "body": "Your plan, renewal date, and how many seats, brands and storage you're using.",
+          "click": false
+        }
+      ]
+    }
+  ]
+}
