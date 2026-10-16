@@ -59,56 +59,71 @@ async function GatedCanvas({
   params: Promise<{ orgId: string; brandId: string; productId: string; adId: string }>;
 }) {
   const { orgId, brandId, productId, adId } = await params;
-  await requireOrgMember(orgId);
-
-  const ad = await getAd(orgId, productId, adId);
+  // Every read below is independent, so they run together: one
+  // round trip to the database per stage instead of ~25 in a row.
+  const [, ad] = await Promise.all([requireOrgMember(orgId), getAd(orgId, productId, adId)]);
   if (!ad) notFound();
 
-  // Save any scene video that finished while nobody had this page open
-  // (the runner doesn't save results itself until it's redeployed), so
-  // a paid generation is never left orphaned.
-  await recoverUnsavedSceneVideos(createServiceClient(), orgId, adId);
+  const [
+    scripts,
+    scenes,
+    concept,
+    castMembers,
+    brandCastMembers,
+    imageModelOptions,
+    videoModelOptions,
+    // A provider counts as "has a key" if EITHER this brand or the org
+    // has one saved, matching get_brand_secret_value's fallback chain.
+    providersWithKeys,
+    sceneImagesBySceneId,
+    archivedSceneImagesBySceneId,
+    sceneFeedbackImagesBySceneId,
+    sceneVoiceoversBySceneId,
+    activeSceneVoiceoverJobsBySceneId,
+    adSpend,
+    revision,
+    visibleStyles,
+  ] = await Promise.all([
+    getAdScripts(orgId, adId),
+    getScenes(orgId, adId),
+    getConcept(orgId, adId),
+    getCastMembers(orgId, adId),
+    getBrandCastMembers(orgId, brandId),
+    getModelOptions("image"),
+    getModelOptions("video"),
+    getProvidersWithKeys(orgId, brandId),
+    getSceneImages(orgId, adId),
+    getArchivedSceneImages(orgId, adId),
+    getSceneFeedbackImages(orgId, adId),
+    getSceneVoiceovers(orgId, adId),
+    getActiveSceneVoiceoverJobs(orgId, adId),
+    getAdSpend(orgId, adId),
+    getActiveRevision(orgId, adId),
+    getVisibleStyles(orgId),
+    // Save any scene video that finished while nobody had this page
+    // open, before the video reads below, so a paid generation is never
+    // left orphaned.
+    recoverUnsavedSceneVideos(createServiceClient(), orgId, adId),
+  ]);
 
-  const scripts = await getAdScripts(orgId, adId);
-  const scenes = await getScenes(orgId, adId);
-  const concept = await getConcept(orgId, adId);
-  const castMembers = await getCastMembers(orgId, adId);
-  const brandCastMembers = await getBrandCastMembers(orgId, brandId);
+  const [sceneVideosBySceneId, archivedSceneVideosBySceneId, activeSceneVideoJobsBySceneId] = await Promise.all([
+    getSceneVideos(orgId, adId),
+    getArchivedSceneVideos(orgId, adId),
+    getActiveSceneVideoJobs(orgId, adId),
+  ]);
+
+  const sceneSpendBySceneId = groupSpendByScene(adSpend);
 
   const assetIds = [
     ...castMembers.flatMap((c) => [c.ref_asset_id, c.sheet_asset_id]),
     ...brandCastMembers.flatMap((c) => [c.ref_asset_id, c.sheet_asset_id]),
   ].filter((id): id is string => id !== null);
-  const assetUrls = await getAssetSignedUrls(orgId, assetIds);
-
-  const imageModelOptions = await getModelOptions("image");
-  const videoModelOptions = await getModelOptions("video");
-  // A provider counts as "has a key" if EITHER this brand or the org
-  // has one saved — matches get_brand_secret_value's own fallback
-  // chain exactly, so this warning never contradicts what generation
-  // will actually do.
-  // list_providers_with_keys is member-readable; the full key listings
-  // are owner-only (org) and owner/admin-only (brand), so users and
-  // admins couldn't load this page through them.
-  const providersWithKeys = await getProvidersWithKeys(orgId, brandId);
-
-  const sceneImagesBySceneId = await getSceneImages(orgId, adId);
-  const archivedSceneImagesBySceneId = await getArchivedSceneImages(orgId, adId);
-  const sceneFeedbackImagesBySceneId = await getSceneFeedbackImages(orgId, adId);
-  const sceneVideosBySceneId = await getSceneVideos(orgId, adId);
-  const archivedSceneVideosBySceneId = await getArchivedSceneVideos(orgId, adId);
-  const activeSceneVideoJobsBySceneId = await getActiveSceneVideoJobs(orgId, adId);
-  const sceneVoiceoversBySceneId = await getSceneVoiceovers(orgId, adId);
-  const activeSceneVoiceoverJobsBySceneId = await getActiveSceneVoiceoverJobs(orgId, adId);
-
-  const sceneSpendBySceneId = groupSpendByScene(await getAdSpend(orgId, adId));
 
   const sceneImagePaths = [
     ...Object.values(sceneImagesBySceneId).flat(),
     ...Object.values(archivedSceneImagesBySceneId).flat(),
     ...Object.values(sceneFeedbackImagesBySceneId).flat(),
   ].map((a) => a.storage_path);
-  const sceneImageUrls = await getAssetSignedUrlsByPath(sceneImagePaths);
 
   const voiceoverAssetPaths = Object.values(sceneVoiceoversBySceneId).flatMap((vo) => [
     vo.voAsset.storage_path,
@@ -119,20 +134,19 @@ async function GatedCanvas({
     ...Object.values(sceneVideosBySceneId).flat(),
     ...Object.values(archivedSceneVideosBySceneId).flat(),
   ].map((a) => a.storage_path);
-  // Scene videos needs both its own video asset URLs AND every scene
-  // image URL (the "pick which image to animate" picker) — merged
-  // into one signed-URL map so scene-videos-step.tsx can look either
-  // kind of asset's storage_path up through a single prop. The
-  // per-scene voiceover audio/SRT paths ride along in the same map
-  // too, since the Voiceover step is rendered from studio-canvas.tsx
-  // alongside Scene videos and both read from assetUrls.
-  const sceneVideoUrls = {
-    ...sceneImageUrls,
-    ...(await getAssetSignedUrlsByPath([...sceneVideoPaths, ...voiceoverAssetPaths])),
-  };
 
-  const revision = await getActiveRevision(orgId, adId);
-  const styles = (await getVisibleStyles(orgId))
+  const [assetUrls, sceneImageUrls, videoAndVoiceUrls] = await Promise.all([
+    getAssetSignedUrls(orgId, assetIds),
+    getAssetSignedUrlsByPath(sceneImagePaths),
+    getAssetSignedUrlsByPath([...sceneVideoPaths, ...voiceoverAssetPaths]),
+  ]);
+
+  // Scene videos needs its own video URLs AND every scene image URL
+  // (the "pick which image to animate" picker), plus the voiceover
+  // audio/SRT paths, all looked up through one map.
+  const sceneVideoUrls = { ...sceneImageUrls, ...videoAndVoiceUrls };
+
+  const styles = visibleStyles
     .filter((s) => s.active)
     .map((s) => ({ id: s.id, name: s.name, preview_image_url: s.preview_image_url }));
 

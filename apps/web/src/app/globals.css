@@ -304,3 +304,11 @@ body {
     }
   }
 }
+
+/* Top navigation progress bar (components/nav-progress.tsx): races to
+   ~30% then crawls, so a slow page still visibly moves. */
+@keyframes nav-progress {
+  0% { width: 0%; }
+  10% { width: 35%; }
+  100% { width: 92%; }
+}

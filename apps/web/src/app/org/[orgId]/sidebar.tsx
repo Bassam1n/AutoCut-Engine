@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +21,10 @@ export function Sidebar({
   info: SidebarInfo;
 }) {
   const pathname = usePathname();
+  // The clicked item lights up straight away, before the page arrives;
+  // it's only honoured while we're still on the page it was clicked from.
+  const [pending, setPending] = useState<{ href: string; from: string } | null>(null);
+  const activePath = pending && pending.from === pathname ? pending.href : pathname;
 
   const links = [
     // Task board for owners/admins; users get only their own tasks.
@@ -83,11 +88,12 @@ export function Sidebar({
 
       <nav className="flex flex-1 flex-col gap-1">
         {links.map((link) => {
-          const isActive = pathname.startsWith(link.href);
+          const isActive = activePath.startsWith(link.href);
           return (
             <Link
               key={link.href}
               href={link.href}
+              onClick={() => setPending({ href: link.href, from: pathname })}
               className={`rounded-full px-3.5 py-2.5 text-sm font-medium transition-all ${
                 isActive
                   ? "bg-accent-soft text-accent shadow-[var(--shadow-soft)]"
