@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { requireOrgMember, canCreateAds } from "@/lib/auth";
+import { requireOrgMember, requireOrgOwner, canCreateAds } from "@/lib/auth";
 import { getAd } from "./ads-data";
 import { getAdScripts } from "./scripts-data";
 import { getScenes } from "./scenes-data";
@@ -170,6 +170,69 @@ export async function archiveAd(
     .eq("id", adId);
 
   if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads`);
+  return { ok: true };
+}
+
+/**
+ * Deletes an archived ad for good: its files (images, videos,
+ * voiceovers, feedback uploads) and every row that belongs to it.
+ * Owner only, and only once archived, so it is always a second
+ * deliberate step. Spend history and board tasks are kept (their ad
+ * link is cleared). Refused while one of its images is a brand cast
+ * reference or a style reference, since deleting it would break those.
+ */
+export async function deleteAdPermanently(
+  orgId: string,
+  brandId: string,
+  productId: string,
+  adId: string
+): Promise<ActionResult> {
+  const user = await requireOrgOwner(orgId);
+  const service = createServiceClient();
+
+  const { data: ad } = await service
+    .from("ads")
+    .select("id, archived, name")
+    .eq("org_id", orgId)
+    .eq("id", adId)
+    .maybeSingle();
+  if (!ad) return { ok: false, error: "Ad not found." };
+  if (!ad.archived) return { ok: false, error: "Archive the ad first, then delete it." };
+
+  const { data: blockers, error: blockersError } = await service.rpc("ad_delete_blockers", {
+    target_org_id: orgId,
+    target_ad_id: adId,
+  });
+  if (blockersError) return { ok: false, error: blockersError.message };
+  if (blockers && blockers.length > 0) {
+    const names = (blockers as { reason: string; detail: string }[])
+      .map((b) => `${b.reason === "style" ? "style" : "cast member"} "${b.detail}"`)
+      .join(", ");
+    return { ok: false, error: `An image from this ad is used by ${names}. Replace that reference first.` };
+  }
+
+  const { data: files, error: filesError } = await service.rpc("ad_storage_paths", {
+    target_org_id: orgId,
+    target_ad_id: adId,
+  });
+  if (filesError) return { ok: false, error: filesError.message };
+  const paths = [...new Set(((files ?? []) as { path: string }[]).map((f) => f.path))];
+  for (let i = 0; i < paths.length; i += 500) {
+    const { error } = await service.storage.from("renders").remove(paths.slice(i, i + 500));
+    if (error) return { ok: false, error: `Could not delete the ad's files: ${error.message}` };
+  }
+
+  const { error: deleteError } = await service.from("ads").delete().eq("org_id", orgId).eq("id", adId);
+  if (deleteError) return { ok: false, error: deleteError.message };
+
+  await service.from("audit_log").insert({
+    org_id: orgId,
+    actor: user.id,
+    action: "ad_deleted",
+    target: ad.name || adId,
+  });
 
   revalidatePath(`/org/${orgId}/brands/${brandId}/products/${productId}/ads`);
   return { ok: true };

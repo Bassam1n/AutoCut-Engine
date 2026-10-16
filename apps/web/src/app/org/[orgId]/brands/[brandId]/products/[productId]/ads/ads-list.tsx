@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { renameAd, archiveAd, unarchiveAd, duplicateAd } from "./ads-actions";
+import { renameAd, archiveAd, unarchiveAd, duplicateAd, deleteAdPermanently } from "./ads-actions";
 import { Modal } from "@/components/modal";
 import type { Ad } from "./ads-data";
 import { buttonVariants } from "@/components/button";
@@ -13,6 +13,7 @@ export function AdsList({
   productId,
   ads,
   canCreate,
+  canDelete,
 }: {
   orgId: string;
   brandId: string;
@@ -20,6 +21,8 @@ export function AdsList({
   ads: Ad[];
   /** member_can_create_ads(): hides New ad and Duplicate when false. */
   canCreate: boolean;
+  /** Owner only: permanent delete on archived ads. */
+  canDelete: boolean;
 }) {
   const [showArchived, setShowArchived] = useState(false);
   const visible = ads.filter((ad) => (showArchived ? ad.archived : !ad.archived));
@@ -46,6 +49,13 @@ export function AdsList({
         </button>
       </div>
 
+      {showArchived && visible.length > 0 && (
+        <p className="text-xs text-foreground-muted">
+          Archived ads keep their text, but their images and videos are deleted 90 days after archiving, except anything
+          saved to the Library.{canDelete ? " Delete permanently to free the space now." : ""}
+        </p>
+      )}
+
       {visible.length === 0 ? (
         <p className="text-sm text-foreground-muted">
           {showArchived ? "No archived ads." : "No ads yet for this product."}
@@ -60,6 +70,7 @@ export function AdsList({
               productId={productId}
               ad={ad}
               canDuplicate={canCreate}
+              canDelete={canDelete}
             />
           ))}
         </div>
@@ -74,14 +85,17 @@ function AdRow({
   productId,
   ad,
   canDuplicate,
+  canDelete,
 }: {
   orgId: string;
   brandId: string;
   productId: string;
   ad: Ad;
   canDuplicate: boolean;
+  canDelete: boolean;
 }) {
   const [isRenaming, setIsRenaming] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -155,9 +169,32 @@ function AdRow({
           >
             {ad.archived ? "Unarchive" : "Archive"}
           </button>
+          {ad.archived && canDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setIsDeleting(true);
+              }}
+              disabled={isPending}
+              className="btn-secondary btn-sm text-danger"
+            >
+              Delete permanently
+            </button>
+          )}
         </div>
       </Link>
       {error && <p className="text-xs text-danger">{error}</p>}
+      {isDeleting && (
+        <DeleteModal
+          orgId={orgId}
+          brandId={brandId}
+          productId={productId}
+          ad={ad}
+          displayName={displayName}
+          onClose={() => setIsDeleting(false)}
+        />
+      )}
       {isRenaming && (
         <RenameModal
           orgId={orgId}
@@ -218,6 +255,58 @@ function RenameModal({
           className="btn-primary btn-sm self-start"
         >
           {isPending ? "Saving..." : "Save"}
+        </button>
+        {error && <p className="text-sm text-danger">{error}</p>}
+      </form>
+    </Modal>
+  );
+}
+
+function DeleteModal({
+  orgId,
+  brandId,
+  productId,
+  ad,
+  displayName,
+  onClose,
+}: {
+  orgId: string;
+  brandId: string;
+  productId: string;
+  ad: Ad;
+  displayName: string;
+  onClose: () => void;
+}) {
+  const [confirmText, setConfirmText] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const ready = confirmText.trim().toLowerCase() === "delete";
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ready) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteAdPermanently(orgId, brandId, productId, ad.id);
+      if (result.ok) onClose();
+      else setError(result.error);
+    });
+  }
+
+  return (
+    <Modal title="Delete ad permanently" onClose={onClose}>
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <p className="text-sm">
+          <span className="font-medium">{displayName}</span> and everything in it will be deleted: scripts, storyboard,
+          images, videos, voiceovers and any Library items saved from it. This can&apos;t be undone.
+        </p>
+        <p className="text-xs text-foreground-muted">Spend history and board tasks are kept.</p>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium">Type DELETE to confirm</span>
+          <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoFocus disabled={isPending} className="field" />
+        </label>
+        <button type="submit" disabled={!ready || isPending} className="btn-primary btn-sm self-start bg-danger">
+          {isPending ? "Deleting..." : "Delete permanently"}
         </button>
         {error && <p className="text-sm text-danger">{error}</p>}
       </form>

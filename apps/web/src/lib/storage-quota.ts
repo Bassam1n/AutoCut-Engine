@@ -15,5 +15,5 @@ export async function storageFullError(orgId: string): Promise<string | null> {
   const { data: used, error } = await service.rpc("org_storage_bytes", { target_org_id: orgId });
   if (error) return null;
   if (Number(used) < quota * 1e9) return null;
-  return `Your agency has used its ${quota} GB of storage. Remove old ads or ask your owner about a bigger plan (Settings, Plan & usage).`;
+  return `Your agency has used its ${quota} GB of storage. Your owner can permanently delete archived ads to free space, or move to a bigger plan.`;
 }

@@ -168,6 +168,7 @@ export function describeAction(action: string): string {
     agency_registered: "Agency registered",
     agency_updated: "Agency details updated",
     plan_changed: "Plan changed",
+    ad_deleted: "Ad deleted permanently",
     payment_recorded: "Payment recorded",
     payment_voided: "Payment voided",
     paid_until_changed: "Paid until date changed",

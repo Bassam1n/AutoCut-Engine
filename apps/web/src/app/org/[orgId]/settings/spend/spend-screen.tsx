@@ -14,6 +14,9 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   member_seat_deactivated: "Member seat deactivated",
   invite_revoked: "Invite revoked",
   seat_cap_changed: "Seat cap changed",
+  ad_deleted: "Ad deleted permanently",
+  plan_changed: "Plan changed",
+  payment_recorded: "Payment recorded",
 };
 
 function auditActionLabel(action: string): string {

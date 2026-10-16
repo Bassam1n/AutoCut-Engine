@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireOrgMember, canCreateAds } from "@/lib/auth";
+import { requireOrgMember, canCreateAds, isOrgOwner } from "@/lib/auth";
 import { getProduct } from "../../products-data";
 import { getAds } from "./ads-data";
 import { AdsList } from "./ads-list";
@@ -74,12 +74,13 @@ async function GatedAds({
   const product = await getProduct(orgId, brandId, productId);
   if (!product) notFound();
 
-  const [ads, canCreate] = await Promise.all([
+  const [ads, canCreate, isOwner] = await Promise.all([
     getAds(orgId, productId, { includeArchived: true }),
     canCreateAds(orgId),
+    isOrgOwner(orgId),
   ]);
 
   return (
-    <AdsList orgId={orgId} brandId={brandId} productId={productId} ads={ads} canCreate={canCreate} />
+    <AdsList orgId={orgId} brandId={brandId} productId={productId} ads={ads} canCreate={canCreate} canDelete={isOwner} />
   );
 }
