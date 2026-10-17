@@ -294,10 +294,16 @@ function RunView({ run }: { run: AutoEditRunView }) {
         )}
       </div>
       {run.instruction && <p className="text-xs text-foreground-muted">“{run.instruction}”</p>}
-      {run.status !== "failed" && run.status !== "cancelled" && (
-        <ol className="flex flex-wrap gap-1.5 text-[11px]">
-          {steps.map((s, i) => (
-            <li key={s} className={`rounded-full border px-2 py-0.5 ${i < idx || run.status === "succeeded" ? "border-accent/40 text-foreground" : i === idx ? "border-accent bg-accent/10 font-medium" : "border-border text-foreground-muted"}`}>
+      {/* Progress while it runs; a finished run is summed up by its header. */}
+      {isActiveStatus(run.status) && (
+        <ol className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          {steps.filter((s) => s !== "succeeded").map((s, i) => (
+            <li
+              key={s}
+              aria-current={i === idx ? "step" : undefined}
+              className={`rounded-full border px-2 py-0.5 ${i < idx ? "border-border text-foreground-muted" : i === idx ? "border-accent bg-accent/10 font-medium" : "border-dashed border-border text-foreground-muted/70"}`}
+            >
+              {i < idx ? "✓ " : ""}
               {s === "reviewing" && run.status === "fixing" ? STATUS_LABEL.fixing : STATUS_LABEL[s]}
               {s === "queued" && run.status === "queued" && run.queuePosition ? ` (#${run.queuePosition} in line)` : ""}
             </li>
