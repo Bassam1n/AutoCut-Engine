@@ -31,6 +31,7 @@ type Verdict = "approved" | "changes";
 export function ReviewForm({
   orgId,
   roundId,
+  adId,
   status,
   adName,
   adHref,
@@ -40,6 +41,7 @@ export function ReviewForm({
 }: {
   orgId: string;
   roundId: string;
+  adId: string;
   status: "open" | "changes_requested" | "approved";
   adName: string;
   adHref: string;
@@ -75,7 +77,7 @@ export function ReviewForm({
       comment: verdicts[s.id].comment,
     }));
     startTransition(async () => {
-      const result = await submitReview(orgId, roundId, note, list);
+      const result = await submitReview(orgId, roundId, adId, note, list);
       if (result.ok) router.push(`/org/${orgId}/board`);
       else setError(result.error);
     });

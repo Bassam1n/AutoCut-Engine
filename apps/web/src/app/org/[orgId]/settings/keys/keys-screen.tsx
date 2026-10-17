@@ -4,6 +4,7 @@ import { Suspense, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ApiKeyProvider, OrgSecretRow } from "./keys-data";
 import { saveProviderKey } from "./keys-actions";
+import { sameOriginPath } from "@/lib/safe-next";
 import { buttonVariants } from "@/components/button";
 
 /**
@@ -109,7 +110,7 @@ function ProviderRow({
       if (result.ok) {
         setValue("");
         setEditing(false);
-        const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+        const returnTo = sameOriginPath(new URLSearchParams(window.location.search).get("returnTo"), window.location.origin);
         if (returnTo) router.push(returnTo);
       } else {
         setError(result.error);

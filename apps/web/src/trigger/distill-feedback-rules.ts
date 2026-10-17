@@ -161,7 +161,9 @@ async function distillForOrg(supabase: ReturnType<typeof getServiceClient>, orgI
   }
 
   for (const cluster of clusters) {
-    const members = cluster.member_indices
+    // Dedupe indices so one feedback row listed twice can't pass the
+    // "appears at least twice" threshold on its own.
+    const members = [...new Set(cluster.member_indices)]
       .map((i) => pending[i])
       .filter((m): m is PendingFeedbackRow => m !== undefined);
 
@@ -178,12 +180,15 @@ async function distillForOrg(supabase: ReturnType<typeof getServiceClient>, orgI
     }));
     const { scope, scopeId } = decideScope(scopeKeys);
 
-    const countResult = await supabase
+    // The cap is per scope target (one brand, one product...), not per
+    // scope kind, or one brand's rules would block every other brand.
+    const capQuery = supabase
       .from("rules")
       .select("id", { count: "exact", head: true })
       .eq("org_id", orgId)
       .eq("scope", scope)
       .eq("active", true);
+    const countResult = await (scopeId === null ? capQuery.is("scope_id", null) : capQuery.eq("scope_id", scopeId));
 
     const capDecision = decideCapAction(countResult.count ?? 0);
     if (capDecision.action === "skip_at_cap") {
@@ -234,7 +239,7 @@ async function getPendingFeedbackForOrg(
 ): Promise<PendingFeedbackRow[]> {
   const { data, error } = await supabase
     .from("feedback_events")
-    .select("id, org_id, text, ad_id, scene_id, ads!inner(brand_id, style_id), scenes(product_id)")
+    .select("id, org_id, text, ad_id, scene_id, ads!inner(brand_id, style_id), scenes(ad_id, product_id)")
     .eq("org_id", orgId)
     .eq("remember", true)
     .is("rule_id", null);
@@ -243,14 +248,17 @@ async function getPendingFeedbackForOrg(
 
   return (data ?? []).map((row) => {
     const ad = row.ads as unknown as { brand_id: string | null; style_id: string | null } | null;
-    const scene = row.scenes as unknown as { product_id: string | null } | null;
+    // Only trust the scene's product when the scene belongs to this
+    // row's ad; scene_id on its own could point at another brand's scene.
+    const scene = row.scenes as unknown as { ad_id: string; product_id: string | null } | null;
+    const sceneProduct = scene && scene.ad_id === row.ad_id ? scene.product_id : null;
     return {
       id: row.id as string,
       org_id: row.org_id as string,
       text: row.text as string,
       brand_id: ad?.brand_id ?? null,
       style_id: ad?.style_id ?? null,
-      product_id: scene?.product_id ?? null,
+      product_id: sceneProduct,
     };
   });
 }

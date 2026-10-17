@@ -12,10 +12,13 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
  * Owner/admin submits a review round. submit_review() records each
  * scene's verdict and moves the task to Revisions (any change requested)
  * or Done (all approved); the database trigger notifies the assignee.
+ * adId is the ad the reviewer was shown; submit_review refuses the
+ * round if the task's ad has changed since.
  */
 export async function submitReview(
   orgId: string,
   roundId: string,
+  adId: string,
   overallNote: string,
   verdicts: SceneVerdict[]
 ): Promise<ActionResult> {
@@ -30,6 +33,7 @@ export async function submitReview(
   const supabase = await createClient();
   const { data: round, error } = await supabase.rpc("submit_review", {
     target_round_id: roundId,
+    expected_ad_id: adId,
     review_note: overallNote,
     verdicts: verdicts.map((v) => ({ scene_id: v.sceneId, verdict: v.verdict, comment: v.comment })),
   });

@@ -36,9 +36,9 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
   // here rather than letting that string reach an end user with no
   // context for what "org_paused" means (spec §5.10's error
   // vocabulary names SPEND_LIMIT as the code for exactly this case).
-  const { error: claimError } = await supabase.rpc("claim_paid_job", {
-    target_org_id: orgId,
-  });
+  const claimError =
+    (await supabase.rpc("claim_paid_job", { target_org_id: orgId })).error ??
+    (brandId ? (await supabase.rpc("assert_brand_active", { target_org_id: orgId, target_brand_id: brandId })).error : null);
   if (claimError) {
     throw new LlmCallError(spendLimitMessage(claimError.message), "SPEND_LIMIT", claimError);
   }

@@ -142,6 +142,7 @@ async function GatedReview({ params }: { params: Promise<{ orgId: string; roundI
       <ReviewForm
         orgId={orgId}
         roundId={round.id}
+        adId={ad.id}
         status={round.status as "open" | "changes_requested" | "approved"}
         adName={adName}
         adHref={`/org/${orgId}/brands/${ad.brand_id}/products/${ad.product_id}/ads/${ad.id}`}

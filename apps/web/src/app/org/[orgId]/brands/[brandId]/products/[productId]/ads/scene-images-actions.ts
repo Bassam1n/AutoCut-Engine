@@ -155,7 +155,9 @@ export async function assembleSceneReferences(
   const approvedRefAssetIds = castMembers.filter((c) => c.approved && c.ref_asset_id).map((c) => c.ref_asset_id as string);
   let castUrls: string[] = [];
   if (approvedRefAssetIds.length > 0) {
-    const { data: castAssets } = await service
+    // Through RLS, not the service client: ref_asset_id is editor-
+    // writable, so only files the caller can already see get signed.
+    const { data: castAssets } = await supabase
       .from("assets")
       .select("storage_path")
       .eq("org_id", orgId)

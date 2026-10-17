@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { listMyNotifications, markNotificationsRead, type NotificationItem } from "./notifications-actions";
+import { sameOriginPath } from "@/lib/safe-next";
 
 function timeAgo(iso: string): string {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
@@ -54,7 +55,9 @@ export function NotificationBell({ orgId, unreadCount }: { orgId: string; unread
     setOpen(false);
     startTransition(async () => {
       if (!item.read_at) await markNotificationsRead(orgId, [item.id]);
-      if (item.link) router.push(item.link);
+      // Stored links are only ever followed within the app.
+      const link = sameOriginPath(item.link, window.location.origin);
+      if (link) router.push(link);
     });
   }
 

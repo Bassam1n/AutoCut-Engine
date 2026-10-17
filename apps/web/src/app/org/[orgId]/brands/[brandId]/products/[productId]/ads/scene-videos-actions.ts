@@ -390,6 +390,22 @@ async function startGenerationWithMotionPlan(
 
   const priceUnit = priceUnitForVideoEndpoint(model.endpoint);
 
+  // The model and duration come from the browser, so check them here:
+  // run-provider-job refuses unpriced models too, but failing early
+  // gives the editor the reason straight away.
+  if (!Number.isFinite(durationS) || durationS <= 0 || durationS > 120) {
+    return { ok: false, error: "Invalid video duration." };
+  }
+  const { count: pricedRows } = await createServiceClient()
+    .from("price_table")
+    .select("model", { count: "exact", head: true })
+    .eq("provider", model.provider)
+    .eq("model", model.endpoint)
+    .gt("usd", 0);
+  if (!pricedRows) {
+    return { ok: false, error: "This model has no price set yet, so it can't be run. Pick another model." };
+  }
+
   // Per-scene reference audio (user-confirmed requirement: "use
   // reference audio while creating the video"), OPTIONAL — a scene
   // with no current voiceover generates its video exactly as before,
@@ -486,11 +502,8 @@ function sceneVideoExtraParams(endpoint: string, speaks: boolean): Record<string
  * price_table's real `unit` column per video endpoint (spec §4: "Price
  * on every paid button, computed from the price table") — matches
  * supabase/seed_price_table.sql's actual rows exactly, not a single
- * invented unit applied to everything. kling-v2-1-pro/kling-v3-pro-i2v
- * (fal) have no price_table row at all yet (a pre-existing seed gap,
- * not introduced here) — defaulted to "per_video" so a price lookup
- * miss falls back to run-provider-job.ts's existing "$0 if the row is
- * missing" behavior rather than guessing a wrong unit.
+ * invented unit applied to everything. Endpoints without a price row
+ * are refused (here and in run-provider-job.ts) until one is added.
  */
 function priceUnitForVideoEndpoint(endpoint: string): "per_image" | "per_video" | "per_second" {
   switch (endpoint) {

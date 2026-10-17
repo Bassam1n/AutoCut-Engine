@@ -267,10 +267,10 @@ export async function setStyleReference(
  * Spec §5.9: "Drag a library item into a scene." Dropping a library
  * image onto a scene creates a NEW versioned assets row for that
  * scene (kind='image', same nextVersion pattern generateSceneImages
- * uses) pointing at the SAME storage_path as the library item's
- * underlying asset — the file is reused, never re-uploaded or
- * duplicated in Storage, exactly like saveToLibrary() never
- * duplicates the asset going INTO the library.
+ * uses) backed by a COPY of the library item's file under this ad's
+ * own renders folder. It used to point at the same storage_path, but
+ * file cleanup (archive purge, permanent ad delete) works per path, so
+ * a shared path could delete a file the library still needed.
  *
  * Chosen over re-scoping the existing asset's own scene_id/ad_id in
  * place: a library item's underlying asset may already be scoped to
@@ -323,16 +323,27 @@ export async function addLibraryItemToScene(
     .limit(1);
   const nextVersion = (existingVersions?.[0]?.version ?? 0) + 1;
 
+  // Copy the file under this ad instead of pointing at the library's
+  // file. Shared paths let the archive purge or a permanent ad delete
+  // remove a file that the library (or another ad) still uses.
+  const ext = sourceAsset.storage_path.split(".").pop() ?? "png";
+  const copyPath = `${orgId}/renders/${adId}/library-${crypto.randomUUID()}.${ext}`;
+  const { error: copyError } = await service.storage.from("renders").copy(sourceAsset.storage_path, copyPath);
+  if (copyError) return { ok: false, error: copyError.message };
+
   const { error: insertError } = await service.from("assets").insert({
     org_id: orgId,
     ad_id: adId,
     scene_id: sceneId,
     kind: "image",
     version: nextVersion,
-    storage_path: sourceAsset.storage_path,
+    storage_path: copyPath,
     source: "library",
   });
-  if (insertError) return { ok: false, error: insertError.message };
+  if (insertError) {
+    await service.storage.from("renders").remove([copyPath]);
+    return { ok: false, error: insertError.message };
+  }
 
   // Same side effect generateSceneImages() has: a new current image
   // for this scene makes any existing video stale.

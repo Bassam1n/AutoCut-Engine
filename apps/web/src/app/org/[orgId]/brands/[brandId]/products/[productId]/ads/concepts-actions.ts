@@ -505,7 +505,10 @@ export async function generateCharacterSheet(
   const service = createServiceClient();
   let referenceUrls: string[] | undefined;
   if (castMember.ref_asset_id) {
-    const { data: asset } = await service
+    // Look the asset up through RLS: ref_asset_id is writable by
+    // editors, so the service client must only sign files the caller
+    // could already see.
+    const { data: asset } = await supabase
       .from("assets")
       .select("storage_path")
       .eq("org_id", orgId)

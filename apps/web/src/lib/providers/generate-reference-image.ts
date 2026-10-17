@@ -53,11 +53,24 @@ export async function generateReferenceImage(params: {
   // ..." exception string is translated to plain language here
   // rather than passed straight through — see spend-limit-message.ts
   // for why.
-  const { error: claimError } = await service.rpc("claim_paid_media_job", {
-    target_org_id: params.orgId,
-  });
+  const claimError =
+    (await service.rpc("claim_paid_media_job", { target_org_id: params.orgId })).error ??
+    (await service.rpc("assert_brand_active", { target_org_id: params.orgId, target_brand_id: params.brandId })).error;
   if (claimError) {
     return { ok: false, error: spendLimitMessage(claimError.message), code: "SPEND_LIMIT" };
+  }
+
+  // Refuse unpriced models before submitting: a $0 estimate would let
+  // paid images run without counting toward the org's spend stop.
+  const { data: price } = await service
+    .from("price_table")
+    .select("usd")
+    .eq("provider", params.provider)
+    .eq("model", params.endpoint)
+    .eq("unit", "per_image")
+    .maybeSingle();
+  if (!price || !(Number(price.usd) > 0)) {
+    return { ok: false, error: "This model has no price set yet, so it can't be run. Pick another model." };
   }
 
   const { data: apiKey, error: keyError } = await service.rpc("get_brand_secret_value", {
@@ -163,23 +176,14 @@ export async function generateReferenceImage(params: {
 
   // Recorded after the asset exists, same ordering as llm.call() —
   // spend reflects work actually done, never charged for a failed
-  // attempt. price_table (supabase/seed_price_table.sql) holds the
-  // per-image estimate; 0 if it's ever missing rather than throwing,
-  // since a pricing-table gap shouldn't block a successful generation.
-  const { data: price } = await service
-    .from("price_table")
-    .select("usd")
-    .eq("provider", params.provider)
-    .eq("model", params.endpoint)
-    .eq("unit", "per_image")
-    .maybeSingle();
+  // attempt. The per-image price was looked up before submitting.
 
   await service.rpc("record_spend_event", {
     target_org_id: params.orgId,
     target_ad_id: params.attributedAdId ?? null,
     target_provider: params.provider,
     target_model: params.endpoint,
-    target_usd_est: price?.usd ?? 0,
+    target_usd_est: Number(price.usd),
     target_kind: params.spendKind,
   });
 

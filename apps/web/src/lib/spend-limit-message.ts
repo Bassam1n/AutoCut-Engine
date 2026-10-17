@@ -29,6 +29,9 @@ export function spendLimitMessage(rawMessage: string): string {
   if (/^org_storage_full:/.test(rawMessage)) {
     return "Your agency's storage is full, so new images and videos can't be saved. Your owner can permanently delete archived ads to free space, or move to a bigger plan.";
   }
+  if (/^brand_archived:/.test(rawMessage)) {
+    return "This brand is archived, so nothing new can be generated for it. An admin can unarchive it from the brand's settings.";
+  }
   if (/^org_suspended:/.test(rawMessage)) {
     return "This agency's account is suspended. Contact AutoCut to restore it.";
   }

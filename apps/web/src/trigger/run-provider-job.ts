@@ -82,11 +82,35 @@ export const runProviderJob = task({
     // spending anything — a paused org's job shouldn't be able to
     // reach a real provider call just because it came in through the
     // async runner instead of the inline path.
-    const { error: claimError } = await supabase.rpc("claim_paid_media_job", { target_org_id: jobPayload.orgId });
+    const claimError =
+      (await supabase.rpc("claim_paid_media_job", { target_org_id: jobPayload.orgId })).error ??
+      (jobPayload.brandId
+        ? (await supabase.rpc("assert_brand_active", { target_org_id: jobPayload.orgId, target_brand_id: jobPayload.brandId })).error
+        : null);
     if (claimError) {
       await failJob(supabase, job.id, "SPEND_LIMIT", spendLimitMessage(claimError.message));
       return { ok: false };
     }
+
+    // Price the job before anything is submitted. A model with no
+    // price_table row is refused outright: recording $0 for it would let
+    // paid generations run without ever counting toward the org's spend
+    // stop. The unit comes from price_table, not from the payload.
+    const estimate = await estimateJobUsd(supabase, jobPayload);
+    if (!estimate.ok) {
+      await failJob(supabase, job.id, "VALIDATION", estimate.error);
+      return { ok: false };
+    }
+    const recordSpend = () =>
+      supabase.rpc("record_spend_event", {
+        target_org_id: jobPayload.orgId,
+        target_ad_id: job.ad_id,
+        target_provider: jobPayload.provider,
+        target_model: jobPayload.endpoint,
+        target_usd_est: estimate.usd,
+        target_kind: jobPayload.spendKind,
+        target_scene_id: job.scene_id,
+      });
 
     // brandId may be absent on a job queued before this field existed —
     // get_brand_secret_value requires a non-null target_brand_id, so a
@@ -152,7 +176,10 @@ export const runProviderJob = task({
 
       const { data: current } = await supabase.from("jobs").select("cancel_requested").eq("id", job.id).maybeSingle();
       if (current?.cancel_requested) {
-        await adapter.cancel(externalTaskId);
+        const cancelResult = await adapter.cancel(externalTaskId);
+        // Unless the provider confirms it stopped the task, assume it ran
+        // (and was billed) and count it toward the spend stop.
+        if (!(cancelResult.ok && cancelResult.status === "cancelled")) await recordSpend();
         await supabase.from("jobs").update({ status: "cancelled" }).eq("id", job.id);
         return { ok: false, cancelled: true };
       }
@@ -182,50 +209,7 @@ export const runProviderJob = task({
       return { ok: false };
     }
 
-    // Priced from price_table (spec §4), same as every other paid call
-    // in this app — 0 if a row is ever missing rather than throwing,
-    // since a pricing-table gap shouldn't block a successful
-    // generation that already happened and cost real money.
-    //
-    // price_table.usd is a PER-UNIT rate, not a flat charge — for
-    // "per_second" rows (e.g. bytedance/seedance-2-5 at $0.19/sec)
-    // this must be multiplied by the actual video duration, or every
-    // video gets billed as if it were 1 second long regardless of how
-    // long it actually ran. This was missed when video pricing units
-    // were added in M7: the original (image-only) version of this
-    // code only ever dealt with "per_image" rows, where usd IS the
-    // flat charge, so `target_usd_est: price?.usd` was correct then
-    // and silently wrong the moment "per_second" rows started being
-    // used — caught from a real $2.52 kie.ai dashboard charge
-    // recording as $0.19 in spend_events (should have been ~$1.26 for
-    // a 2-generation session with real durations, still short of
-    // $2.52 exactly because kie.ai's own billed seconds don't always
-    // match the requested duration param 1:1 — this fix uses the
-    // REQUESTED duration as the best available estimate, not kie.ai's
-    // actual billed seconds, which this app has no way to read back).
-    const { data: price } = await supabase
-      .from("price_table")
-      .select("usd")
-      .eq("provider", jobPayload.provider)
-      .eq("model", jobPayload.endpoint)
-      .eq("unit", jobPayload.priceUnit)
-      .maybeSingle();
-
-    const requestedDurationSeconds = Number(jobPayload.extra?.duration ?? NaN);
-    const usdEstimate =
-      jobPayload.priceUnit === "per_second" && Number.isFinite(requestedDurationSeconds)
-        ? (price?.usd ?? 0) * requestedDurationSeconds
-        : (price?.usd ?? 0);
-
-    await supabase.rpc("record_spend_event", {
-      target_org_id: jobPayload.orgId,
-      target_ad_id: job.ad_id,
-      target_provider: jobPayload.provider,
-      target_model: jobPayload.endpoint,
-      target_usd_est: usdEstimate,
-      target_kind: jobPayload.spendKind,
-      target_scene_id: job.scene_id,
-    });
+    await recordSpend();
 
     await supabase
       .from("jobs")
@@ -265,3 +249,37 @@ function getServiceClient() {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
+
+type PricedPayload = {
+  provider: string;
+  endpoint: string;
+  priceUnit: "per_image" | "per_video" | "per_second";
+  extra?: Record<string, unknown>;
+};
+
+/**
+ * price_table.usd is a PER-UNIT rate, not a flat charge: "per_second"
+ * rows are multiplied by the requested duration (the best estimate
+ * available; kie.ai's billed seconds can't be read back). The payload's
+ * priceUnit only picks between rows when a model has several units.
+ */
+async function estimateJobUsd(
+  supabase: ReturnType<typeof getServiceClient>,
+  jobPayload: PricedPayload
+): Promise<{ ok: true; usd: number } | { ok: false; error: string }> {
+  const { data: rows } = await supabase
+    .from("price_table")
+    .select("usd, unit")
+    .eq("provider", jobPayload.provider)
+    .eq("model", jobPayload.endpoint);
+  const priced = (rows ?? []).filter((r) => Number(r.usd) > 0);
+  const row = priced.find((r) => r.unit === jobPayload.priceUnit) ?? (priced.length === 1 ? priced[0] : undefined);
+  if (!row) return { ok: false, error: "This model has no price set yet, so it can't be run. Pick another model." };
+  if (row.unit !== "per_second") return { ok: true, usd: Number(row.usd) };
+  const seconds = Number(jobPayload.extra?.duration ?? NaN);
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 120) {
+    return { ok: false, error: "Invalid video duration." };
+  }
+  return { ok: true, usd: Number(row.usd) * seconds };
+}
+

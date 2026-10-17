@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/safe-next";
 
 /**
  * Fallback for sign-in links that used the implicit flow instead of PKCE
@@ -25,10 +26,17 @@ import { createClient } from "@/lib/supabase/client";
  * param. Kept as a permanent fallback rather than a one-off fix, since
  * nothing stops a future manually-generated link (or a different
  * Supabase client somewhere) from producing the same shape again.
+ *
+ * The tokens in a fragment could have been planted by anyone who sent
+ * the link, so nothing is installed until the person sees which account
+ * the link signs into and presses Continue (same idea as /auth/accept),
+ * and `next` is only ever followed within this site.
  */
 export function ImplicitFlowBridge({ next }: { next: string }) {
   const router = useRouter();
-  const [state, setState] = useState<"working" | "error">("working");
+  const [state, setState] = useState<"working" | "confirm" | "error">("working");
+  const [email, setEmail] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<{ access_token: string; refresh_token: string } | null>(null);
 
   useEffect(() => {
     // The whole body runs as a genuinely async task (not just a .then()
@@ -51,35 +59,45 @@ export function ImplicitFlowBridge({ next }: { next: string }) {
       const params = new URLSearchParams(hash.slice(1));
       const access_token = params.get("access_token");
       const refresh_token = params.get("refresh_token");
+      // Drop the tokens from the address bar either way.
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
 
       if (!access_token || !refresh_token) {
         setState("error");
         return;
       }
 
-      const supabase = createClient();
-      const { error } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
-      });
+      // Ask Supabase who the token belongs to (verified server-side)
+      // without installing it yet.
+      const { data, error } = await createClient().auth.getUser(access_token);
       if (cancelled) return;
-
-      if (error) {
+      if (error || !data.user) {
         setState("error");
         return;
       }
-
-      await supabase.rpc("accept_invite");
-      if (cancelled) return;
-
-      router.replace(next);
+      setEmail(data.user.email ?? null);
+      setTokens({ access_token, refresh_token });
+      setState("confirm");
     }
 
     run();
     return () => {
       cancelled = true;
     };
-  }, [next, router]);
+  }, []);
+
+  async function continueSignIn() {
+    if (!tokens) return;
+    setState("working");
+    const supabase = createClient();
+    const { error } = await supabase.auth.setSession(tokens);
+    if (error) {
+      setState("error");
+      return;
+    }
+    await supabase.rpc("accept_invite");
+    router.replace(safeNext(next, window.location.origin));
+  }
 
   if (state === "error") {
     return (
@@ -91,6 +109,33 @@ export function ImplicitFlowBridge({ next }: { next: string }) {
           </a>
           .
         </p>
+      </main>
+    );
+  }
+
+  if (state === "confirm") {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm space-y-4 text-center">
+          <p className="text-sm text-foreground-muted">
+            This link signs you in as{" "}
+            <span className="font-medium text-foreground">{email ?? "an account without an email"}</span>.
+          </p>
+          <button
+            type="button"
+            onClick={continueSignIn}
+            className="btn-primary w-full"
+          >
+            Continue
+          </button>
+          <p className="text-xs text-foreground-muted">
+            Not you?{" "}
+            <a href="/login" className="font-medium text-accent hover:underline">
+              Sign in with your own email
+            </a>
+            .
+          </p>
+        </div>
       </main>
     );
   }

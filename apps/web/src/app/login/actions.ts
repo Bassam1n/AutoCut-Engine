@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { sendSignInEmail } from "@/lib/send-signin-email";
 
 export type LoginResult = { ok: true } | { ok: false; error: string };
@@ -20,6 +20,9 @@ export type LoginResult = { ok: true } | { ok: false; error: string };
  * gets sent, and the UI shows the same "check your email" outcome
  * either way so this never confirms or denies whether a given email is
  * a real account (standard practice against account enumeration).
+ * The check runs with the service client because the RPC is not
+ * callable from the browser (anyone could otherwise ask it directly),
+ * and a failed send for a known email gets the same generic outcome.
  */
 export async function requestMagicLink(formData: FormData): Promise<LoginResult> {
   const email = String(formData.get("email") ?? "").trim();
@@ -28,9 +31,7 @@ export async function requestMagicLink(formData: FormData): Promise<LoginResult>
     return { ok: false, error: "Enter a valid email address." };
   }
 
-  const supabase = await createClient();
-
-  const { data: isKnown, error: checkError } = await supabase.rpc(
+  const { data: isKnown, error: checkError } = await createServiceClient().rpc(
     "email_is_known_for_signin",
     { check_email: email }
   );
@@ -47,7 +48,8 @@ export async function requestMagicLink(formData: FormData): Promise<LoginResult>
 
   const sent = await sendSignInEmail(email);
   if (!sent.ok) {
-    return { ok: false, error: sent.error };
+    console.error("sign-in email failed:", sent.error);
+    return { ok: false, error: "Something went wrong. Try again." };
   }
 
   return { ok: true };
