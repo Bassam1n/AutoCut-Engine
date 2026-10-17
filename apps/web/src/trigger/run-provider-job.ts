@@ -1,6 +1,6 @@
 import { task, wait, logger } from "@trigger.dev/sdk";
 import { createClient } from "@supabase/supabase-js";
-import { adapterFor } from "@/lib/providers/adapter-for";
+import { adapterFor, isPlanCreditProvider } from "@/lib/providers/adapter-for";
 import { ProviderAdapterError, type ProviderAdapter, type SubmitParams } from "@/lib/providers/types";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
 import { finalizeSceneVideo } from "@/lib/jobs/finalize-scene-video";
@@ -66,7 +66,7 @@ export const runProviderJob = task({
     const jobPayload = job.payload as {
       orgId: string;
       brandId?: string;
-      provider: "fal" | "kie" | "higgsfield";
+      provider: "fal" | "kie" | "higgsfield_plan";
       endpoint: string;
       prompt: string;
       referenceImageUrls?: string[];
@@ -95,13 +95,19 @@ export const runProviderJob = task({
     // price_table row is refused outright: recording $0 for it would let
     // paid generations run without ever counting toward the org's spend
     // stop. The unit comes from price_table, not from the payload.
-    const estimate = await estimateJobUsd(supabase, jobPayload);
+    // Plan-credit jobs (a connected Higgsfield account) spend the client's
+    // own subscription credits, so there is no per-call price to look up.
+    // How they count toward the dollar spend stop is still to be decided;
+    // until then they are not recorded as dollar spend.
+    const planCredits = isPlanCreditProvider(jobPayload.provider);
+    const estimate = planCredits ? ({ ok: true, usd: 0 } as const) : await estimateJobUsd(supabase, jobPayload);
     if (!estimate.ok) {
       await failJob(supabase, job.id, "VALIDATION", estimate.error);
       return { ok: false };
     }
-    const recordSpend = () =>
-      supabase.rpc("record_spend_event", {
+    const recordSpend = async () => {
+      if (planCredits) return;
+      await supabase.rpc("record_spend_event", {
         target_org_id: jobPayload.orgId,
         target_ad_id: job.ad_id,
         target_provider: jobPayload.provider,
@@ -110,6 +116,7 @@ export const runProviderJob = task({
         target_kind: jobPayload.spendKind,
         target_scene_id: job.scene_id,
       });
+    };
 
     // brandId may be absent on a job queued before this field existed —
     // get_brand_secret_value requires a non-null target_brand_id, so a
@@ -128,11 +135,34 @@ export const runProviderJob = task({
         });
 
     if (keyError || !apiKey) {
-      await failJob(supabase, job.id, "KEY_INVALID", `No ${jobPayload.provider} key saved for this brand or org.`);
+      await failJob(
+        supabase,
+        job.id,
+        "KEY_INVALID",
+        planCredits
+          ? "No Higgsfield account is connected for this brand. Connect one on the brand's Keys page."
+          : `No ${jobPayload.provider} key saved for this brand or org.`
+      );
       return { ok: false };
     }
 
-    const adapter: ProviderAdapter = adapterFor(jobPayload.provider, apiKey);
+    let adapter: ProviderAdapter;
+    try {
+      adapter = adapterFor(jobPayload.provider, apiKey, async (secret) => {
+        // A refreshed Higgsfield login must be saved or the next job can't sign in.
+        if (!jobPayload.brandId) return;
+        const { error } = await supabase.rpc("service_update_higgsfield_plan_secret", {
+          target_org_id: jobPayload.orgId,
+          target_brand_id: jobPayload.brandId,
+          secret_value: secret,
+        });
+        if (error) logger.error("Could not save refreshed Higgsfield login", { jobId: job.id, error: error.message });
+      });
+    } catch (err) {
+      const message = err instanceof ProviderAdapterError ? err.message : "Could not read the saved provider key.";
+      await failJob(supabase, job.id, "KEY_INVALID", message);
+      return { ok: false };
+    }
 
     const submitParams: SubmitParams = {
       kind: job.kind === "generate_scene_video" ? "video" : "image",

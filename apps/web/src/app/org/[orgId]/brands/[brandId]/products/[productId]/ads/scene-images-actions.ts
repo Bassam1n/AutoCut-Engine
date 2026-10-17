@@ -32,7 +32,7 @@ import { getAccessibleAd, getAccessibleAsset, isPathUnder, sceneBelongsToAd } fr
 // poll-loop cap.
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-export type ModelChoice = { provider: "fal" | "kie" | "higgsfield"; endpoint: string };
+export type ModelChoice = { provider: "fal" | "kie" | "higgsfield_plan"; endpoint: string };
 
 /**
  * Reference-image assembly cap for the actual image-generation call

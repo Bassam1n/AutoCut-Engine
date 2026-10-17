@@ -14,7 +14,7 @@ import { RewriteFeedbackPromptSchema } from "@/lib/claude/schemas/rewrite-feedba
 import { CheckReworkDiffSchema } from "@/lib/claude/schemas/check-rework-diff";
 import { AnalyzeVideoFeedbackSchema } from "@/lib/claude/schemas/analyze-video-feedback";
 import { generateReferenceImage } from "@/lib/providers/generate-reference-image";
-import { HIGGSFIELD_ENDPOINTS } from "@/lib/providers/higgsfield";
+import { HIGGSFIELD_PLAN_MODELS } from "@/lib/providers/higgsfield-plan-adapter";
 import { startProviderJob } from "@/lib/jobs/run-job";
 import { pickVideoFeedbackStillAsset } from "@/lib/feedback/target-asset";
 import { getAd } from "./ads-data";
@@ -588,8 +588,8 @@ export async function submitVideoFeedback(
 
 /** price_table unit lookup for video feedback's provider submission — same mapping scene-videos-actions.ts's priceUnitForVideoEndpoint uses, duplicated here rather than exported from that file since that function is not currently exported and this file shouldn't widen that module's public surface just for one shared switch. */
 function videoPriceUnitFor(endpoint: string): "per_image" | "per_video" | "per_second" {
-  // Every Higgsfield video model is billed per second.
-  if (HIGGSFIELD_ENDPOINTS[endpoint]?.kind === "video") return "per_second";
+  // Higgsfield plan video models bill credits by duration.
+  if (HIGGSFIELD_PLAN_MODELS[endpoint]?.kind === "video") return "per_second";
   switch (endpoint) {
     case "kling-3.0/video":
     case "minimax-h3/image-to-video":

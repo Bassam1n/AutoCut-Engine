@@ -14,7 +14,7 @@ export type PreviewAccess = {
   providersWithKeys: string[];
 };
 
-type Model = { provider: "fal" | "kie" | "higgsfield"; endpoint: string };
+type Model = { provider: "fal" | "kie" | "higgsfield_plan"; endpoint: string };
 
 export function StyleGallery({
   orgId,

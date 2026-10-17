@@ -1,6 +1,6 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
-import { adapterFor } from "./adapter-for";
+import { adapterFor, isPlanCreditProvider } from "./adapter-for";
 import { ProviderAdapterError, type ProviderAdapter } from "./types";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
 
@@ -35,7 +35,7 @@ export async function generateReferenceImage(params: {
   brandId: string;
   prompt: string;
   referenceImageUrls?: string[];
-  provider: "fal" | "kie" | "higgsfield";
+  provider: "fal" | "kie" | "higgsfield_plan";
   endpoint: string;
   extra?: Record<string, unknown>;
   /** Ad this generation is attributed to for cost breakdown, when it has one — cast reference generation is triggered from inside an ad's Studio flow even though the resulting asset is brand-scoped, not ad-scoped. */
@@ -60,16 +60,23 @@ export async function generateReferenceImage(params: {
   }
 
   // Refuse unpriced models before submitting: a $0 estimate would let
-  // paid images run without counting toward the org's spend stop.
-  const { data: price } = await service
-    .from("price_table")
-    .select("usd")
-    .eq("provider", params.provider)
-    .eq("model", params.endpoint)
-    .eq("unit", "per_image")
-    .maybeSingle();
-  if (!price || !(Number(price.usd) > 0)) {
-    return { ok: false, error: "This model has no price set yet, so it can't be run. Pick another model." };
+  // paid images run without counting toward the org's spend stop. Plan
+  // credits (a connected Higgsfield account) have no per-call price and
+  // aren't counted in dollars yet; see run-provider-job.ts.
+  const planCredits = isPlanCreditProvider(params.provider);
+  let priceUsd = 0;
+  if (!planCredits) {
+    const { data: price } = await service
+      .from("price_table")
+      .select("usd")
+      .eq("provider", params.provider)
+      .eq("model", params.endpoint)
+      .eq("unit", "per_image")
+      .maybeSingle();
+    if (!price || !(Number(price.usd) > 0)) {
+      return { ok: false, error: "This model has no price set yet, so it can't be run. Pick another model." };
+    }
+    priceUsd = Number(price.usd);
   }
 
   const { data: apiKey, error: keyError } = await service.rpc("get_brand_secret_value", {
@@ -80,13 +87,27 @@ export async function generateReferenceImage(params: {
   if (keyError || !apiKey) {
     return {
       ok: false,
-      error: `No ${params.provider} key saved for this org.`,
+      error: planCredits
+        ? "No Higgsfield account is connected for this brand. Connect one on the brand's Keys page."
+        : `No ${params.provider} key saved for this org.`,
       code: "KEY_MISSING",
       provider: params.provider,
     };
   }
 
-  const adapter: ProviderAdapter = adapterFor(params.provider, apiKey);
+  let adapter: ProviderAdapter;
+  try {
+    adapter = adapterFor(params.provider, apiKey, async (secret) => {
+      // A refreshed Higgsfield login must be saved or the next call can't sign in.
+      await service.rpc("service_update_higgsfield_plan_secret", {
+        target_org_id: params.orgId,
+        target_brand_id: params.brandId,
+        secret_value: secret,
+      });
+    });
+  } catch (err) {
+    return { ok: false, error: describeProviderError(err) };
+  }
 
   let externalTaskId: string;
   try {
@@ -177,12 +198,12 @@ export async function generateReferenceImage(params: {
   // spend reflects work actually done, never charged for a failed
   // attempt. The per-image price was looked up before submitting.
 
-  await service.rpc("record_spend_event", {
+  if (!planCredits) await service.rpc("record_spend_event", {
     target_org_id: params.orgId,
     target_ad_id: params.attributedAdId ?? null,
     target_provider: params.provider,
     target_model: params.endpoint,
-    target_usd_est: Number(price.usd),
+    target_usd_est: priceUsd,
     target_kind: params.spendKind,
   });
 

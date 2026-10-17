@@ -3,6 +3,10 @@
 import Link from "next/link";
 import type { ModelOption } from "@/lib/providers/models-data";
 
+/** Display names for provider ids shown in the picker. */
+const PROVIDER_LABELS: Record<string, string> = { higgsfield_plan: "Higgsfield" };
+const providerLabel = (provider: string) => PROVIDER_LABELS[provider] ?? provider;
+
 /**
  * Picks a provider+model for a generation task. Every registered
  * model shows regardless of whether a key is saved for its provider —
@@ -50,19 +54,22 @@ export function ModelPicker({
         </option>
         {options.map((o) => (
           <option key={`${o.provider}::${o.endpoint}`} value={`${o.provider}::${o.endpoint}`}>
-            {o.name} ({o.provider}){providersWithKeys.has(o.provider) ? "" : " — no key saved"}
+            {o.name} ({providerLabel(o.provider)})
+            {providersWithKeys.has(o.provider) ? "" : o.provider === "higgsfield_plan" ? " — no account connected" : " — no key saved"}
           </option>
         ))}
       </select>
 
       {selected && !hasKey && (
         <p className="text-xs text-danger">
-          No {selected.provider} key saved for this brand or org.{" "}
+          {selected.provider === "higgsfield_plan"
+            ? "No Higgsfield account is connected for this brand."
+            : `No ${selected.provider} key saved for this brand or org.`}{" "}
           <Link
             href={`${brandId ? `/org/${orgId}/brands/${brandId}/settings/keys` : `/org/${orgId}/settings/keys`}?returnTo=${encodeURIComponent(returnToPath)}`}
             className="font-medium underline"
           >
-            Add one
+            {selected.provider === "higgsfield_plan" ? "Connect one" : "Add one"}
           </Link>{" "}
           to use this model.
         </p>

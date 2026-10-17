@@ -441,3 +441,46 @@ on conflict (model_id, provider, endpoint) do update
   set parameter_schema = excluded.parameter_schema,
       price_rule = excluded.price_rule,
       is_default = excluded.is_default;
+
+-- Higgsfield via the API key (above) is replaced by the brand's connected
+-- higgsfield.ai account (plan credits, provider 'higgsfield_plan'); the
+-- API models are deactivated, not deleted, like z-image.
+update public.models set active = false
+where name in ('marketing-studio-flare', 'grok-image-2', 'soul-2', 'ideogram-4', 'kling-3-std-i2v',
+  'kling-3-pro-i2v', 'wan-3-i2v', 'minimax-h3-2k-i2v', 'hailuo-2-3-i2v', 'happy-horse-1-1-i2v');
+
+-- Higgsfield account (plan credits) models. The endpoint is Higgsfield's
+-- model id, sent through its MCP generate_image / generate_video tools by
+-- HiggsfieldPlanAdapter (apps/web/src/lib/providers/higgsfield-plan-adapter.ts).
+-- Model ids, media roles and settings follow Higgsfield's model reference
+-- in github.com/higgsfield-ai/skills (MIT, Copyright (c) 2026 Higgsfield AI).
+-- No price_table rows: these spend the client's own plan credits.
+insert into public.models (name, capability, active, prompt_guide, is_default)
+values
+  ('hf-marketing-studio-image', 'image', true, 'Higgsfield Marketing Studio Image on the connected Higgsfield account (plan credits). Higgsfield''s pick for commercial, product and ad images. Uses the product photos as references: describe the change you want (setting, light, props, people, framing) rather than re-describing the product they already show. Write like a photographer''s brief: subject, setting, composition and camera angle, lens, lighting, mood. If the scene needs text, quote it exactly and keep headlines to 2-4 words in clear space, never over a face. Phrase everything positively (say what you want, e.g. ''tack sharp'', not ''no blur''): most Higgsfield models have no negative prompt.', false),
+  ('hf-gpt-image-2-5', 'image', true, 'GPT Image 2.5 on the connected Higgsfield account (plan credits). High-fidelity general model and the strongest for typography, banners and reference-guided edits. Uses the product photos as references: describe what changes around the product, not the product itself. Quote any on-image text exactly. Phrase everything positively (say what you want, e.g. ''tack sharp'', not ''no blur''): most Higgsfield models have no negative prompt.', false),
+  ('hf-soul-2', 'image', true, 'Higgsfield SOUL 2.0 on the connected Higgsfield account (plan credits). Text only: reference images are NOT used, so the prompt alone must carry the product''s look. Best for original people and editorial scenes: UGC-style creators, influencers, fashion, lifestyle. Describe the person (age range, look, wardrobe, expression), the setting, the camera (lens, angle, shot size) and the light in concrete photographic terms. Not suited to exact product reproduction or text. Phrase everything positively (say what you want, e.g. ''tack sharp'', not ''no blur''): most Higgsfield models have no negative prompt.', false),
+  ('hf-seedance-2-5', 'video', true, 'Seedance 2.5 image-to-video on the connected Higgsfield account (plan credits). Higgsfield''s default all-purpose video model, 4-30 seconds, up to 1080p. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false),
+  ('hf-kling-3', 'video', true, 'Kling 3.0 image-to-video on the connected Higgsfield account (plan credits). Good value for single-plane scenes without heavy motion, with native audio when the scene speaks. 3-15 seconds. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false),
+  ('hf-kling-3-turbo', 'video', true, 'Kling 3.0 Turbo image-to-video on the connected Higgsfield account (plan credits). The cheaper, faster Kling: one start frame, 3-15 seconds, no audio. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false)
+on conflict (name) do update
+  set capability = excluded.capability,
+      active = excluded.active,
+      prompt_guide = excluded.prompt_guide,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield_plan', v.endpoint, v.schema::jsonb, '{}'::jsonb, true
+from (values
+ ('hf-marketing-studio-image', 'marketing_studio_image', '[{"key": "quality", "label": "Quality", "type": "enum", "options": ["1k", "2k"], "default": "2k", "required": false}]'),
+ ('hf-gpt-image-2-5', 'gpt_image_2_5', '[{"key": "quality", "label": "Quality", "type": "enum", "options": ["low", "medium", "high"], "default": "high", "required": false}]'),
+ ('hf-soul-2', 'soul_2', '[{"key": "quality", "label": "Quality", "type": "enum", "options": ["1.5k", "2k"], "default": "2k", "required": false}]'),
+ ('hf-seedance-2-5', 'seedance_2_5', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 4, "max": 15, "default": 5, "required": false}, {"key": "resolution", "label": "Resolution", "type": "enum", "options": ["480p", "720p", "1080p"], "default": "720p", "required": false}]'),
+ ('hf-kling-3', 'kling3_0', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 3, "max": 15, "default": 5, "required": false}]'),
+ ('hf-kling-3-turbo', 'kling3_0_turbo', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 3, "max": 15, "default": 5, "required": false}]')
+) as v(name, endpoint, schema)
+join public.models m on m.name = v.name
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;

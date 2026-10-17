@@ -20,7 +20,7 @@ import { getAccessibleAd, isPathUnder } from "@/lib/access";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-export type ModelChoice = { provider: "fal" | "kie" | "higgsfield"; endpoint: string };
+export type ModelChoice = { provider: "fal" | "kie" | "higgsfield_plan"; endpoint: string };
 
 const DEFAULT_IMAGE_MODEL: ModelChoice = { provider: "fal", endpoint: "fal-ai/flux/dev" };
 

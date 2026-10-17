@@ -92,7 +92,7 @@ export function ConceptCastStep({
     if (castMembers.length > 0 && !window.confirm("Re-extracting cast replaces EVERY current cast member for this ad, including any added manually or from the brand library. Continue?")) {
       return;
     }
-    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie" | "higgsfield", endpoint: imageModel.endpoint };
+    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie" | "higgsfield_plan", endpoint: imageModel.endpoint };
     startExtracting(async () => {
       const result = await extractCast(orgId, brandId, productId, ad.id, model);
       if (!result.ok) setError(result.error);
@@ -658,7 +658,7 @@ function CastMemberCard({
       return;
     }
     setSheetStatus("generating");
-    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie" | "higgsfield", endpoint: imageModel.endpoint };
+    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie" | "higgsfield_plan", endpoint: imageModel.endpoint };
     startTransition(async () => {
       const result = await generateCharacterSheet(orgId, brandId, productId, ad.id, member.id, model);
       if (result.ok) {
@@ -797,7 +797,7 @@ function RegenerateModal({
       setError("Pick an image model first.");
       return;
     }
-    const model: ModelChoice = { provider: selectedModel.provider as "fal" | "kie" | "higgsfield", endpoint: selectedModel.endpoint };
+    const model: ModelChoice = { provider: selectedModel.provider as "fal" | "kie" | "higgsfield_plan", endpoint: selectedModel.endpoint };
     startTransition(async () => {
       const result = await regenerateCastReference(orgId, brandId, productId, ad.id, member.id, feedback || "make it better", model);
       if (result.ok) {

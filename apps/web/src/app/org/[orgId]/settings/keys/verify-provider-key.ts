@@ -1,6 +1,5 @@
 import "server-only";
 import type { ApiKeyProvider } from "./keys-data";
-import { HIGGSFIELD_API_BASE } from "@/lib/providers/higgsfield";
 
 export type VerifyResult = { ok: true } | { ok: false; error: string };
 
@@ -24,10 +23,6 @@ export type VerifyResult = { ok: true } | { ok: false; error: string };
  *   best effort.
  * - fal: official docs path, used purely as an auth probe (a pricing
  *   lookup, not a generation call), best effort.
- * - higgsfield: status lookup for a request id that can't exist.
- *   docs.higgsfield.ai documents 401 for bad credentials and 404 for an
- *   unknown request id; 401 for a garbage key was confirmed live. Free:
- *   nothing is generated.
  */
 export async function verifyProviderKey(
   provider: ApiKeyProvider,
@@ -47,8 +42,6 @@ export async function verifyProviderKey(
         return await verifyKie(key);
       case "fal":
         return await verifyFal(key);
-      case "higgsfield":
-        return await verifyHiggsfield(key);
     }
   } catch {
     return { ok: false, error: "Could not reach the provider. Try again." };
@@ -117,18 +110,4 @@ async function verifyFal(key: string): Promise<VerifyResult> {
   if (res.status === 401 || res.status === 403) return { ok: false, error: "Invalid API key." };
   if (!res.ok) return { ok: false, error: `fal.ai returned an error (${res.status}).` };
   return { ok: true };
-}
-
-async function verifyHiggsfield(key: string): Promise<VerifyResult> {
-  // Stored as "KEY_ID:KEY_SECRET" (the keys screen collects both parts).
-  if (!/^[^:\s]+:\S+$/.test(key)) {
-    return { ok: false, error: "Enter both the Higgsfield key ID and the key secret." };
-  }
-  const res = await fetch(`${HIGGSFIELD_API_BASE}/requests/${crypto.randomUUID()}/status`, {
-    headers: { Authorization: `Key ${key}` },
-  });
-  if (res.status === 401) return { ok: false, error: "Invalid key ID or secret." };
-  // 404 = authenticated, the made-up request just doesn't exist.
-  if (res.status === 404 || res.ok) return { ok: true };
-  return { ok: false, error: `Higgsfield returned an error (${res.status}).` };
 }

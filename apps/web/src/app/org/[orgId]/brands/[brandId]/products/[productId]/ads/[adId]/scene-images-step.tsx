@@ -98,7 +98,7 @@ export function SceneImagesStep({
       setError({ friendly: "Pick an image model first." });
       return;
     }
-    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie" | "higgsfield", endpoint: imageModel.endpoint };
+    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie" | "higgsfield_plan", endpoint: imageModel.endpoint };
     markGenerating(sceneId, true);
     try {
       const result = await generateSceneImages(orgId, brandId, productId, ad.id, sceneId, count, model);
@@ -555,7 +555,7 @@ function SceneImageCard({
           scene={scene}
           override={override}
           onOverrideSaved={setOverride}
-          model={feedbackModel ? { provider: feedbackModel.provider as "fal" | "kie" | "higgsfield", endpoint: feedbackModel.endpoint } : null}
+          model={feedbackModel ? { provider: feedbackModel.provider as "fal" | "kie" | "higgsfield_plan", endpoint: feedbackModel.endpoint } : null}
         />
       )}
 
@@ -577,7 +577,7 @@ function SceneImageCard({
             if (!feedbackModel) {
               return Promise.resolve({ ok: false, error: "Pick an image model first." } as const);
             }
-            const model: ModelChoice = { provider: feedbackModel.provider as "fal" | "kie" | "higgsfield", endpoint: feedbackModel.endpoint };
+            const model: ModelChoice = { provider: feedbackModel.provider as "fal" | "kie" | "higgsfield_plan", endpoint: feedbackModel.endpoint };
             return submitImageFeedback(
               orgId,
               brandId,

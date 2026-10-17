@@ -6,7 +6,6 @@ import type { ApiKeyProvider, OrgSecretRow } from "./keys-data";
 import { saveProviderKey } from "./keys-actions";
 import { sameOriginPath } from "@/lib/safe-next";
 import { buttonVariants } from "@/components/button";
-import { ProviderKeyFields, providerKeyHint } from "./provider-key-fields";
 
 /**
  * When linked to with ?returnTo=<path>, shows a banner so the editor
@@ -29,7 +28,6 @@ const API_KEY_PROVIDERS: { id: ApiKeyProvider; label: string }[] = [
   { id: "anthropic", label: "Anthropic" },
   { id: "kie", label: "kie.ai" },
   { id: "fal", label: "fal.ai" },
-  { id: "higgsfield", label: "Higgsfield" },
   { id: "elevenlabs", label: "ElevenLabs" },
   { id: "twelvelabs", label: "TwelveLabs" },
   { id: "pexels", label: "Pexels" },
@@ -151,13 +149,14 @@ function ProviderRow({
 
       {editing && (
         <div className="mt-3 flex gap-2">
-          <ProviderKeyFields
-            provider={provider}
-            label={label}
+          <input
+            type="password"
+            autoComplete="off"
             placeholder={`Paste your ${label} API key`}
             value={value}
-            onChange={setValue}
+            onChange={(e) => setValue(e.target.value)}
             disabled={isPending}
+            className="field flex-1"
           />
           <button
             type="button"
@@ -184,9 +183,6 @@ function ProviderRow({
         </div>
       )}
 
-      {editing && providerKeyHint(provider) && (
-        <p className="mt-2 text-xs text-foreground-muted">{providerKeyHint(provider)}</p>
-      )}
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>
   );

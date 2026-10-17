@@ -7,8 +7,7 @@ import { CALLBACK_PATH, PLAN_COOKIE, canManageBrandKeys, keysPageUrl, type PlanO
  * Higgsfield's OAuth redirect lands here: checks state, trades the code
  * for tokens, stores them in Vault as this brand's "higgsfield_plan"
  * secret, then proves the login works by listing Higgsfield's MCP
- * tools. Tool names (never tokens) are logged so the integration can
- * be built against the real tool list.
+ * tools (generate_image must be among them) before marking it verified.
  */
 export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin;
@@ -65,15 +64,17 @@ export async function GET(request: NextRequest) {
     } catch (err) {
       toolsError = err instanceof HiggsfieldPlanError ? `${err.message} ${err.detail ?? ""}`.trim() : "Tool listing failed.";
     }
-    console.log("higgsfield_plan: connected", { orgId, brandId, toolCount: tools.length, tools, toolsError });
+    console.log("higgsfield_plan: connected", { orgId, brandId, toolCount: tools.length, toolsError });
 
-    if (toolsError) return back({ higgsfield_plan: "connected_no_tools", message: toolsError });
+    if (toolsError || !tools.includes("generate_image")) {
+      return back({ higgsfield_plan: "error", message: `Signed in, but Higgsfield's generation tools didn't load. ${toolsError ?? ""}`.trim() });
+    }
     await supabase.rpc("mark_brand_secret_verified", {
       target_org_id: orgId,
       target_brand_id: brandId,
       target_provider: "higgsfield_plan",
     });
-    return back({ higgsfield_plan: "connected", tools: tools.join(",") });
+    return back({ higgsfield_plan: "connected" });
   } catch (err) {
     const message =
       err instanceof HiggsfieldPlanError ? `${err.message}${err.detail ? ` (${err.detail})` : ""}` : "Connecting Higgsfield failed.";

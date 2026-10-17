@@ -6,13 +6,11 @@ import type { BrandSecretRow } from "./keys-data";
 import { saveBrandProviderKey } from "./keys-actions";
 import { HiggsfieldPlanCard } from "./higgsfield-plan-card";
 import { buttonVariants } from "@/components/button";
-import { ProviderKeyFields, providerKeyHint } from "@/app/org/[orgId]/settings/keys/provider-key-fields";
 
 const API_KEY_PROVIDERS: { id: ApiKeyProvider; label: string }[] = [
   { id: "anthropic", label: "Anthropic" },
   { id: "kie", label: "kie.ai" },
   { id: "fal", label: "fal.ai" },
-  { id: "higgsfield", label: "Higgsfield" },
   { id: "elevenlabs", label: "ElevenLabs" },
   { id: "twelvelabs", label: "TwelveLabs" },
   { id: "pexels", label: "Pexels" },
@@ -28,8 +26,8 @@ export function KeysScreen({
   secrets: BrandSecretRow[];
 }) {
   const byProvider = Object.fromEntries(secrets.map((s) => [s.provider, s]));
-  // Not an API-key provider, so it isn't in ApiKeyProvider; matched by name.
-  const planSecret = secrets.find((s) => (s.provider as string) === "higgsfield_plan");
+  // A Higgsfield account login, not an API key, so it isn't in ApiKeyProvider.
+  const higgsfieldAccount = secrets.find((s) => (s.provider as string) === "higgsfield_plan");
 
   return (
     <div className="flex flex-col gap-3">
@@ -53,8 +51,8 @@ export function KeysScreen({
         <HiggsfieldPlanCard
           orgId={orgId}
           brandId={brandId}
-          connected={Boolean(planSecret)}
-          verified={Boolean(planSecret?.verified_at)}
+          connected={Boolean(higgsfieldAccount)}
+          verified={Boolean(higgsfieldAccount?.verified_at)}
         />
       </Suspense>
     </div>
@@ -142,13 +140,14 @@ function ProviderRow({
 
       {editing && (
         <div className="mt-3 flex gap-2">
-          <ProviderKeyFields
-            provider={provider}
-            label={label}
+          <input
+            type="password"
+            autoComplete="off"
             placeholder={`Paste this brand's ${label} API key`}
             value={value}
-            onChange={setValue}
+            onChange={(e) => setValue(e.target.value)}
             disabled={isPending}
+            className="field flex-1"
           />
           <button
             type="button"
@@ -173,9 +172,6 @@ function ProviderRow({
         </div>
       )}
 
-      {editing && providerKeyHint(provider) && (
-        <p className="mt-2 text-xs text-foreground-muted">{providerKeyHint(provider)}</p>
-      )}
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>
   );

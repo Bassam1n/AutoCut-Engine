@@ -60,7 +60,7 @@ async function GatedStyles({ searchParams }: { searchParams: Promise<{ org?: str
 
   return (
     <div className="flex flex-col gap-4">
-      <KeysAgencyPicker agencies={agencies} selected={orgId} hasImageKey={providersWithKeys.some((p) => p === "kie" || p === "fal" || p === "higgsfield")} />
+      <KeysAgencyPicker agencies={agencies} selected={orgId} hasImageKey={providersWithKeys.some((p) => p === "kie" || p === "fal")} />
       <StyleGallery
         orgId={orgId}
         styles={styles}

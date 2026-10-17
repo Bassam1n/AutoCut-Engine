@@ -50,7 +50,7 @@ export async function generateStylePreview(
   orgId: string,
   styleId: string,
   subject: string,
-  model: { provider: "fal" | "kie" | "higgsfield"; endpoint: string }
+  model: { provider: "fal" | "kie" | "higgsfield_plan"; endpoint: string }
 ): Promise<PreviewResult> {
   await requireOrgMember(orgId);
   const supabase = await createClient();

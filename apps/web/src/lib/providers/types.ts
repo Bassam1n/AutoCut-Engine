@@ -9,7 +9,7 @@
 export type GenerationKind = "image" | "video";
 
 /** Image/video generation providers with an adapter (see adapter-for.ts). */
-export type MediaProvider = "fal" | "kie" | "higgsfield";
+export type MediaProvider = "fal" | "kie" | "higgsfield_plan";
 
 export type SubmitParams = {
   kind: GenerationKind;

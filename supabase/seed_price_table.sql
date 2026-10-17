@@ -54,6 +54,8 @@ on conflict (provider, model, unit) do update
   set usd = excluded.usd,
       updated_at = now();
 
+-- (Unused since the API models were replaced by the connected-account
+-- 'higgsfield_plan' models, which spend plan credits and have no rows here.)
 -- Higgsfield Cloud API prices (read 2026-10-17 from Higgsfield's public
 -- pricing at console.higgsfield.ai/pricing, the same data its page
 -- loads from dash.higgsfield.ai/api/v2/pricing/models/). Higgsfield
