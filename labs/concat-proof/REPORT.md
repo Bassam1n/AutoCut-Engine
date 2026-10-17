@@ -87,6 +87,7 @@ Claude tokens and cost per edit are pending the run with the key.
 ## Problems seen
 - Hyperframes falls back to slower screenshot capture with software GL ("BeginFrame did not run") on some renders.
 - The auto-mode permission classifier refused several steps: building FFmpeg from source, running the downloaded binaries at times, and setting a temporary password for the asset download. The user supplied the clips instead.
+- Claude Code cloud environments reserve `ANTHROPIC_API_KEY` and strip it from the session ("won't be used to authenticate requests"). The proof reads `PROOF_ANTHROPIC_API_KEY` first, then `ANTHROPIC_API_KEY`.
 - The container sets `ANTHROPIC_BASE_URL` for Claude Code's own traffic. The proof pins `https://api.anthropic.com` explicitly (override with `PROOF_ANTHROPIC_BASE_URL`).
 
 ## Reproduce
@@ -96,6 +97,6 @@ cd labs/concat-proof && npm install --ignore-scripts
 # put the 6 scene clips (01.mp4 .. 06.mp4) in a folder, e.g. /home/user/work/ad
 AD_MEDIA_DIR=/home/user/work/ad node src/test-alpha.mjs /home/user/work/alpha /home/user/work/ad/01.mp4 <dir with hook.mov/.webm/.png/.mp4>
 AD_MEDIA_DIR=/home/user/work/ad node src/run.mjs --mode template --plan fixtures/executor-test-plan.json   # executor test, no Claude
-AD_MEDIA_DIR=/home/user/work/ad ANTHROPIC_API_KEY=... node src/run.mjs --mode template                       # Claude-directed
-AD_MEDIA_DIR=/home/user/work/ad ANTHROPIC_API_KEY=... node src/run.mjs --mode direct
+AD_MEDIA_DIR=/home/user/work/ad PROOF_ANTHROPIC_API_KEY=... node src/run.mjs --mode template                       # Claude-directed
+AD_MEDIA_DIR=/home/user/work/ad PROOF_ANTHROPIC_API_KEY=... node src/run.mjs --mode direct
 ```

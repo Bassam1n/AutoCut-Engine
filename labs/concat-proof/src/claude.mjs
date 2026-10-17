@@ -11,9 +11,14 @@ export const MODEL = "claude-opus-5-5";
 const PRICE = { input: 4, output: 20, cacheRead: 0.2, cacheWrite: 5 }; // $ per 1M tokens, Opus 5.5
 
 // Explicit base URL: a Claude Code container sets ANTHROPIC_BASE_URL for its
-// own traffic, which the SDK would otherwise pick up.
+// own traffic, which the SDK would otherwise pick up. The key is read from
+// PROOF_ANTHROPIC_API_KEY first: Claude Code cloud environments reserve
+// ANTHROPIC_API_KEY and strip it from the session.
 let client;
-const api = () => (client ??= new Anthropic({ baseURL: process.env.PROOF_ANTHROPIC_BASE_URL ?? "https://api.anthropic.com" }));
+const api = () => (client ??= new Anthropic({
+  apiKey: process.env.PROOF_ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_API_KEY,
+  baseURL: process.env.PROOF_ANTHROPIC_BASE_URL ?? "https://api.anthropic.com",
+}));
 export const usageLog = [];
 
 function cost(u) {
