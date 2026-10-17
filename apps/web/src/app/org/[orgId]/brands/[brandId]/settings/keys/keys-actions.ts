@@ -8,6 +8,7 @@ import type { ApiKeyProvider } from "@/app/org/[orgId]/settings/keys/keys-data";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
   HiggsfieldPlanError,
+  callMcpTool,
   listMcpTools,
   needsRefresh,
   refreshTokens,
@@ -117,6 +118,113 @@ export async function inspectHiggsfieldPlan(orgId: string, brandId: string): Pro
       );
     }
     return { ok: true, toolCount: tools.length, generationTools: interesting.map((t) => t.name) };
+  } catch (err) {
+    const message = err instanceof HiggsfieldPlanError ? `${err.message}${err.detail ? ` (${err.detail})` : ""}` : "Could not reach Higgsfield.";
+    return { ok: false, error: message };
+  }
+}
+
+export type PlanTestResult =
+  | {
+      ok: true;
+      stage: "preflight_failed" | "generated" | "submit_failed" | "not_finished";
+      balanceBefore: string;
+      cost: string;
+      jobId: string | null;
+      imageUrl: string | null;
+      balanceAfter: string | null;
+      detail: string | null;
+    }
+  | { ok: false; error: string };
+
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+const IMAGE_URL_RE = /https:\/\/[^\s"'<>)]+\.(?:png|jpe?g|webp)(?:\?[^\s"'<>)]*)?/i;
+
+function logChunks(label: string, text: string) {
+  for (let i = 0; i < text.length; i += 1500) {
+    console.log(`higgsfield_plan: ${label} [${i / 1500 + 1}/${Math.ceil(text.length / 1500)}]`, text.slice(i, i + 1500));
+  }
+}
+
+/**
+ * Experimental, user-confirmed test of plan-credit generation: logs
+ * generate_image's full input schema, reads the balance, runs a FREE
+ * cost preflight (get_cost: true) and only if that succeeds generates
+ * ONE small image on the account's plan, then reads the balance again.
+ * Tokens are never logged.
+ */
+export async function testHiggsfieldPlanImage(orgId: string, brandId: string): Promise<PlanTestResult> {
+  await requireOrgAdmin(orgId);
+  const service = createServiceClient();
+  const { data: raw, error } = await service.rpc("get_brand_secret_value", {
+    target_org_id: orgId,
+    target_brand_id: brandId,
+    target_provider: "higgsfield_plan",
+  });
+  if (error || !raw) return { ok: false, error: "Connect the Higgsfield account first." };
+
+  try {
+    let tokens = JSON.parse(raw) as HiggsfieldPlanTokens;
+    if (needsRefresh(tokens)) {
+      tokens = await refreshTokens(tokens);
+      await (await createClient()).rpc("save_brand_secret", {
+        target_org_id: orgId,
+        target_brand_id: brandId,
+        target_provider: "higgsfield_plan",
+        secret_value: JSON.stringify(tokens),
+      });
+    }
+    const token = tokens.accessToken;
+
+    const tools = await listMcpTools(token);
+    const generateImage = tools.find((t) => t.name === "generate_image");
+    if (generateImage) logChunks("full schema generate_image", JSON.stringify(generateImage.inputSchema));
+
+    const before = await callMcpTool(token, "balance", {});
+    logChunks("balance before", before.text);
+
+    const args = {
+      model: "soul_2",
+      prompt: "A white ceramic coffee mug on a wooden table beside a sunlit window, soft natural light, product photo.",
+      aspect_ratio: "1:1",
+      count: 1,
+    };
+    const preflight = await callMcpTool(token, "generate_image", { ...args, get_cost: true });
+    logChunks(`preflight isError=${preflight.isError}`, preflight.text);
+    const base = { balanceBefore: before.text.slice(0, 400), cost: preflight.text.slice(0, 400) };
+    if (preflight.isError) {
+      return { ok: true, stage: "preflight_failed", ...base, jobId: null, imageUrl: null, balanceAfter: null, detail: preflight.text.slice(0, 600) };
+    }
+
+    const submit = await callMcpTool(token, "generate_image", args);
+    logChunks(`submit isError=${submit.isError}`, submit.text);
+    const jobId = submit.text.match(UUID_RE)?.[0] ?? null;
+    if (submit.isError || !jobId) {
+      return { ok: true, stage: "submit_failed", ...base, jobId, imageUrl: null, balanceAfter: null, detail: submit.text.slice(0, 600) };
+    }
+
+    let imageUrl: string | null = null;
+    let lastStatus = "";
+    for (let attempt = 0; attempt < 4 && !imageUrl; attempt++) {
+      const status = await callMcpTool(token, "job_status", { jobId, sync: true });
+      lastStatus = status.text;
+      logChunks(`job_status attempt ${attempt + 1}`, status.text);
+      imageUrl = status.text.match(IMAGE_URL_RE)?.[0] ?? null;
+      if (/"status"\s*:\s*"(failed|nsfw|canceled|cancelled)"/i.test(status.text)) break;
+    }
+
+    const after = await callMcpTool(token, "balance", {});
+    logChunks("balance after", after.text);
+
+    return {
+      ok: true,
+      stage: imageUrl ? "generated" : "not_finished",
+      ...base,
+      jobId,
+      imageUrl,
+      balanceAfter: after.text.slice(0, 400),
+      detail: imageUrl ? null : lastStatus.slice(0, 600),
+    };
   } catch (err) {
     const message = err instanceof HiggsfieldPlanError ? `${err.message}${err.detail ? ` (${err.detail})` : ""}` : "Could not reach Higgsfield.";
     return { ok: false, error: message };

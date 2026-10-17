@@ -8,6 +8,9 @@ import { KeysScreen } from "./keys-screen";
 import { BrandNav } from "../../brand-nav";
 import { BackButton } from "../../../../back-button";
 
+// The Higgsfield plan-credit test action waits for a real generation.
+export const maxDuration = 180;
+
 export default function BrandKeysPage({
   params,
 }: {

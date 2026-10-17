@@ -208,3 +208,29 @@ export function parseMcpBody(text: string, id: number): { result?: unknown; erro
 export function needsRefresh(tokens: HiggsfieldPlanTokens): boolean {
   return tokens.expiresAt !== null && tokens.expiresAt - Date.now() < 60_000;
 }
+
+export type McpToolResult = { text: string; isError: boolean };
+
+/** Opens an MCP session and calls one tool. Returns the tool's text content. */
+export async function callMcpTool(
+  accessToken: string,
+  name: string,
+  args: Record<string, unknown>
+): Promise<McpToolResult> {
+  const init = await mcpRequest(accessToken, null, {
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "AutoCut", version: "1.0.0" } },
+  });
+  await mcpRequest(accessToken, init.sessionId, { jsonrpc: "2.0", method: "notifications/initialized" });
+  const call = await mcpRequest(accessToken, init.sessionId, {
+    jsonrpc: "2.0",
+    id: 3,
+    method: "tools/call",
+    params: { name, arguments: args },
+  });
+  const result = (call.result ?? {}) as { content?: { type: string; text?: string }[]; isError?: boolean };
+  const text = (result.content ?? []).map((c) => c.text ?? "").join("\n");
+  return { text, isError: Boolean(result.isError) };
+}
