@@ -26,7 +26,10 @@ const Clip = z.object({
   volume: z.number().describe("ambient clip audio, 0..1"),
 });
 
+// No z.record anywhere: structured outputs turn a record into an object that
+// allows no keys, so Claude could only ever return {}. Named things are lists.
 const TextStyle = z.object({
+  name: z.string().describe("style name that captions refer to, e.g. main"),
   fontSize: z.number().describe("fraction of frame height, captions ~0.035-0.05"),
   fontWeight: z.number().int(),
   color: z.string().describe("#rrggbb"),
@@ -41,9 +44,19 @@ const Caption = z.object({
   start: z.number(),
   end: z.number(),
   text: z.string().describe("at most ~7 words; a phrase the viewer can read in time"),
-  style: z.string().describe("name of an entry in captionStyles"),
+  style: z.string().describe("name of one of the captionStyles"),
   popIn: z.boolean().describe("short scale pop on entry"),
 });
+
+const TemplateProps = z.object({
+  headline: z.string().nullable().describe("hookPill, endCard"),
+  sub: z.string().nullable().describe("hookPill, endCard"),
+  text: z.string().nullable().describe("callout"),
+  cta: z.string().nullable().describe("endCard"),
+  bg: z.string().nullable().describe("endCard background colour"),
+  accent: z.string().nullable().describe("all templates: accent colour"),
+}).describe("null for props the template doesn't use");
+export const TEMPLATE_REQUIRED = { hookPill: ["headline"], callout: ["text"], endCard: ["headline", "cta"] };
 
 const Graphic = z.object({
   id: z.string().describe("short slug, e.g. hook, endcard"),
@@ -51,7 +64,7 @@ const Graphic = z.object({
   start: z.number(),
   duration: z.number(),
   layout: z.enum(["overlay", "fullFrame"]).describe("overlay = transparent over footage; fullFrame = opaque card, footage hidden"),
-  template: z.object({ name: z.enum(["hookPill", "endCard", "callout"]), props: z.record(z.string(), z.string()) }).nullable()
+  template: z.object({ name: z.enum(["hookPill", "endCard", "callout"]), props: TemplateProps }).nullable()
     .describe("template mode: a built-in template and its text props; null in direct mode"),
   code: z.object({
     css: z.string().describe("CSS for elements inside #root (1080x1920 px)"),
@@ -63,7 +76,7 @@ const Graphic = z.object({
 export const EditPlan = z.object({
   summary: z.string().describe("one or two sentences: the edit's idea"),
   clips: z.array(Clip).describe("in timeline order, laid end to end on the main track"),
-  captionStyles: z.record(z.string(), TextStyle),
+  captionStyles: z.array(TextStyle),
   captions: z.array(Caption).describe("non-overlapping, in time order"),
   graphics: z.array(Graphic),
   endCardHold: z.number().describe("seconds the timeline runs past the last clip for a full-frame end card; 0 if none"),
@@ -101,13 +114,14 @@ export function lintPlan(plan, ad, clipDurations, mode) {
   if (Math.abs(end - ad.targetLengthSeconds) > 3) p.push(`total length ${end.toFixed(1)}s is more than 3s from the ${ad.targetLengthSeconds}s target`);
   let last = -1;
   for (const [i, c] of plan.captions.entries()) {
-    if (!plan.captionStyles[c.style]) p.push(`captions[${i}]: unknown style ${c.style}`);
+    if (!plan.captionStyles.some((st) => st.name === c.style)) p.push(`captions[${i}]: unknown style ${c.style}`);
     if (c.start < last - 1e-3) p.push(`captions[${i}]: overlaps the previous caption`);
     if (c.end - c.start < 0.4) p.push(`captions[${i}]: shorter than 0.4s`);
     last = c.end;
   }
   for (const g of plan.graphics) {
     if (mode === "template" && !g.template) p.push(`graphic ${g.id}: template mode needs template`);
+    for (const k of TEMPLATE_REQUIRED[g.template?.name] ?? []) if (!g.template.props?.[k]) p.push(`graphic ${g.id}: ${g.template.name} needs props.${k}`);
     if (mode === "direct" && !g.code) p.push(`graphic ${g.id}: direct mode needs code`);
     if (g.start + g.duration > end + 0.05) p.push(`graphic ${g.id}: runs past the end (${end.toFixed(2)}s)`);
   }

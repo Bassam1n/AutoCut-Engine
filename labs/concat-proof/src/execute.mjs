@@ -59,7 +59,7 @@ export async function executePlan({ plan, ad, adDir, workDir, name, output, widt
 
     // Captions as Concat titles on T3 (no render step, crisp at any size).
     for (const cap of plan.captions) {
-      const st = plan.captionStyles[cap.style];
+      const st = plan.captionStyles.find((x) => x.name === cap.style);
       const id = (await cc.apply(path, { op: "addTextClip", trackId: "T3", start: cap.start, duration: cap.end - cap.start, offsetY: st.offsetY,
         style: { content: cap.text, fontFamily: "Inter", fontSize: st.fontSize, fontWeight: st.fontWeight, color: st.color, background: st.background,
           strokeWidth: st.strokeWidth, strokeColor: st.strokeColor, maxWidth: st.maxWidth, align: "center", shadow: !st.background } })).createdId;

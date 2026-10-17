@@ -99,6 +99,7 @@ export function codeFor(g) {
   if (g.code) return g.code;
   const make = TEMPLATES[g.template?.name];
   if (!make) throw new Error(`graphic ${g.id}: unknown template ${g.template?.name}`);
-  const c = make(g.template.props ?? {});
+  // Null props fall back to the template defaults.
+  const c = make(Object.fromEntries(Object.entries(g.template.props ?? {}).filter(([, v]) => v != null)));
   return { ...c, js: c.js.replaceAll("__DUR__", String(g.duration)) };
 }
