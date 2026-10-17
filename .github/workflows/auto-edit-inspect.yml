@@ -1,0 +1,45 @@
+name: Auto-edit - inspect a worker run
+
+# Ops tool: prints a production Trigger.dev run's status, attempts,
+# machine, duration and error (auto_edit_runs.trigger_run_id), and the
+# render limit's current usage, for debugging without dashboard access.
+# Same key resolution as auto-edit-dispatch.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      trigger_run_id:
+        description: "Trigger.dev run id (run_...)"
+        required: true
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - name: Inspect
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+          RUN_ID: ${{ inputs.trigger_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^run_[a-z0-9]+$ ]] || { echo "::error::trigger_run_id must look like run_..."; exit 1; }
+          REF=$(node -p "require('fs').readFileSync('trigger.config.ts','utf8').match(/project: \"(proj_[a-z0-9]+)\"/)[1]")
+          KEY=$(curl -fsS -H "Authorization: Bearer $TRIGGER_ACCESS_TOKEN" "https://api.trigger.dev/api/v1/projects/$REF/prod" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).apiKey))')
+          echo "::add-mask::$KEY"
+          TRIGGER_SECRET_KEY="$KEY" node --input-type=module -e '
+            import { runs, concurrencyLimits } from "@trigger.dev/sdk";
+            const r = await runs.retrieve(process.env.RUN_ID);
+            const { payload, output, ...rest } = r;
+            console.log(JSON.stringify(rest, null, 2));
+            try { console.log("limit", JSON.stringify(await concurrencyLimits.retrieve("auto-edit-render"), null, 2)); } catch (e) { console.log("limit lookup failed", e.message); }
+          '
