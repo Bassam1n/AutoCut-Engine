@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Suspense, useState, useTransition } from "react";
 import type { ApiKeyProvider } from "@/app/org/[orgId]/settings/keys/keys-data";
 import type { BrandSecretRow } from "./keys-data";
 import { saveBrandProviderKey } from "./keys-actions";
+import { HiggsfieldPlanCard } from "./higgsfield-plan-card";
 import { buttonVariants } from "@/components/button";
 import { ProviderKeyFields, providerKeyHint } from "@/app/org/[orgId]/settings/keys/provider-key-fields";
 
@@ -27,6 +28,8 @@ export function KeysScreen({
   secrets: BrandSecretRow[];
 }) {
   const byProvider = Object.fromEntries(secrets.map((s) => [s.provider, s]));
+  // Not an API-key provider, so it isn't in ApiKeyProvider; matched by name.
+  const planSecret = secrets.find((s) => (s.provider as string) === "higgsfield_plan");
 
   return (
     <div className="flex flex-col gap-3">
@@ -45,6 +48,15 @@ export function KeysScreen({
           existing={byProvider[p.id]}
         />
       ))}
+
+      <Suspense fallback={null}>
+        <HiggsfieldPlanCard
+          orgId={orgId}
+          brandId={brandId}
+          connected={Boolean(planSecret)}
+          verified={Boolean(planSecret?.verified_at)}
+        />
+      </Suspense>
     </div>
   );
 }
