@@ -1,3 +1,4 @@
+import { setDesignedText } from "./designed-text";
 import { TRANSITIONS, clipStarts, planLength, type EditPlan, type PlanClip } from "./plan-schema";
 
 /**
@@ -239,6 +240,16 @@ export function setGraphicText(plan: EditPlan, id: string, props: Partial<EditPl
   if (i < 0) return plan;
   const next = clone(plan);
   Object.assign(next.graphics[i].template.props, props);
+  return next;
+}
+
+/** Changes one run of text in a Designed graphic's own HTML (see designed-text.ts). */
+export function setDesignedGraphicText(plan: EditPlan, id: string, index: number, text: string): EditPlan {
+  const i = plan.graphics.findIndex((g) => g.id === id);
+  if (i < 0 || !plan.graphics[i].code) return plan;
+  const next = clone(plan);
+  const code = next.graphics[i].code!;
+  code.html = setDesignedText(code.html, index, text);
   return next;
 }
 

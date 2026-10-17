@@ -5,8 +5,10 @@ import { renderProblems } from "./lint";
 import { EditPlan, clipStarts, planLength } from "./plan-schema";
 import { previewAt } from "./preview-model";
 import { TRANSITION_CATALOGUE } from "./transitions";
+import { designedTexts, setDesignedText } from "./designed-text";
+import { checkGraphicCode, resolveGraphic } from "./graphics-sandbox";
 import {
-  addCaption, deleteClip, insertClip, deleteGraphic, kenBurnsOf, moveCaption, moveClip, planFromScenes, retimeGraphic,
+  addCaption, deleteClip, insertClip, setDesignedGraphicText, deleteGraphic, kenBurnsOf, moveCaption, moveClip, planFromScenes, retimeGraphic,
   setKenBurns, setTransition, splitClip, trimClip, updateCaption,
 } from "./timeline-ops";
 
@@ -181,5 +183,31 @@ describe("previewAt", () => {
     expect(previewAt(p, p.captions[0].start + 0.1).captions).toEqual([0]);
     expect(s.voiceovers).toEqual([]);
     expect(previewAt(p, clipStarts(p)[1] + 0.5, { 1: 2 }).voiceovers).toEqual([{ scene: 1, local: expect.closeTo(0.5, 6) }]);
+  });
+});
+
+describe("Designed graphic text", () => {
+  const html = '<div id="bg"></div><div id="hd">Taste the difference.</div><div id="cta">\n  Find it at your store today\n</div><b>A &amp; B</b>';
+
+  it("lists each run of text, decoded", () => {
+    expect(designedTexts(html)).toEqual(["Taste the difference.", "Find it at your store today", "A & B"]);
+  });
+
+  it("changes only that run, keeps the layout and escapes markup", () => {
+    const out = setDesignedText(html, 1, "Shop <now> & save");
+    expect(out).toBe('<div id="bg"></div><div id="hd">Taste the difference.</div><div id="cta">\n  Shop &lt;now&gt; &amp; save\n</div><b>A &amp; B</b>');
+    expect(designedTexts(out)[1]).toBe("Shop <now> & save");
+    expect(checkGraphicCode({ css: "", html: out, js: "tl.to(\"#cta\",{opacity:1,duration:.3},0);" })).toEqual([]);
+  });
+
+  it("edits the graphic in the plan, so the preview and the render both change", () => {
+    const p = EditPlan.parse(structuredClone(designedFixture));
+    const g = p.graphics.find((x) => x.code)!;
+    const before = designedTexts(g.code!.html);
+    const q = setDesignedGraphicText(p, g.id, 0, "New words");
+    const after = q.graphics.find((x) => x.id === g.id)!;
+    expect(designedTexts(after.code!.html)).toEqual(["New words", ...before.slice(1)]);
+    expect(resolveGraphic(after).source).toBe("designed");
+    expect(p.graphics.find((x) => x.id === g.id)!.code!.html).toBe(g.code!.html);
   });
 });

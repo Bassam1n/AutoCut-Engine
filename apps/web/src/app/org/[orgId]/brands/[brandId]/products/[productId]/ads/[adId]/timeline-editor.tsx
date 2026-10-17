@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { designedTexts } from "@/lib/auto-edit/designed-text";
 import { problemForEditors, renderProblems } from "@/lib/auto-edit/lint";
 import { clipStarts, footageLabel, footageShortLabel, planLength, voiceoverStarts, type EditPlan, type TRANSITIONS } from "@/lib/auto-edit/plan-schema";
 import { previewAt } from "@/lib/auto-edit/preview-model";
 import { TRANSITION_CATALOGUE, TRANSITION_GROUPS, transitionLabel } from "@/lib/auto-edit/transitions";
 import {
   addCaption, deleteCaption, deleteClip, deleteGraphic, insertClip, kenBurnsOf, moveCaption, moveClip, retimeGraphic,
-  setClipVolume, setGraphicText, setKenBurns, setTransition, splitClip, trimClip, updateCaption, type KenBurns,
+  setClipVolume, setDesignedGraphicText, setGraphicText, setKenBurns, setTransition, splitClip, trimClip, updateCaption, type KenBurns,
 } from "@/lib/auto-edit/timeline-ops";
 import { saveTimeline, type EditorScene, type TimelineView } from "../auto-edit-actions";
 import { LivePreview } from "./live-preview";
@@ -451,6 +452,15 @@ function Inspector({
   graphic: EditPlan["graphics"][number] | null;
 }) {
   const num = (v: string) => (v.trim() === "" ? NaN : Number(v));
+  const templateFields = graphic && (
+    <div className="grid grid-cols-2 gap-2">
+      {(graphic.template.name === "callout" ? (["text", "accent"] as const) : graphic.template.name === "hookPill" ? (["headline", "sub", "accent"] as const) : (["headline", "sub", "cta", "bg", "accent"] as const)).map((k) => (
+        <label key={k} className="flex flex-col gap-1">{k}
+          <input className="field field-sm" value={graphic.template.props[k]} onChange={(e) => onCommit(setGraphicText(plan, graphic.id, { [k]: e.target.value }))} />
+        </label>
+      ))}
+    </div>
+  );
   return (
     <fieldset disabled={locked} className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-border p-3 text-xs">
       {!sel && <p className="text-foreground-muted">Select a clip, caption or graphic on the timeline to edit it.</p>}
@@ -533,14 +543,23 @@ function Inspector({
               <input type="number" step={0.1} className="field field-sm" value={graphic.duration} onChange={(e) => { const v = num(e.target.value); if (!Number.isNaN(v)) onCommit(retimeGraphic(plan, graphic.id, graphic.start, v)); }} />
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {(graphic.template.name === "callout" ? (["text", "accent"] as const) : graphic.template.name === "hookPill" ? (["headline", "sub", "accent"] as const) : (["headline", "sub", "cta", "bg", "accent"] as const)).map((k) => (
-              <label key={k} className="flex flex-col gap-1">{k}
-                <input className="field field-sm" value={graphic.template.props[k]} onChange={(e) => onCommit(setGraphicText(plan, graphic.id, { [k]: e.target.value }))} />
-              </label>
-            ))}
-          </div>
-          {graphic.code && <p className="text-[11px] text-foreground-muted">This is a Designed graphic: its look and wording are in its code. These fields change its Clean template, used if the design can&apos;t render.</p>}
+          {graphic.code ? (
+            <>
+              <div className="flex flex-col gap-2">
+                {designedTexts(graphic.code.html).map((text, i) => (
+                  <label key={i} className="flex flex-col gap-1">Text {i + 1}
+                    <TextRunField value={text} onChange={(v) => onCommit(setDesignedGraphicText(plan, graphic.id, i, v))} />
+                  </label>
+                ))}
+              </div>
+              <details className="text-[11px] text-foreground-muted">
+                <summary className="cursor-pointer">Fallback template (only shows if this design can&apos;t render)</summary>
+                <div className="mt-2">{templateFields}</div>
+              </details>
+            </>
+          ) : (
+            templateFields
+          )}
           <button type="button" className="btn-secondary btn-sm self-start text-danger" onClick={onDelete}>Delete graphic</button>
         </>
       )}
@@ -551,4 +570,21 @@ function Inspector({
 function fmt(s: number): string {
   const m = Math.floor(s / 60);
   return `${m}:${(s - m * 60).toFixed(1).padStart(4, "0")}`;
+}
+
+/** A text run of a Designed graphic: live as you type, but never empty (an empty run would vanish from the graphic). */
+function TextRunField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input
+      className="field field-sm"
+      value={draft ?? value}
+      maxLength={200}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        if (e.target.value.trim()) onChange(e.target.value);
+      }}
+      onBlur={() => setDraft(null)}
+    />
+  );
 }
