@@ -93,8 +93,8 @@ export async function planEdit({ ad, clipDurations, frames, mode }) {
 }
 
 /** Asks for fixes to lint problems the schema can't express. */
-export async function fixPlan({ ad, clipDurations, plan, problems, mode }) {
-  return call({ label: "fix", schema: EditPlan, effort: "medium", content: [
+export async function fixPlan({ ad, clipDurations, plan, problems, mode, label = "fix", effort = "medium" }) {
+  return call({ label, schema: EditPlan, effort, content: [
     { type: "text", text: mode === "direct" ? MODE_DIRECT : MODE_TEMPLATE },
     { type: "text", text: `AD\n${JSON.stringify(ad)}\nClip durations: ${JSON.stringify(clipDurations)}` },
     { type: "text", text: `Your plan:\n${JSON.stringify(plan)}\n\nIt has these problems:\n- ${problems.join("\n- ")}\n\nReturn the corrected full plan; change nothing else.` },
@@ -110,7 +110,7 @@ export async function reviewPreview({ ad, clipDurations, plan, previewFrames, mo
   ];
   for (const f of previewFrames) content.push({ type: "text", text: `t=${f.t.toFixed(2)}s` }, image(f.file));
   content.push({ type: "text", text: `Review the cut as the editor about to hand it to a client. Check legibility and placement of captions and graphics, collisions with faces or with each other, pacing, caption sync with the scenes, black frames or edges, and whether the hook and the end card work. ${extra}
-Return verdict "ship" or "fix", the issues you found, and revisedPlan (the full plan with your fixes; identical if nothing needs fixing).` });
+Return verdict "ship" or "fix" and the issues you found, each with the exact plan change that fixes it. Only say "fix" for problems a viewer would notice.` });
   return call({ label: "review", schema: Review, content });
 }
 

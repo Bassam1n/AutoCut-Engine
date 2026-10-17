@@ -48,14 +48,15 @@ const Caption = z.object({
   popIn: z.boolean().describe("short scale pop on entry"),
 });
 
+// Plain strings, "" when unused: six nullable fields made the compiled grammar too large for the API.
 const TemplateProps = z.object({
-  headline: z.string().nullable().describe("hookPill, endCard"),
-  sub: z.string().nullable().describe("hookPill, endCard"),
-  text: z.string().nullable().describe("callout"),
-  cta: z.string().nullable().describe("endCard"),
-  bg: z.string().nullable().describe("endCard background colour"),
-  accent: z.string().nullable().describe("all templates: accent colour"),
-}).describe("null for props the template doesn't use");
+  headline: z.string().describe("hookPill, endCard"),
+  sub: z.string().describe("hookPill, endCard"),
+  text: z.string().describe("callout"),
+  cta: z.string().describe("endCard"),
+  bg: z.string().describe("endCard background colour"),
+  accent: z.string().describe("all templates: accent colour"),
+}).describe("empty string for props the template doesn't use");
 export const TEMPLATE_REQUIRED = { hookPill: ["headline"], callout: ["text"], endCard: ["headline", "cta"] };
 
 const Graphic = z.object({
@@ -82,10 +83,11 @@ export const EditPlan = z.object({
   endCardHold: z.number().describe("seconds the timeline runs past the last clip for a full-frame end card; 0 if none"),
 });
 
+// Verdict and issues only: with a full EditPlan inside, the compiled grammar is
+// too large for the API. A "fix" verdict goes to fixPlan as a second call.
 export const Review = z.object({
   verdict: z.enum(["ship", "fix"]),
-  issues: z.array(z.object({ at: z.number().nullable(), problem: z.string(), fix: z.string() })),
-  revisedPlan: EditPlan.describe("the full plan with the fixes applied (the same plan if verdict is ship)"),
+  issues: z.array(z.object({ at: z.number().nullable(), problem: z.string(), fix: z.string().describe("the exact plan change: which field, from what to what") })),
 });
 
 /** Checks Claude can't be held to by the JSON schema; returns problems as strings. */

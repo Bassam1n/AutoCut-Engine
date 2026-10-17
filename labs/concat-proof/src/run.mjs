@@ -1,7 +1,7 @@
 // The whole loop for one ad:
 //   context (script, scenes, sampled frames) -> Claude plans -> lint/fix ->
 //   Hyperframes graphics + Concat edits -> low-res preview -> Claude reviews
-//   sampled preview frames -> one round of fixes -> final 1080x1920 MP4.
+//   sampled preview frames -> one round of fixes (a second call) -> final 1080x1920 MP4.
 //
 //   node src/run.mjs --mode template|direct [--ad ad] [--work DIR] [--plan plan.json] [--no-review]
 //   node src/run.mjs --mode direct --revise "make it punchier" --from DIR/final-plan.json
@@ -101,7 +101,11 @@ if (a.revise) {
     writeFileSync(join(work, "review.json"), JSON.stringify(review, null, 2));
     log(`review: ${review.verdict}, ${review.issues.length} issues`);
     for (const i of review.issues) log(`  - ${i.at ?? "-"}s ${i.problem} -> ${i.fix}`);
-    if (review.verdict === "fix") plan = await validPlan(review.revisedPlan, "review");
+    if (review.verdict === "fix") {
+      const problems = review.issues.map((i) => `${i.at == null ? "" : `at ${i.at}s: `}${i.problem} Fix: ${i.fix}`);
+      const revised = await time("reviewFix", () => claude.fixPlan({ ad, clipDurations, plan, problems, mode: a.mode, label: "reviewFix", effort: "high" }));
+      plan = await validPlan(revised, "review");
+    }
   }
   writeFileSync(join(work, "final-plan.json"), JSON.stringify(plan, null, 2));
   await time("finalRender", () => render(plan, "final", 1080, 1920, 20, "medium"));

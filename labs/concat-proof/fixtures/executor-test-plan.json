@@ -22,8 +22,8 @@
     { "start": 22.5, "end": 26.6, "text": "One sip straight from the fridge.", "style": "main", "popIn": true }
   ],
   "graphics": [
-    { "id": "hook", "role": "hook", "start": 0, "duration": 2.5, "layout": "overlay", "template": { "name": "hookPill", "props": { "headline": "BLACK COFFEE TASTES BURNT?", "sub": "it doesn't have to", "text": null, "cta": null, "bg": null, "accent": "#ff4628" } }, "code": null },
-    { "id": "endcard", "role": "endCard", "start": 26.7, "duration": 3.3, "layout": "fullFrame", "template": { "name": "endCard", "props": { "headline": "Cold brew, never bitter", "sub": "18-hour steep. No added sugar.", "text": null, "cta": "Find it in store today", "bg": "#14110f", "accent": "#ff4628" } }, "code": null }
+    { "id": "hook", "role": "hook", "start": 0, "duration": 2.5, "layout": "overlay", "template": { "name": "hookPill", "props": { "headline": "BLACK COFFEE TASTES BURNT?", "sub": "it doesn't have to", "text": "", "cta": "", "bg": "", "accent": "#ff4628" } }, "code": null },
+    { "id": "endcard", "role": "endCard", "start": 26.7, "duration": 3.3, "layout": "fullFrame", "template": { "name": "endCard", "props": { "headline": "Cold brew, never bitter", "sub": "18-hour steep. No added sugar.", "text": "", "cta": "Find it in store today", "bg": "#14110f", "accent": "#ff4628" } }, "code": null }
   ],
   "endCardHold": 2.8
 }
