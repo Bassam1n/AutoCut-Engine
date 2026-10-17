@@ -1,0 +1,362 @@
+{
+  "summary": "Same hook-to-proof story, now cut punchier: jump-cut punch-ins split the steep and on-the-go shots, every shot has push-in energy, and captions land as short, bigger popping beats with accent-coloured hits. Two stickers mark the key claims: 18-hour steep and never bitter. The competitor clip stays out, and it closes on the fridge-cold can and a 'Taste the difference' end card.",
+  "clips": [
+    {
+      "scene": 0,
+      "sourceIn": 0.3,
+      "sourceOut": 5.8,
+      "transitionIn": null,
+      "motion": {
+        "keys": [
+          {
+            "at": 0,
+            "scale": 1.15,
+            "offsetX": 0,
+            "offsetY": 0.07
+          },
+          {
+            "at": 1,
+            "scale": 1.08,
+            "offsetX": 0,
+            "offsetY": 0.04
+          }
+        ],
+        "ease": "inOut"
+      },
+      "volume": 0.3
+    },
+    {
+      "scene": 1,
+      "sourceIn": 0,
+      "sourceOut": 4,
+      "transitionIn": null,
+      "motion": {
+        "keys": [
+          {
+            "at": 0,
+            "scale": 1,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          {
+            "at": 1,
+            "scale": 1.1,
+            "offsetX": 0,
+            "offsetY": 0.01
+          }
+        ],
+        "ease": "in"
+      },
+      "volume": 0.35
+    },
+    {
+      "scene": 2,
+      "sourceIn": 0,
+      "sourceOut": 3,
+      "transitionIn": null,
+      "motion": {
+        "keys": [
+          {
+            "at": 0,
+            "scale": 1.04,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          {
+            "at": 1,
+            "scale": 1.1,
+            "offsetX": 0.01,
+            "offsetY": 0.01
+          }
+        ],
+        "ease": "linear"
+      },
+      "volume": 0.3
+    },
+    {
+      "scene": 2,
+      "sourceIn": 3,
+      "sourceOut": 6,
+      "transitionIn": null,
+      "motion": {
+        "keys": [
+          {
+            "at": 0,
+            "scale": 1.18,
+            "offsetX": 0.02,
+            "offsetY": 0.02
+          },
+          {
+            "at": 1,
+            "scale": 1.22,
+            "offsetX": 0.02,
+            "offsetY": 0.03
+          }
+        ],
+        "ease": "linear"
+      },
+      "volume": 0.3
+    },
+    {
+      "scene": 4,
+      "sourceIn": 0,
+      "sourceOut": 3,
+      "transitionIn": null,
+      "motion": {
+        "keys": [
+          {
+            "at": 0,
+            "scale": 1,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          {
+            "at": 1,
+            "scale": 1.06,
+            "offsetX": 0,
+            "offsetY": 0.01
+          }
+        ],
+        "ease": "out"
+      },
+      "volume": 0.35
+    },
+    {
+      "scene": 4,
+      "sourceIn": 3,
+      "sourceOut": 6.016,
+      "transitionIn": null,
+      "motion": {
+        "keys": [
+          {
+            "at": 0,
+            "scale": 1.15,
+            "offsetX": 0,
+            "offsetY": 0.02
+          },
+          {
+            "at": 1,
+            "scale": 1.2,
+            "offsetX": 0,
+            "offsetY": 0.03
+          }
+        ],
+        "ease": "inOut"
+      },
+      "volume": 0.35
+    },
+    {
+      "scene": 5,
+      "sourceIn": 0.3,
+      "sourceOut": 5.8,
+      "transitionIn": null,
+      "motion": {
+        "keys": [
+          {
+            "at": 0,
+            "scale": 1,
+            "offsetX": 0,
+            "offsetY": 0
+          },
+          {
+            "at": 1,
+            "scale": 1.12,
+            "offsetX": 0,
+            "offsetY": 0.02
+          }
+        ],
+        "ease": "out"
+      },
+      "volume": 0.3
+    }
+  ],
+  "captionStyles": [
+    {
+      "name": "main",
+      "fontSize": 0.046,
+      "fontWeight": 900,
+      "color": "#ffffff",
+      "background": "",
+      "strokeWidth": 0.0045,
+      "strokeColor": "#000000",
+      "maxWidth": 0.84,
+      "offsetY": 0.28
+    },
+    {
+      "name": "punch",
+      "fontSize": 0.056,
+      "fontWeight": 900,
+      "color": "#f2b56b",
+      "background": "",
+      "strokeWidth": 0.005,
+      "strokeColor": "#000000",
+      "maxWidth": 0.84,
+      "offsetY": 0.28
+    }
+  ],
+  "captions": [
+    {
+      "start": 2.6,
+      "end": 3.6,
+      "text": "Fair.",
+      "style": "punch",
+      "popIn": true
+    },
+    {
+      "start": 3.7,
+      "end": 5.4,
+      "text": "Most of it kinda does.",
+      "style": "main",
+      "popIn": true
+    },
+    {
+      "start": 5.6,
+      "end": 7.6,
+      "text": "Bitterness comes from rushing it.",
+      "style": "main",
+      "popIn": true
+    },
+    {
+      "start": 7.7,
+      "end": 9.4,
+      "text": "We don't rush.",
+      "style": "punch",
+      "popIn": true
+    },
+    {
+      "start": 9.6,
+      "end": 11.6,
+      "text": "Slow-steeped 18 whole hours.",
+      "style": "main",
+      "popIn": true
+    },
+    {
+      "start": 11.7,
+      "end": 13.5,
+      "text": "Small batches. Deep, mellow, smooth.",
+      "style": "main",
+      "popIn": true
+    },
+    {
+      "start": 15.6,
+      "end": 16.8,
+      "text": "No added sugar.",
+      "style": "punch",
+      "popIn": true
+    },
+    {
+      "start": 16.9,
+      "end": 18.5,
+      "text": "Honestly? You won't miss it.",
+      "style": "main",
+      "popIn": true
+    },
+    {
+      "start": 18.6,
+      "end": 21.3,
+      "text": "Just good coffee, as it should've tasted.",
+      "style": "main",
+      "popIn": true
+    },
+    {
+      "start": 21.6,
+      "end": 24,
+      "text": "In a slim can, take it anywhere.",
+      "style": "main",
+      "popIn": true
+    },
+    {
+      "start": 24.1,
+      "end": 25,
+      "text": "Grab one.",
+      "style": "punch",
+      "popIn": true
+    },
+    {
+      "start": 25.1,
+      "end": 26.9,
+      "text": "Straight from the fridge.",
+      "style": "main",
+      "popIn": true
+    }
+  ],
+  "graphics": [
+    {
+      "id": "hook",
+      "role": "hook",
+      "start": 0,
+      "duration": 2.5,
+      "layout": "overlay",
+      "template": {
+        "name": "hookPill",
+        "props": {
+          "headline": "Black coffee = burnt toast?",
+          "sub": "Okay, confession time.",
+          "text": "",
+          "cta": "",
+          "bg": "",
+          "accent": "#c8873a"
+        }
+      },
+      "code": null
+    },
+    {
+      "id": "steep",
+      "role": "callout",
+      "start": 9.8,
+      "duration": 2.6,
+      "layout": "overlay",
+      "template": {
+        "name": "callout",
+        "props": {
+          "headline": "",
+          "sub": "",
+          "text": "18-HOUR STEEP",
+          "cta": "",
+          "bg": "",
+          "accent": "#c8873a"
+        }
+      },
+      "code": null
+    },
+    {
+      "id": "neverbitter",
+      "role": "callout",
+      "start": 13.6,
+      "duration": 1.8,
+      "layout": "overlay",
+      "template": {
+        "name": "callout",
+        "props": {
+          "headline": "",
+          "sub": "",
+          "text": "NEVER BITTER",
+          "cta": "",
+          "bg": "",
+          "accent": "#c8873a"
+        }
+      },
+      "code": null
+    },
+    {
+      "id": "endcard",
+      "role": "endCard",
+      "start": 27.016,
+      "duration": 3,
+      "layout": "fullFrame",
+      "template": {
+        "name": "endCard",
+        "props": {
+          "headline": "Taste the difference",
+          "sub": "18-hour cold brew. Small batches. No added sugar.",
+          "text": "",
+          "cta": "Find it in store today",
+          "bg": "#14100c",
+          "accent": "#c8873a"
+        }
+      },
+      "code": null
+    }
+  ],
+  "endCardHold": 3
+}

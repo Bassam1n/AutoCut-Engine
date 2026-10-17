@@ -1,0 +1,162 @@
+{
+  "mode": "direct",
+  "started": "2026-10-17T16:18:40.453Z",
+  "steps": {
+    "plan": 63891,
+    "previewRender": 76640,
+    "review": 34644,
+    "reviewFix": 29281,
+    "finalRender": 153901
+  },
+  "preview": {
+    "graphics": [
+      {
+        "id": "hook",
+        "layout": "overlay",
+        "seconds": 2.6,
+        "renderMs": 16102,
+        "cached": false
+      },
+      {
+        "id": "steep",
+        "layout": "overlay",
+        "seconds": 5,
+        "renderMs": 22696,
+        "cached": false
+      },
+      {
+        "id": "endcard",
+        "layout": "fullFrame",
+        "seconds": 2,
+        "renderMs": 6787,
+        "cached": false
+      }
+    ],
+    "buildMs": 400,
+    "exportMs": 30630
+  },
+  "review": {
+    "verdict": "fix",
+    "issues": [
+      {
+        "at": 17.2,
+        "problem": "Scene 3 (15.4–19.0 s) shows a can with a large, legible COSTA COFFEE logo, which is a competitor brand. That can't go to the client: it reads as an ad for Costa and contradicts the end-card can and the other clips. The logo sits on the can's label at roughly x 400–600 px, y 1210–1600 px. The top captions at y≈500 px stay clear of it.",
+        "fix": "Add a graphic to graphics: {\"id\":\"nosugar\",\"role\":\"callout\",\"start\":15.4,\"duration\":3.6,\"layout\":\"overlay\",\"template\":null,\"code\":{\"css\":\"#ns{position:absolute;left:290px;top:1130px;width:470px;height:470px;border-radius:50%;background:#f5e6c8;color:#1a0f08;border:10px solid #c8823a;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,'DejaVu Sans',sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.45);text-align:center;opacity:0}#ns .n{font-size:170px;font-weight:900;line-height:0.9}#ns .t{font-size:44px;font-weight:800;letter-spacing:2px;line-height:1.1;margin-top:8px}\",\"html\":\"<div id='ns'><div class='n'>0g</div><div class='t'>ADDED<br>SUGAR</div></div>\",\"js\":\"tl.fromTo('#ns',{scale:0.3,rotation:-20,opacity:0},{scale:1,rotation:-6,opacity:1,duration:0.3,ease:'back.out(1.8)'},0);tl.to('#ns',{rotation:-3,duration:2.9,ease:'sine.inOut'},0.3);tl.to('#ns',{scale:0.6,opacity:0,duration:0.25,ease:'power2.in'},3.3);\"}}. The sticker fully covers the COSTA label for the whole clip and reinforces the no-added-sugar claim. Also change clip 3's motion last key from {scale:1.1, offsetX:0.03, offsetY:0.03} to {scale:1.06, offsetX:0, offsetY:0}, so the can drifts less and stays under the sticker."
+      },
+      {
+        "at": 30,
+        "problem": "On the end card the sub line '18-hour steep · small batches · no added sugar' wraps and leaves 'sugar' orphaned alone on the second line. It looks unpolished on the CTA frame.",
+        "fix": "In the endcard css for #sub, change font-size:44px to font-size:36px and left:80px;width:920px to left:40px;width:1000px, so the line fits on one row. Alternatively, change the html to '18-hour steep · small batches<br>no added sugar'."
+      }
+    ],
+    "frames": 14
+  },
+  "final": {
+    "graphics": [
+      {
+        "id": "hook",
+        "layout": "overlay",
+        "seconds": 2.6,
+        "renderMs": 0,
+        "cached": true
+      },
+      {
+        "id": "steep",
+        "layout": "overlay",
+        "seconds": 5,
+        "renderMs": 0,
+        "cached": true
+      },
+      {
+        "id": "nosugar",
+        "layout": "overlay",
+        "seconds": 3.6,
+        "renderMs": 16839,
+        "cached": false
+      },
+      {
+        "id": "endcard",
+        "layout": "fullFrame",
+        "seconds": 2,
+        "renderMs": 6520,
+        "cached": false
+      }
+    ],
+    "buildMs": 374,
+    "exportMs": 130141
+  },
+  "claude": [
+    {
+      "label": "plan",
+      "ms": 63888,
+      "stop": "end_turn",
+      "usage": {
+        "input_tokens": 11513,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 6796,
+        "service_tier": "standard",
+        "inference_geo": "global",
+        "speed": "standard",
+        "output_tokens_details": {
+          "thinking_tokens": 3148
+        }
+      },
+      "usd": 0.181972
+    },
+    {
+      "label": "review",
+      "ms": 34643,
+      "stop": "end_turn",
+      "usage": {
+        "input_tokens": 11949,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 3204,
+        "service_tier": "standard",
+        "inference_geo": "global",
+        "speed": "standard",
+        "output_tokens_details": {
+          "thinking_tokens": 2195
+        }
+      },
+      "usd": 0.111876
+    },
+    {
+      "label": "reviewFix",
+      "ms": 29281,
+      "stop": "end_turn",
+      "usage": {
+        "input_tokens": 10319,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 4302,
+        "service_tier": "standard",
+        "inference_geo": "global",
+        "speed": "standard",
+        "output_tokens_details": {
+          "thinking_tokens": 139
+        }
+      },
+      "usd": 0.127316
+    }
+  ],
+  "claudeTotalUsd": 0.4212,
+  "claudeTokens": {
+    "input": 33781,
+    "output": 14302
+  },
+  "finished": "2026-10-17T16:24:44.941Z"
+}

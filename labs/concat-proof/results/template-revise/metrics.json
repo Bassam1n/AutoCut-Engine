@@ -1,0 +1,72 @@
+{
+  "mode": "template",
+  "started": "2026-10-17T16:26:56.095Z",
+  "steps": {
+    "revise": 37605,
+    "finalRender": 142929
+  },
+  "revised": {
+    "graphics": [
+      {
+        "id": "hook",
+        "layout": "overlay",
+        "seconds": 2.5,
+        "renderMs": 15738,
+        "cached": false
+      },
+      {
+        "id": "steep",
+        "layout": "overlay",
+        "seconds": 2.6,
+        "renderMs": 0,
+        "cached": true
+      },
+      {
+        "id": "neverbitter",
+        "layout": "overlay",
+        "seconds": 1.8,
+        "renderMs": 9878,
+        "cached": false
+      },
+      {
+        "id": "endcard",
+        "layout": "fullFrame",
+        "seconds": 3,
+        "renderMs": 7253,
+        "cached": false
+      }
+    ],
+    "buildMs": 370,
+    "exportMs": 109659
+  },
+  "claude": [
+    {
+      "label": "revise",
+      "ms": 37605,
+      "stop": "end_turn",
+      "usage": {
+        "input_tokens": 7926,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 4292,
+        "service_tier": "standard",
+        "inference_geo": "global",
+        "speed": "standard",
+        "output_tokens_details": {
+          "thinking_tokens": 2116
+        }
+      },
+      "usd": 0.117544
+    }
+  ],
+  "claudeTotalUsd": 0.1175,
+  "claudeTokens": {
+    "input": 7926,
+    "output": 4292
+  },
+  "finished": "2026-10-17T16:30:00.089Z"
+}

@@ -1,0 +1,20 @@
+{
+  "verdict": "fix",
+  "issues": [
+    {
+      "at": 16.45,
+      "problem": "Scene 3 (15.5–19.1 s) shows a can with a large COSTA COFFEE logo, which is a competitor brand. It sits in frame for the whole clip and is hard to crop out because the can moves up the frame. A client cannot run this.",
+      "fix": "Remove clip {scene:3, sourceIn:0.2, sourceOut:3.8}. Recover the lost time elsewhere. Scene 4: sourceIn 0.2→0, sourceOut 5.8→6.016 (output 15.5–21.516). Scene 5: sourceIn 0.6→0.3, sourceOut 3.4→5.8 (output 21.516–27.016). Endcard graphic start: 27.5→27.016, endCardHold stays 3. Total = 30.016 s."
+    },
+    {
+      "at": 15.6,
+      "problem": "After scene 3 is removed, the later captions no longer line up with their scenes. The no-added-sugar line needs a new home.",
+      "fix": "Replace captions from 15.6 onward with: {15.6–16.8 'No added sugar.' main popIn}, {16.9–18.5 'Honestly? You won't miss it.' main}, {18.6–21.3 'Just good coffee, as it should've tasted.' main popIn}, {21.6–24.0 'In a slim can, take it anywhere.' main popIn}, {24.1–26.9 'Grab one straight from the fridge.' main popIn}. The 'high' style is no longer used."
+    },
+    {
+      "at": 1,
+      "problem": "The hookPill headline sits right over the actor's face and eyes while she sips. The caption 'Confession: black coffee tastes burnt?' then repeats the pill's 'confession' line at the same moment, so the hook reads twice and looks cluttered.",
+      "fix": "Delete caption {0.2–2.5 'Confession: black coffee tastes burnt?'}. Set hook props headline 'Burnt-toast coffee?'→'Black coffee = burnt toast?' and keep sub 'Okay, confession time.' Change scene 0 motion keys to [{at:0, scale:1.15, offsetX:0, offsetY:0.07}, {at:1, scale:1.08, offsetX:0, offsetY:0.04}] so her face starts lower in frame, clear of the pill."
+    }
+  ]
+}
