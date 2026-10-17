@@ -58,14 +58,15 @@ function image(path) {
 
 async function call({ label, schema, content, effort = "high" }) {
   const t0 = performance.now();
-  const res = await api().messages.parse({
+  // Streamed: the SDK refuses a non-streaming request this large (it could pass 10 min).
+  const res = await api().messages.stream({
     model: MODEL,
     max_tokens: 32000,
     thinking: { type: "adaptive" },
     output_config: { effort, format: zodOutputFormat(schema) },
     system: SYSTEM,
     messages: [{ role: "user", content }],
-  });
+  }).finalMessage();
   const entry = { label, ms: Math.round(performance.now() - t0), stop: res.stop_reason, usage: res.usage, usd: cost(res.usage) };
   usageLog.push(entry);
   if (res.stop_reason === "refusal") throw new Error(`${label}: Claude declined (${JSON.stringify(res.stop_details)})`);
