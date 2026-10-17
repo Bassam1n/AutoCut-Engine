@@ -148,3 +148,14 @@ describe("exportProject", () => {
     expect(engine.calls.find((c) => c.method === "export.run")?.params).toMatchObject({ codec: "h264", width: 540, height: 960 });
   });
 });
+
+describe("toolchainPaths", () => {
+  it("gives the render tools a HOME and no secrets", async () => {
+    const { toolchainPaths } = await import("./toolchain");
+    const p = toolchainPaths({ PATH: "/usr/bin", SUPABASE_SERVICE_ROLE_KEY: "s", TRIGGER_SECRET_KEY: "t", NODE_ENV: "test" });
+    expect(p.concatEnv.HOME).toBe("/tmp");
+    expect(p.hyperframesEnv.HOME).toBe("/tmp");
+    expect(p.concatEnv.SUPABASE_SERVICE_ROLE_KEY).toBeUndefined();
+    expect(p.hyperframesEnv.TRIGGER_SECRET_KEY).toBeUndefined();
+  });
+});

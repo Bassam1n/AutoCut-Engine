@@ -69,7 +69,10 @@ export function toolchainPaths(env: NodeJS.ProcessEnv = process.env): ToolchainP
   const root = env.AUTO_EDIT_ROOT ?? "/opt/autoedit";
   const ffLib = `${root}/ffmpeg/lib`;
   const ortLib = `${root}/onnxruntime/lib`;
-  const base = { ...env };
+  // The worker sets no HOME, and the engine refuses to start without
+  // one (it keeps its settings there).
+  const home = env.AUTO_EDIT_HOME ?? env.HOME ?? "/tmp";
+  const base: NodeJS.ProcessEnv = { ...env, HOME: home };
   // Never hand the render tools the app's secrets.
   for (const k of Object.keys(base)) {
     if (/KEY|SECRET|TOKEN|PASSWORD/i.test(k)) delete base[k];
@@ -89,7 +92,6 @@ export function toolchainPaths(env: NodeJS.ProcessEnv = process.env): ToolchainP
       PRODUCER_HEADLESS_SHELL_PATH: env.AUTO_EDIT_CHROME ?? `${root}/chrome-sandboxed`,
       PATH: `${root}/ffmpeg/bin:${env.PATH ?? ""}`,
       LD_LIBRARY_PATH: ffLib,
-      HOME: env.AUTO_EDIT_HOME ?? env.HOME ?? "/tmp",
       DO_NOT_TRACK: "1",
       HYPERFRAMES_NO_TELEMETRY: "1",
       HYPERFRAMES_NO_UPDATE_CHECK: "1",
