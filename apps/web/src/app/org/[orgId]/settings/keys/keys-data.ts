@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
-export type ApiKeyProvider = "anthropic" | "kie" | "fal" | "elevenlabs" | "twelvelabs" | "pexels";
+export type ApiKeyProvider = "anthropic" | "kie" | "fal" | "higgsfield" | "elevenlabs" | "twelvelabs" | "pexels";
 export type OAuthProvider = "xai" | "heygen";
 
 export type OrgSecretRow = {

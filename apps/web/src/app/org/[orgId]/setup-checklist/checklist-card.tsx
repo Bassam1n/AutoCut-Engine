@@ -19,7 +19,7 @@ export function ChecklistCard({
     },
     {
       done: checklist.imageProviderKeyVerified,
-      label: "Verify an image provider key (kie.ai or fal.ai)",
+      label: "Verify an image provider key (kie.ai, fal.ai or Higgsfield)",
       href: `/org/${orgId}/settings/keys`,
     },
     {

@@ -37,7 +37,7 @@ export async function getSetupChecklist(orgId: string): Promise<SetupChecklist> 
     (s) => s.provider === "anthropic" && s.verified_at !== null
   );
   const imageProviderKeyVerified = secrets.some(
-    (s) => (s.provider === "kie" || s.provider === "fal") && s.verified_at !== null
+    (s) => (s.provider === "kie" || s.provider === "fal" || s.provider === "higgsfield") && s.verified_at !== null
   );
 
   const brandIds = (brandsResult.data ?? []).map((b) => b.id);

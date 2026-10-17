@@ -12,6 +12,8 @@ import { LlmCallError } from "@/lib/claude/types";
 import { PlanVideoMotionSchema } from "@/lib/claude/schemas/plan-video-motion";
 import { WriteVideoPromptSchema } from "@/lib/claude/schemas/write-video-prompt";
 import { startProviderJob, getJobStatus as getJobStatusAction } from "@/lib/jobs/run-job";
+import { HIGGSFIELD_ENDPOINTS } from "@/lib/providers/higgsfield";
+import { getTargetModel } from "@/lib/providers/models-data";
 import {
   defaultSceneVideoDurationS,
   parseVideoDurationField,
@@ -29,7 +31,7 @@ import { getProduct } from "../../products-data";
 import { canAccessJob, getAccessibleAsset } from "@/lib/access";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
+export type ModelChoice = { provider: "fal" | "kie" | "higgsfield"; endpoint: string };
 
 // resolveSceneSpeaks() moved to lib/video/duration.ts — this file is
 // a "use server" Server Actions module (every export must be async),
@@ -116,11 +118,14 @@ export async function resolveFinalVideoPrompt(
   styleMasterprompt: string | null,
   rules: { kind: "do" | "avoid"; text: string }[],
   endpoint: string,
-  productRealWorldSize?: string | null
+  productRealWorldSize?: string | null,
+  /** Provider of `endpoint`, so its registry prompt guide reaches Claude as target_model. */
+  provider?: ModelChoice["provider"]
 ): Promise<ResolveVideoPromptResult> {
   // Exported server action that spends on the org's LLM key.
   await requireOrgMember(orgId);
   const charLimit = videoPromptCharLimitFor(endpoint);
+  const targetModel = provider ? await getTargetModel({ provider, endpoint }) : null;
 
   async function writeOnce(shortenInstruction: string | null): Promise<string> {
     const result = await llmCall({
@@ -141,6 +146,7 @@ export async function resolveFinalVideoPrompt(
         active_rules: rules,
         shorten_instruction: shortenInstruction,
         product_real_world_size: productRealWorldSize ?? null,
+        target_model: targetModel,
       },
     });
     return result.output.final_prompt;
@@ -377,7 +383,8 @@ async function startGenerationWithMotionPlan(
     styleMasterprompt,
     rules.map((r) => ({ kind: r.kind, text: r.text })),
     model.endpoint,
-    product?.real_world_size
+    product?.real_world_size,
+    model.provider
   );
   if (!promptResult.ok) return { ok: false, error: promptResult.error };
 
@@ -484,6 +491,14 @@ function sceneVideoExtraParams(endpoint: string, speaks: boolean): Record<string
     if (endpoint === "kling-3.0/video") extra.sound = true;
     if (endpoint === "fal-ai/kling-video/v3/pro/image-to-video") extra.generate_audio = true;
   }
+  // Higgsfield's Kling and Wan default native audio ON, unlike the kie
+  // models above, so they get an explicit value either way: the
+  // provider's own audio only when the scene speaks, otherwise silent
+  // (the app's voiceover is mixed in separately).
+  if (endpoint === "kling-video/v3.0/std/image-to-video" || endpoint === "kling-video/v3.0/pro/image-to-video") {
+    extra.sound = speaks ? "on" : "off";
+  }
+  if (endpoint === "alibaba/wan-3.0/image-to-video") extra.generate_audio = speaks;
   // bytedance/seedance-2-5's real request payload (user-confirmed
   // 2026-10-12) has a documented return_last_frame field — kie.ai can
   // hand back a video's last frame natively, no ffmpeg needed (the
@@ -506,6 +521,8 @@ function sceneVideoExtraParams(endpoint: string, speaks: boolean): Record<string
  * are refused (here and in run-provider-job.ts) until one is added.
  */
 function priceUnitForVideoEndpoint(endpoint: string): "per_image" | "per_video" | "per_second" {
+  // Every Higgsfield video model is billed per second.
+  if (HIGGSFIELD_ENDPOINTS[endpoint]?.kind === "video") return "per_second";
   switch (endpoint) {
     case "kling-3.0/video":
     case "minimax-h3/image-to-video":

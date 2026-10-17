@@ -53,3 +53,44 @@ values
 on conflict (provider, model, unit) do update
   set usd = excluded.usd,
       updated_at = now();
+
+-- Higgsfield Cloud API prices (read 2026-10-17 from Higgsfield's public
+-- pricing at console.higgsfield.ai/pricing, the same data its page
+-- loads from dash.higgsfield.ai/api/v2/pricing/models/). Higgsfield
+-- publishes these directly in USD, so no credit conversion is needed.
+-- Each row is the LIST price (before Higgsfield's current launch
+-- discounts of 15-75%) for the most expensive tier the adapter can
+-- request, so recorded spend never undercounts:
+--   Marketing Studio Flare: token-priced ($0.0126 at 1k low up to
+--     $0.7219 at 4k max). The adapter blocks 4k and xhigh/max; $0.084
+--     is Higgsfield's own documented per-image estimate for the same
+--     GPT Image 2.5 Flare renderer at 2k with reference images (Ads
+--     Studio pricing).
+--   Grok Image 2.0: $0.04 (1k low) / $0.08 (2k medium) -> 0.08.
+--   SOUL V2: $0.0032 (720p) / $0.0057 (1080p); adapter pins 1080p.
+--   Ideogram 4.0: flat $0.03.
+--   Kling 3.0 Std / Pro i2v: $0.084-0.126 / $0.112-0.168 per second
+--     (upper value is with native audio) -> 0.126 / 0.168.
+--   Wan 3.0 i2v: $0.05 / 0.10 / 0.20 per second at 480p / 720p /
+--     1080p; adapter pins 1080p -> 0.20.
+--   MiniMax H3 i2v (2K only): $0.13 per second.
+--   Hailuo 2.3 Std i2v: $0.0467 (6s) / $0.056 (10s) per second -> 0.056.
+--   HappyHorse 1.1 i2v: $0.14 / 0.18 per second at 720p / 1080p;
+--     adapter pins 1080p -> 0.18.
+-- Seedance 2.x and Cinema Studio are not exposed yet: Higgsfield only
+-- publishes their lowest and highest tiers, not the 720p/1080p rate.
+insert into public.price_table (provider, model, unit, usd)
+values
+  ('higgsfield', 'marketing-studio/image/flare', 'per_image', 0.084),
+  ('higgsfield', 'xai/grok-imagine-image-2.0', 'per_image', 0.08),
+  ('higgsfield', 'higgsfield-ai/soul/v2/standard', 'per_image', 0.0057),
+  ('higgsfield', 'ideogram/v4.0', 'per_image', 0.03),
+  ('higgsfield', 'kling-video/v3.0/std/image-to-video', 'per_second', 0.126),
+  ('higgsfield', 'kling-video/v3.0/pro/image-to-video', 'per_second', 0.168),
+  ('higgsfield', 'alibaba/wan-3.0/image-to-video', 'per_second', 0.20),
+  ('higgsfield', 'minimax/h3/image-to-video', 'per_second', 0.13),
+  ('higgsfield', 'minimax/hailuo-2.3/standard/image-to-video', 'per_second', 0.056),
+  ('higgsfield', 'alibaba/happy-horse/v1.1/image-to-video', 'per_second', 0.18)
+on conflict (provider, model, unit) do update
+  set usd = excluded.usd,
+      updated_at = now();

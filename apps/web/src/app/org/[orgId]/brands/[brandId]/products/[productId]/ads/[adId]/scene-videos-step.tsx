@@ -509,7 +509,7 @@ function SceneVideoCard({
     }
 
     const clampedDuration = await clampDurationS(duration, videoModel.parameterSchema);
-    const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie", endpoint: videoModel.endpoint };
+    const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie" | "higgsfield", endpoint: videoModel.endpoint };
 
     setIsGenerating(true);
     try {
@@ -568,7 +568,7 @@ function SceneVideoCard({
 
     setError(null);
     const clampedDuration = await clampDurationS(duration, videoModel.parameterSchema);
-    const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie", endpoint: videoModel.endpoint };
+    const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie" | "higgsfield", endpoint: videoModel.endpoint };
 
     setIsAnimatingFallback(true);
     setIsGenerating(true);
@@ -737,7 +737,7 @@ function SceneVideoCard({
             if (!videoModel) {
               return Promise.resolve({ ok: false, error: "Pick a video model first." } as const);
             }
-            const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie", endpoint: videoModel.endpoint };
+            const model: ModelChoice = { provider: videoModel.provider as "fal" | "kie" | "higgsfield", endpoint: videoModel.endpoint };
             return submitVideoFeedback(orgId, brandId, productId, ad.id, scene.id, mode, feedbackText, remember, model);
           }}
           onVideoJobStarted={(jobId) => pollJob(jobId)}

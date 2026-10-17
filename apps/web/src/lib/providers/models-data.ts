@@ -60,3 +60,28 @@ export async function getModelOptions(capability: "image" | "video"): Promise<Mo
     return a.name.localeCompare(b.name);
   });
 }
+
+export type TargetModel = { name: string; provider: string; prompt_guide: string };
+
+/**
+ * The chosen model's registry prompt guide, handed to the prompt-writing
+ * Claude calls (write_image_prompt v5+, write_video_prompt v3+) as
+ * `target_model`, so the prompt is written for that model's strengths
+ * and limits. Null when the model has no guide or isn't registered.
+ */
+export async function getTargetModel(
+  model: { provider: string; endpoint: string } | null | undefined
+): Promise<TargetModel | null> {
+  if (!model) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("model_providers")
+    .select("provider, models!inner(name, prompt_guide)")
+    .eq("provider", model.provider)
+    .eq("endpoint", model.endpoint)
+    .limit(1)
+    .maybeSingle();
+  const row = data?.models as unknown as { name: string; prompt_guide: string | null } | undefined;
+  if (!row?.prompt_guide) return null;
+  return { name: row.name, provider: model.provider, prompt_guide: row.prompt_guide };
+}

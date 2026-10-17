@@ -1,7 +1,6 @@
 import { task, wait, logger } from "@trigger.dev/sdk";
 import { createClient } from "@supabase/supabase-js";
-import { KieAdapter } from "@/lib/providers/kie";
-import { FalAdapter } from "@/lib/providers/fal";
+import { adapterFor } from "@/lib/providers/adapter-for";
 import { ProviderAdapterError, type ProviderAdapter, type SubmitParams } from "@/lib/providers/types";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
 import { finalizeSceneVideo } from "@/lib/jobs/finalize-scene-video";
@@ -67,7 +66,7 @@ export const runProviderJob = task({
     const jobPayload = job.payload as {
       orgId: string;
       brandId?: string;
-      provider: "fal" | "kie";
+      provider: "fal" | "kie" | "higgsfield";
       endpoint: string;
       prompt: string;
       referenceImageUrls?: string[];
@@ -133,8 +132,7 @@ export const runProviderJob = task({
       return { ok: false };
     }
 
-    const adapter: ProviderAdapter =
-      jobPayload.provider === "kie" ? new KieAdapter(apiKey) : new FalAdapter(apiKey);
+    const adapter: ProviderAdapter = adapterFor(jobPayload.provider, apiKey);
 
     const submitParams: SubmitParams = {
       kind: job.kind === "generate_scene_video" ? "video" : "image",

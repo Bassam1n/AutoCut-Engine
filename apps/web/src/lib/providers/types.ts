@@ -8,6 +8,9 @@
 
 export type GenerationKind = "image" | "video";
 
+/** Image/video generation providers with an adapter (see adapter-for.ts). */
+export type MediaProvider = "fal" | "kie" | "higgsfield";
+
 export type SubmitParams = {
   kind: GenerationKind;
   model: string;
@@ -53,7 +56,11 @@ export type PollResult = {
 
 export type CancelResult =
   | { ok: true; status: "cancelled" | "already_completed" }
-  | { ok: false; reason: "not_supported" | "not_found" | "provider_error" };
+  | {
+      ok: false;
+      /** already_started: the provider refused because processing began, so it will still run and bill. */
+      reason: "not_supported" | "not_found" | "provider_error" | "already_started";
+    };
 
 /**
  * Spec §5.10's error vocabulary, the subset an adapter can actually

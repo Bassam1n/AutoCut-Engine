@@ -336,3 +336,108 @@ on conflict (model_id, provider, endpoint) do update
   set parameter_schema = excluded.parameter_schema,
       price_rule = excluded.price_rule,
       is_default = excluded.is_default;
+
+-- Higgsfield Cloud API models (2026-10-17). Endpoints and fields come from
+-- each model's page on docs.higgsfield.ai; HiggsfieldAdapter
+-- (apps/web/src/lib/providers/higgsfield.ts) sends only documented
+-- fields and pins tier-changing ones (resolution) to the tier priced in
+-- seed_price_table.sql. Prompt guides fold in prompting know-how from
+-- github.com/higgsfield-ai/skills (MIT, Copyright (c) 2026 Higgsfield AI),
+-- paraphrased, plus each model's documented limits.
+insert into public.models (name, capability, active, prompt_guide, is_default)
+values
+  ('marketing-studio-flare', 'image', true, 'Higgsfield Marketing Studio Image 2.5 Flare (GPT Image 2.5 engine), built for campaign and product ad images. Accepts up to 16 reference images: the product photos are the source of truth, so describe the change you want (setting, light, props, people, framing) instead of re-describing the product they already show. Write like a photographer''s brief: subject, setting, composition and camera angle, lens, lighting, mood. Strongest Higgsfield model for legible on-image text: if the scene needs text, quote it exactly and keep headlines to 2-4 words placed in clear space, never over a face. Phrase everything positively (say what you want, e.g. ''tack sharp'', not ''no blur''): most Higgsfield models have no negative prompt. Prompt limit 5000 characters, but a tight paragraph works best.', false),
+  ('grok-image-2', 'image', true, 'xAI Grok Image 2.0 via Higgsfield. Expressive, bold, high-contrast looks; good for stylized or graphic ad frames. Takes up to 10 reference images for editing: describe only what should change from the references. Use vivid, concrete visual language (subject, setting, color palette, lighting, camera angle). Phrase everything positively (say what you want, e.g. ''tack sharp'', not ''no blur''): most Higgsfield models have no negative prompt. ', false),
+  ('soul-2', 'image', true, 'Higgsfield SOUL V2, text-to-image only: reference images are NOT used, so the prompt alone must carry the product''s look. Best for original people and editorial scenes: UGC-style creators, influencers, fashion, lifestyle, magazine-cover polish. Describe the person (age range, look, wardrobe, expression), the setting, the camera (lens, angle, shot size) and the light in concrete photographic terms. Not suited to exact product reproduction or text. Phrase everything positively (say what you want, e.g. ''tack sharp'', not ''no blur''): most Higgsfield models have no negative prompt. ', false),
+  ('ideogram-4', 'image', true, 'Ideogram 4.0 via Higgsfield. Strong typography: use it when the frame must show readable text (sign, label, headline); quote the exact words in double quotes and say where they sit. Takes one reference image (the first product photo) for remix. Prompt must be 2-2048 characters. Phrase everything positively (say what you want, e.g. ''tack sharp'', not ''no blur''): most Higgsfield models have no negative prompt. ', false),
+  ('kling-3-std-i2v', 'video', true, 'Kling 3.0 Standard image-to-video via Higgsfield. Good value for single-plane scenes without heavy motion; native audio when the scene speaks. 3-15 seconds; output framing follows the starting image. Prompts over 2500 characters are truncated. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false),
+  ('kling-3-pro-i2v', 'video', true, 'Kling 3.0 Pro image-to-video via Higgsfield. Higher fidelity than Standard for detailed product and people motion; native audio when the scene speaks. 3-15 seconds; output framing follows the starting image. Prompts over 2500 characters are truncated. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false),
+  ('wan-3-i2v', 'video', true, 'Alibaba Wan 3.0 image-to-video via Higgsfield, 1080p, 2-30 seconds, native audio when the scene speaks. Handles longer continuous shots and stylized looks well. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false),
+  ('minimax-h3-2k-i2v', 'video', true, 'MiniMax H3 image-to-video via Higgsfield at 2K, 5-15 seconds, no audio. Output aspect ratio follows the starting image. Strong, realistic physical motion. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false),
+  ('hailuo-2-3-i2v', 'video', true, 'MiniMax Hailuo 2.3 Standard image-to-video via Higgsfield, 768p, 6 or 10 seconds, no audio. Cheapest Higgsfield video option with strong physics; good for drafts and simple product motion. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false),
+  ('happy-horse-1-1-i2v', 'video', true, 'Alibaba HappyHorse 1.1 image-to-video via Higgsfield, 1080p, 2-15 seconds. Uses the starting image as the first frame only. The starting image anchors the shot: describe only the motion, never re-describe what the frame already shows. Use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, one clear action per clip. Keep on-screen text, captions, logos and watermarks out of the motion (they garble in video). Phrase everything positively.', false)
+on conflict (name) do update
+  set capability = excluded.capability,
+      active = excluded.active,
+      prompt_guide = excluded.prompt_guide,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'marketing-studio/image/flare', '[{"key": "resolution", "label": "Resolution", "type": "enum", "options": ["1k", "2k"], "default": "2k", "required": false}, {"key": "quality", "label": "Quality", "type": "enum", "options": ["low", "medium", "high"], "default": "high", "required": false}, {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["auto", "1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"], "default": "auto", "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'marketing-studio-flare'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'xai/grok-imagine-image-2.0', '[{"key": "resolution", "label": "Resolution", "type": "enum", "options": ["1k", "2k"], "default": "1k", "required": false}, {"key": "quality", "label": "Quality", "type": "enum", "options": ["low", "medium"], "default": "medium", "required": false}, {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["auto", "1:1", "1:2", "2:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16"], "default": "auto", "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'grok-image-2'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'higgsfield-ai/soul/v2/standard', '[{"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["9:16", "16:9", "4:3", "3:4", "1:1", "2:3", "3:2"], "default": "1:1", "required": false}, {"key": "enhance_prompt", "label": "Enhance prompt", "type": "boolean", "default": false, "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'soul-2'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'ideogram/v4.0', '[{"key": "rendering_speed", "label": "Speed", "type": "enum", "options": ["TURBO", "DEFAULT", "QUALITY"], "default": "DEFAULT", "required": false}, {"key": "aspect_ratio", "label": "Aspect ratio", "type": "enum", "options": ["1:1", "4:5", "9:16", "16:9", "3:4", "4:3", "2:3", "3:2"], "default": "1:1", "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'ideogram-4'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'kling-video/v3.0/std/image-to-video', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 3, "max": 15, "default": 5, "required": false}, {"key": "cfg_scale", "label": "Prompt adherence", "type": "number", "min": 0, "max": 1, "step": 0.1, "default": 0.5, "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'kling-3-std-i2v'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'kling-video/v3.0/pro/image-to-video', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 3, "max": 15, "default": 5, "required": false}, {"key": "cfg_scale", "label": "Prompt adherence", "type": "number", "min": 0, "max": 1, "step": 0.1, "default": 0.5, "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'kling-3-pro-i2v'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'alibaba/wan-3.0/image-to-video', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 2, "max": 30, "default": 5, "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'wan-3-i2v'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'minimax/h3/image-to-video', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 5, "max": 15, "default": 5, "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'minimax-h3-2k-i2v'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'minimax/hailuo-2.3/standard/image-to-video', '[{"key": "duration", "label": "Duration (seconds)", "type": "enum", "options": ["6", "10"], "default": "6", "required": true}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'hailuo-2-3-i2v'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;
+
+insert into public.model_providers (model_id, provider, endpoint, parameter_schema, price_rule, is_default)
+select m.id, 'higgsfield', 'alibaba/happy-horse/v1.1/image-to-video', '[{"key": "duration", "label": "Duration (seconds)", "type": "integer", "min": 2, "max": 15, "default": 5, "required": false}]'::jsonb, '{}'::jsonb, true
+from public.models m where m.name = 'happy-horse-1-1-i2v'
+on conflict (model_id, provider, endpoint) do update
+  set parameter_schema = excluded.parameter_schema,
+      price_rule = excluded.price_rule,
+      is_default = excluded.is_default;

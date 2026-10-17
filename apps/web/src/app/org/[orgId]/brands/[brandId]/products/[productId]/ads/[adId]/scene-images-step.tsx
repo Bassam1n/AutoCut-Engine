@@ -98,7 +98,7 @@ export function SceneImagesStep({
       setError({ friendly: "Pick an image model first." });
       return;
     }
-    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie", endpoint: imageModel.endpoint };
+    const model: ModelChoice = { provider: imageModel.provider as "fal" | "kie" | "higgsfield", endpoint: imageModel.endpoint };
     markGenerating(sceneId, true);
     try {
       const result = await generateSceneImages(orgId, brandId, productId, ad.id, sceneId, count, model);
@@ -555,6 +555,7 @@ function SceneImageCard({
           scene={scene}
           override={override}
           onOverrideSaved={setOverride}
+          model={feedbackModel ? { provider: feedbackModel.provider as "fal" | "kie" | "higgsfield", endpoint: feedbackModel.endpoint } : null}
         />
       )}
 
@@ -576,7 +577,7 @@ function SceneImageCard({
             if (!feedbackModel) {
               return Promise.resolve({ ok: false, error: "Pick an image model first." } as const);
             }
-            const model: ModelChoice = { provider: feedbackModel.provider as "fal" | "kie", endpoint: feedbackModel.endpoint };
+            const model: ModelChoice = { provider: feedbackModel.provider as "fal" | "kie" | "higgsfield", endpoint: feedbackModel.endpoint };
             return submitImageFeedback(
               orgId,
               brandId,
@@ -637,6 +638,7 @@ function PromptOverrideEditor({
   scene,
   override,
   onOverrideSaved,
+  model,
 }: {
   orgId: string;
   brandId: string;
@@ -645,6 +647,7 @@ function PromptOverrideEditor({
   scene: Scene;
   override: string | null;
   onOverrideSaved: (override: string | null) => void;
+  model: ModelChoice | null;
 }) {
   const [text, setText] = useState(override ?? "");
   const [isComputing, startComputing] = useTransition();
@@ -655,7 +658,7 @@ function PromptOverrideEditor({
   function onComputePrompt() {
     setError(null);
     startComputing(async () => {
-      const result = await resolveFinalImagePrompt(orgId, brandId, productId, scene);
+      const result = await resolveFinalImagePrompt(orgId, brandId, productId, scene, model);
       if (result.ok) {
         setText(result.prompt);
         setHasComputed(true);

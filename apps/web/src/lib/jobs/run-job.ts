@@ -26,7 +26,7 @@ import type { runProviderJob } from "@/trigger/run-provider-job";
 export type RunJobPayload = {
   orgId: string;
   brandId: string;
-  provider: "fal" | "kie";
+  provider: "fal" | "kie" | "higgsfield";
   endpoint: string;
   prompt: string;
   referenceImageUrls?: string[];

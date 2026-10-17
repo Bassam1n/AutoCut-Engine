@@ -1,7 +1,6 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/service";
-import { FalAdapter } from "./fal";
-import { KieAdapter } from "./kie";
+import { adapterFor } from "./adapter-for";
 import { ProviderAdapterError, type ProviderAdapter } from "./types";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
 
@@ -36,7 +35,7 @@ export async function generateReferenceImage(params: {
   brandId: string;
   prompt: string;
   referenceImageUrls?: string[];
-  provider: "fal" | "kie";
+  provider: "fal" | "kie" | "higgsfield";
   endpoint: string;
   extra?: Record<string, unknown>;
   /** Ad this generation is attributed to for cost breakdown, when it has one — cast reference generation is triggered from inside an ad's Studio flow even though the resulting asset is brand-scoped, not ad-scoped. */
@@ -87,7 +86,7 @@ export async function generateReferenceImage(params: {
     };
   }
 
-  const adapter: ProviderAdapter = params.provider === "kie" ? new KieAdapter(apiKey) : new FalAdapter(apiKey);
+  const adapter: ProviderAdapter = adapterFor(params.provider, apiKey);
 
   let externalTaskId: string;
   try {

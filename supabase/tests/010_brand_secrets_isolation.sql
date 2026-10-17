@@ -8,7 +8,7 @@
 -- per-brand keys never breaks an org that hasn't set any up.
 
 begin;
-select plan(9);
+select plan(10);
 
 insert into auth.users (id, email, aud, role)
 values ('d0000000-0000-0000-0000-000000000001', 'brand-secrets-test-user@example.invalid', 'authenticated', 'authenticated');
@@ -43,6 +43,13 @@ select lives_ok(
 select lives_ok(
   $$ select public.save_org_secret('d1111111-1111-1111-1111-111111111111', 'fal', 'org-level-fallback-key-value') $$,
   'save_org_secret succeeds for the fallback fixture (fal: no brand-level key exists, so this is what must be returned)'
+);
+
+-- Migration 065: Higgsfield's two-part credential is stored as one
+-- "KEY_ID:KEY_SECRET" value, so the provider allow-list must accept it.
+select lives_ok(
+  $$ select public.save_brand_secret('d1111111-1111-1111-1111-111111111111', 'd2222222-2222-2222-2222-222222222222', 'higgsfield', 'test-key-id:test-key-secret') $$,
+  'save_brand_secret accepts the higgsfield provider'
 );
 
 select is(

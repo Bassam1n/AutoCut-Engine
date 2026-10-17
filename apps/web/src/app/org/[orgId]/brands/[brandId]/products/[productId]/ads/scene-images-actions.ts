@@ -11,6 +11,7 @@ import { LlmCallError } from "@/lib/claude/types";
 import { WriteImagePromptSchema } from "@/lib/claude/schemas/write-image-prompt";
 import { GenerateProductSpecSchema } from "@/lib/claude/schemas/generate-product-spec";
 import { generateReferenceImage } from "@/lib/providers/generate-reference-image";
+import { getTargetModel } from "@/lib/providers/models-data";
 import { getEffectiveSceneStyle } from "@/lib/scene-style";
 import { getAd } from "./ads-data";
 import { getScenes, type Scene } from "./scenes-data";
@@ -31,7 +32,7 @@ import { getAccessibleAd, getAccessibleAsset, isPathUnder, sceneBelongsToAd } fr
 // poll-loop cap.
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-export type ModelChoice = { provider: "fal" | "kie"; endpoint: string };
+export type ModelChoice = { provider: "fal" | "kie" | "higgsfield"; endpoint: string };
 
 /**
  * Reference-image assembly cap for the actual image-generation call
@@ -316,7 +317,9 @@ export async function resolveFinalImagePrompt(
   orgId: string,
   brandId: string,
   productId: string,
-  scene: Scene
+  scene: Scene,
+  /** The image model the prompt is for: its registry prompt guide goes to Claude as target_model. */
+  model?: ModelChoice | null
 ): Promise<{ ok: true; prompt: string; wasOverride: boolean } | { ok: false; error: string }> {
   // Exported server action that spends on the org's LLM key.
   await requireOrgMember(orgId);
@@ -342,7 +345,10 @@ export async function resolveFinalImagePrompt(
   }
   const productSpec = scene.product_id ? await getLatestProductSpec(orgId, scene.product_id) : null;
 
-  const rules = await getActiveRulesForAd(orgId, brandId, sceneStyle.styleId, scene.product_id);
+  const [rules, targetModel] = await Promise.all([
+    getActiveRulesForAd(orgId, brandId, sceneStyle.styleId, scene.product_id),
+    getTargetModel(model),
+  ]);
 
   try {
     const result = await llmCall({
@@ -362,6 +368,7 @@ export async function resolveFinalImagePrompt(
         style_masterprompt: styleMasterprompt,
         active_rules: rules.map((r) => ({ kind: r.kind, text: r.text })),
         product_spec: productSpec?.spec ?? null,
+        target_model: targetModel,
       },
     });
     return { ok: true, prompt: clampPromptLength(result.output.final_prompt), wasOverride: false };
@@ -424,7 +431,7 @@ export async function generateSceneImages(
   // ad/brand lookups resolveFinalImagePrompt otherwise does).
   if (!(await getAccessibleAd(orgId, adId, brandId))) return { ok: false, error: "Ad not found." };
 
-  const promptResult = await resolveFinalImagePrompt(orgId, brandId, productId, scene);
+  const promptResult = await resolveFinalImagePrompt(orgId, brandId, productId, scene, model);
   if (!promptResult.ok) return { ok: false, error: promptResult.error };
 
   const references = await assembleSceneReferences(orgId, brandId, scene);

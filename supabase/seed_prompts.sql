@@ -517,3 +517,32 @@ values (
 on conflict (task, version) do update
   set body = excluded.body,
       active = excluded.active;
+
+
+-- v5: the prompt is now written FOR the chosen image model. Callers pass
+-- target_model (name, provider, prompt_guide from models.prompt_guide)
+-- so per-model know-how reaches Claude, e.g. the Higgsfield models'
+-- guides (seed_models.sql), which paraphrase prompting advice from
+-- github.com/higgsfield-ai/skills (MIT, Copyright (c) 2026 Higgsfield AI).
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_image_prompt',
+  5,
+  'You are writing the final image generation prompt for one scene of a video ad. You are given the scene''s Visual description (what the camera should see), brand context, product facts (name, category, what it is, and optionally its real-world size), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules for this ad/org/brand/product (may be empty — follow every one given), and a structured product spec describing the product''s exact visual appearance (may be absent, since not every product has one yet). Combine all of this into ONE self-contained, ready-to-send prompt an image generation model can act on directly — do not describe the inputs or refer to "the visual" or "the rules" by name, just write the prompt itself. If a product spec is given and the product is in frame, describe the product using its actual visual features, materials and colors rather than inventing details. If a real-world size is given and the product is in frame, use it to get the product''s scale right relative to any hands, people, furniture or other objects in the shot — explicitly describe the product as correspondingly small or large so it is not rendered bigger or smaller than it actually is. Follow every active rule exactly (a DO rule is an instruction to include, an AVOID rule is an instruction to exclude). Match the style masterprompt''s guidance when one is given. Keep the prompt concrete and specific enough to generate a single still image from. The resulting image becomes the starting frame of a short video clip later — if the Visual description depicts a moment mid-action (not yet resolved), preserve that exactly: never word the prompt in a way that implies the action is already finished, a gesture already completed, or eyes already closed. Write ONE tight paragraph, under roughly 600 characters — state every detail exactly once; never restate or summarize the scene a second time at the end, and never pad with repeated phrasing. Image generation models have limited prompt length, so every sentence must earn its place. Optionally you are also given target_model: the image model this prompt is for, with its prompt_guide (what that model does well, how it reads prompts, whether it uses the reference images, its length limit). When target_model is given, write the prompt for that model: follow its prompt_guide wherever it is more specific than these instructions, and stay inside any length limit it states. Whatever the model: phrase everything positively (say what should be there, e.g. ''an empty beach'', never ''no people'') since most image models have no negative prompt; write it like a photographer''s brief in the order subject, setting, composition and camera angle, lens, lighting, mood; and when the guide says reference images are used, describe what to change around the product rather than re-describing details the photos already show. Only put words in the image when the Visual calls for them, quoted exactly and kept to a few words.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;
+
+-- v3: same target_model input for video (see write_image_prompt v5).
+insert into public.prompt_versions (task, version, body, active)
+values (
+  'write_video_prompt',
+  3,
+  'You are writing the final video generation prompt for one scene of a video ad, to animate a specific starting image into a short clip. You are given: the approved motion_plan (the one continuous action to animate — follow this exactly, it has already been checked against the image for physical plausibility), the scene''s Visual description for additional context, spoken copy ONLY if this scene is allowed to speak (if spoken_copy is absent or null, do not invent any speech or mouth movement), the chosen visual style''s masterprompt (may be absent), any active DO/AVOID rules (may be empty — follow every one given), and optionally the product''s real-world size. Combine these into ONE self-contained, ready-to-send video generation prompt — describe the motion concretely and specifically (camera movement if any, the subject''s action, pacing), mention spoken copy only if it was actually given to you, and do not restate the full visual description the starting image already carries; focus on what moves and changes. When a real-world size is given and the product is involved in the motion, keep the product described at that actual scale relative to any hands, people or other objects in the clip — do not let the animation imply the product is bigger or smaller than its real size. Do not refer to the inputs by name, just write the prompt itself. Optionally you are also given target_model: the video model this prompt is for, with its prompt_guide (what that model does well, its audio and duration behavior, its length limit). When target_model is given, follow its prompt_guide wherever it is more specific than these instructions and stay inside any length limit it states. Whatever the model: use concrete camera verbs (slow push-in, pull back, dolly, pan, orbit, handheld) and explicit subject motion, keep to one clear action, phrase everything positively, and keep on-screen text, captions, logos and watermarks out of the clip because video models garble them.',
+  true
+)
+on conflict (task, version) do update
+  set body = excluded.body,
+      active = excluded.active;

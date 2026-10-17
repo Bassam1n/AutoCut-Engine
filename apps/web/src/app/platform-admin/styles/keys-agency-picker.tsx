@@ -29,7 +29,7 @@ export function KeysAgencyPicker({
         </select>
       </label>
       {!hasImageKey && (
-        <span className="text-xs text-danger">This agency has no kie.ai or fal.ai key saved. Pick another, or add one in its Org-wide keys.</span>
+        <span className="text-xs text-danger">This agency has no kie.ai, fal.ai or Higgsfield key saved. Pick another, or add one in its Org-wide keys.</span>
       )}
       <span className="text-xs text-foreground-muted">Spend is recorded on that agency.</span>
     </div>
