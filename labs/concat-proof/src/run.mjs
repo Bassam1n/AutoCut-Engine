@@ -8,8 +8,8 @@
 //
 // --plan skips the planning call (executor test with a hand-written plan).
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { env } from "./env.mjs";
 import { executePlan } from "./execute.mjs";
@@ -81,7 +81,11 @@ function previewFrames(video, plan) {
 let plan;
 if (a.revise) {
   plan = JSON.parse(readFileSync(a.from, "utf8"));
-  plan = await time("revise", () => claude.revisePlan({ ad, clipDurations, plan, instruction: a.revise, mode: a.mode }));
+  // The review that shaped this plan, if it sits next to it: without it a revision
+  // undoes review fixes it can't see the reason for (it put the competitor-logo shot back).
+  const reviewFile = join(dirname(resolve(a.from)), "review.json");
+  const findings = existsSync(reviewFile) ? JSON.parse(readFileSync(reviewFile, "utf8")).issues : [];
+  plan = await time("revise", () => claude.revisePlan({ ad, clipDurations, plan, instruction: a.revise, mode: a.mode, findings }));
   plan = await validPlan(plan, "revise");
   writeFileSync(join(work, "revised-plan.json"), JSON.stringify(plan, null, 2));
   await time("finalRender", () => render(plan, "revised", 1080, 1920, 20, "medium"));

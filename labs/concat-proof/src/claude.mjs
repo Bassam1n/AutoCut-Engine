@@ -115,10 +115,11 @@ Return verdict "ship" or "fix" and the issues you found, each with the exact pla
 }
 
 /** A later chat turn: "revise: make it punchier". */
-export async function revisePlan({ ad, clipDurations, plan, instruction, mode }) {
+export async function revisePlan({ ad, clipDurations, plan, instruction, mode, findings = [] }) {
+  const kept = findings.length ? `\n\nThe current plan already fixes these findings from a review of the rendered video. They still hold; don't undo them:\n- ${findings.map((i) => `${i.problem} (fixed by: ${i.fix})`).join("\n- ")}` : "";
   return call({ label: "revise", schema: EditPlan, content: [
     { type: "text", text: mode === "direct" ? MODE_DIRECT : MODE_TEMPLATE },
     { type: "text", text: `AD\n${JSON.stringify(ad)}\nClip durations: ${JSON.stringify(clipDurations)}` },
-    { type: "text", text: `Current plan:\n${JSON.stringify(plan)}\n\nThe client asks: "${instruction}"\nReturn the full revised plan.` },
+    { type: "text", text: `Current plan:\n${JSON.stringify(plan)}${kept}\n\nThe client asks: "${instruction}"\nReturn the full revised plan.` },
   ] });
 }
