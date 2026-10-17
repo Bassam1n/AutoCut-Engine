@@ -36,8 +36,8 @@ const MODES: { id: AutoEditMode; name: string; look: string; captions: string; r
     look: "Claude designs each motion graphic for this ad: custom badges, stickers and end cards in the brand's colours.",
     captions: "Short phrases, paced closely to the script.",
     reliability: "Claude's graphic code runs in a locked-down renderer. If one can't render, that graphic switches to a Clean template automatically.",
-    cost: "≈ $0.60",
-    time: "≈ 5 min",
+    cost: "≈ $0.45",
+    time: "≈ 4 min",
   },
   {
     id: "clean",
@@ -46,7 +46,7 @@ const MODES: { id: AutoEditMode; name: string; look: string; captions: string; r
     captions: "Full phrases, fewer on screen.",
     reliability: "Most predictable: the templates are known to render.",
     cost: "≈ $0.45",
-    time: "≈ 4 min",
+    time: "≈ 3.5 min",
   },
 ];
 
@@ -180,7 +180,7 @@ export function AutoEditPanel({ orgId, adId, adName }: { orgId: string; adId: st
             ))}
           </div>
           <p className="text-[11px] text-foreground-muted">
-            Estimates measured on a 30-second, 6-scene ad; each revision is about $0.20 and 2 minutes. Claude runs on your
+            Estimates measured on a 30-second, 6-scene ad; each revision is about $0.30 and 2 minutes. Claude runs on your
             agency&apos;s own Anthropic key, so it shows up in your spend like other generations. Manual edits, rendering and
             exports have no Claude cost.
           </p>
