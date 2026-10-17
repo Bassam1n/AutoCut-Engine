@@ -1,0 +1,8 @@
+out/
+work/
+*.mp4
+*.mov
+*.webm
+*.png
+gsap.min.js
+node_modules/
