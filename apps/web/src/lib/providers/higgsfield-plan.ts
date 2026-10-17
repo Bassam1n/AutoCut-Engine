@@ -130,7 +130,7 @@ function base64Url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-export type McpTool = { name: string; description?: string };
+export type McpTool = { name: string; description?: string; inputSchema?: unknown };
 
 /**
  * Minimal MCP (streamable HTTP) client: initialize, then tools/list.
@@ -151,7 +151,7 @@ export async function listMcpTools(accessToken: string): Promise<McpTool[]> {
   await mcpRequest(accessToken, sessionId, { jsonrpc: "2.0", method: "notifications/initialized" });
   const list = await mcpRequest(accessToken, sessionId, { jsonrpc: "2.0", id: 2, method: "tools/list" });
   const tools = (list.result as { tools?: McpTool[] } | undefined)?.tools ?? [];
-  return tools.map((t) => ({ name: t.name, description: t.description }));
+  return tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }));
 }
 
 async function mcpRequest(
@@ -202,4 +202,9 @@ export function parseMcpBody(text: string, id: number): { result?: unknown; erro
     }
   }
   return null;
+}
+
+/** True when the access token is missing an expiry or expires within a minute. */
+export function needsRefresh(tokens: HiggsfieldPlanTokens): boolean {
+  return tokens.expiresAt !== null && tokens.expiresAt - Date.now() < 60_000;
 }

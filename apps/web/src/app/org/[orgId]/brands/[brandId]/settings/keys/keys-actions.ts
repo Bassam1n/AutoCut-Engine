@@ -5,6 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { requireOrgAdmin } from "@/lib/auth";
 import { verifyProviderKey } from "@/app/org/[orgId]/settings/keys/verify-provider-key";
 import type { ApiKeyProvider } from "@/app/org/[orgId]/settings/keys/keys-data";
+import { createServiceClient } from "@/lib/supabase/service";
+import {
+  HiggsfieldPlanError,
+  listMcpTools,
+  needsRefresh,
+  refreshTokens,
+  type HiggsfieldPlanTokens,
+} from "@/lib/providers/higgsfield-plan";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -56,4 +64,61 @@ export async function saveBrandProviderKey(
 
   revalidatePath(`/org/${orgId}/brands/${brandId}/settings/keys`);
   return { ok: true };
+}
+
+export type InspectPlanResult =
+  | { ok: true; toolCount: number; generationTools: string[] }
+  | { ok: false; error: string };
+
+/** Tools whose input formats the plan-credit generation path will be built on. */
+const PLAN_TOOLS_OF_INTEREST =
+  /^(generate_image|generate_video|job_status|jobs_wait|job_display|models_explore|media_import_url|media_upload|media_confirm|show_generations|use_higgsfield)$|balance|credit|account|plan|wallet|cost/i;
+
+/**
+ * Experimental, free: reads the brand's Higgsfield account login,
+ * refreshes it if needed, and logs the full MCP tool list plus the
+ * input schemas of the generation-related tools (never the tokens), so
+ * plan-credit generation can be built against Higgsfield's real tool
+ * formats. Nothing is generated.
+ */
+export async function inspectHiggsfieldPlan(orgId: string, brandId: string): Promise<InspectPlanResult> {
+  await requireOrgAdmin(orgId);
+  const service = createServiceClient();
+  const { data: raw, error } = await service.rpc("get_brand_secret_value", {
+    target_org_id: orgId,
+    target_brand_id: brandId,
+    target_provider: "higgsfield_plan",
+  });
+  if (error || !raw) return { ok: false, error: "Connect the Higgsfield account first." };
+
+  let tokens: HiggsfieldPlanTokens;
+  try {
+    tokens = JSON.parse(raw) as HiggsfieldPlanTokens;
+    if (needsRefresh(tokens)) {
+      tokens = await refreshTokens(tokens);
+      // save_brand_secret checks the caller is an org admin, so it runs as the user.
+      await (await createClient()).rpc("save_brand_secret", {
+        target_org_id: orgId,
+        target_brand_id: brandId,
+        target_provider: "higgsfield_plan",
+        secret_value: JSON.stringify(tokens),
+      });
+    }
+    const tools = await listMcpTools(tokens.accessToken);
+    const names = tools.map((t) => t.name);
+    for (let i = 0; i < names.length; i += 40) {
+      console.log(`higgsfield_plan: tools ${i + 1}-${Math.min(i + 40, names.length)} of ${names.length}`, names.slice(i, i + 40).join(", "));
+    }
+    const interesting = tools.filter((t) => PLAN_TOOLS_OF_INTEREST.test(t.name));
+    for (const tool of interesting) {
+      console.log(
+        `higgsfield_plan: schema ${tool.name}`,
+        JSON.stringify({ description: tool.description, inputSchema: tool.inputSchema }).slice(0, 6000)
+      );
+    }
+    return { ok: true, toolCount: tools.length, generationTools: interesting.map((t) => t.name) };
+  } catch (err) {
+    const message = err instanceof HiggsfieldPlanError ? `${err.message}${err.detail ? ` (${err.detail})` : ""}` : "Could not reach Higgsfield.";
+    return { ok: false, error: message };
+  }
 }

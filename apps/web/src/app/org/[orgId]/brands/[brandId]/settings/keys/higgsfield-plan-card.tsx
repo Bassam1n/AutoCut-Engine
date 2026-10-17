@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { buttonVariants } from "@/components/button";
+import { inspectHiggsfieldPlan, type InspectPlanResult } from "./keys-actions";
 
 /**
  * EXPERIMENTAL "Connect Higgsfield account": signs in with the client's
@@ -25,6 +27,8 @@ export function HiggsfieldPlanCard({
   const result = searchParams.get("higgsfield_plan");
   const message = searchParams.get("message");
   const tools = searchParams.get("tools");
+  const [inspect, setInspect] = useState<InspectPlanResult | null>(null);
+  const [isInspecting, startInspecting] = useTransition();
   const connectHref = `/api/higgsfield-plan/connect?orgId=${encodeURIComponent(orgId)}&brandId=${encodeURIComponent(brandId)}`;
 
   return (
@@ -52,6 +56,22 @@ export function HiggsfieldPlanCard({
       <a href={connectHref} className={`${buttonVariants.primary} mt-3 inline-flex`}>
         {connected ? "Reconnect Higgsfield account" : "Connect Higgsfield account"}
       </a>
+      {connected && (
+        <button
+          type="button"
+          disabled={isInspecting}
+          onClick={() => startInspecting(async () => setInspect(await inspectHiggsfieldPlan(orgId, brandId)))}
+          className="btn-secondary ml-2 mt-3"
+        >
+          {isInspecting ? "Checking..." : "Check Higgsfield tools"}
+        </button>
+      )}
+      {inspect?.ok && (
+        <p className="mt-3 text-sm text-accent">
+          Read {inspect.toolCount} tools. Generation tools found: {inspect.generationTools.join(", ") || "none"}.
+        </p>
+      )}
+      {inspect && !inspect.ok && <p className="mt-3 text-sm text-danger">{inspect.error}</p>}
 
       {result === "connected" && (
         <p className="mt-3 text-sm text-accent">
