@@ -275,4 +275,28 @@ describe("llmCall", () => {
     expect(err).toBeInstanceOf(LlmCallError);
     expect((err as LlmCallError).code).toBe("KEY_NO_CREDIT");
   });
+  it("maps the 400 'credit balance is too low' error to KEY_NO_CREDIT", async () => {
+    // What the API actually returns for a prepaid account with no credit
+    // left (seen in production, October 2026), not a 402.
+    const body = { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits." } };
+    mockPromptVersionsTable("Extract info");
+    mockHappyRpcs("sk-ant-fake-no-credit-key");
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => body,
+      text: async () => JSON.stringify(body),
+    });
+
+    const err = await llmCall({
+      task: "example_extraction",
+      schema: ExampleExtractionSchema,
+      input: { description: "A product." },
+      orgId: "org-1",
+    }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(LlmCallError);
+    expect((err as LlmCallError).code).toBe("KEY_NO_CREDIT");
+  });
 });

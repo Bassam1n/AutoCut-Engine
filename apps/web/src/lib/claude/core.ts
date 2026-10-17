@@ -111,7 +111,10 @@ export function mapAnthropicError(err: unknown): LlmCallError {
   if (err instanceof Anthropic.APIConnectionError) return new LlmCallError("Could not reach Anthropic.", "TIMEOUT", err);
   if (err instanceof Anthropic.APIError) {
     // billing_error (402, out of credit) has no typed class in the SDK.
-    if (err.status === 402) return new LlmCallError("Anthropic key has no credit.", "KEY_NO_CREDIT", err);
+    // Out of prepaid credit also comes back as a 400 invalid_request_error.
+    if (err.status === 402 || (err.status === 400 && /credit balance is too low/i.test(err.message))) {
+      return new LlmCallError("Anthropic key has no credit.", "KEY_NO_CREDIT", err);
+    }
     return new LlmCallError(err.message, "PROVIDER_ERROR", err);
   }
   return new LlmCallError(err instanceof Error ? err.message : "unknown Anthropic client error", "PROVIDER_ERROR", err);
