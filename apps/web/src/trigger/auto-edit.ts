@@ -51,6 +51,7 @@ export const autoEdit = task({
     } catch (e) {
       const failure = classify(e);
       logger.error("auto-edit failed", { code: failure.code, message: failure.message, attempt: ctx.attempt.number });
+      await appendErrorDetail(supabase, payload.runId, `attempt ${ctx.attempt.number} ${failure.code}: ${failure.message}`);
       if (failure.retryable && ctx.attempt.number < MAX_ATTEMPTS) {
         await supabase.from("auto_edit_runs").update({ error: "Retrying after a render problem." }).eq("id", payload.runId);
         throw failure;
@@ -64,10 +65,18 @@ export const autoEdit = task({
     const supabase = getServiceClient();
     const { data } = await supabase.from("auto_edit_runs").select("status").eq("id", payload.runId).maybeSingle();
     if (data && !["succeeded", "failed", "cancelled"].includes(data.status)) {
-      await markFailed(supabase, payload.runId, "RENDER_FAILED", error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      await appendErrorDetail(supabase, payload.runId, `run failed: ${message}`);
+      await markFailed(supabase, payload.runId, "RENDER_FAILED", message);
     }
   },
 });
+
+async function appendErrorDetail(supabase: ReturnType<typeof getServiceClient>, runId: string, line: string) {
+  const { data } = await supabase.from("auto_edit_runs").select("error_detail").eq("id", runId).maybeSingle();
+  const detail = [data?.error_detail, line.slice(0, 4000)].filter(Boolean).join("\n");
+  await supabase.from("auto_edit_runs").update({ error_detail: detail }).eq("id", runId);
+}
 
 async function markFailed(supabase: ReturnType<typeof getServiceClient>, runId: string, code: string, detail: string) {
   // The stored error is what the editor reads; the raw detail goes to the task log.
