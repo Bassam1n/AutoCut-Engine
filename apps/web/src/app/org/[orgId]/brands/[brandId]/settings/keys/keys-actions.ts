@@ -183,20 +183,25 @@ export async function testHiggsfieldPlanImage(orgId: string, brandId: string): P
     const before = await callMcpTool(token, "balance", {});
     logChunks("balance before", before.text);
 
-    const args = {
+    // generate_image takes everything inside `params` (schema logged
+    // above). use_unlim: false pays from plan credits rather than
+    // pausing to ask about free-trial generations.
+    const params = {
       model: "soul_2",
       prompt: "A white ceramic coffee mug on a wooden table beside a sunlit window, soft natural light, product photo.",
       aspect_ratio: "1:1",
       count: 1,
+      use_unlim: false,
     };
-    const preflight = await callMcpTool(token, "generate_image", { ...args, get_cost: true });
+    const context = "Testing that AutoCut can generate an ad image on the user's plan credits.";
+    const preflight = await callMcpTool(token, "generate_image", { params: { ...params, get_cost: true }, context });
     logChunks(`preflight isError=${preflight.isError}`, preflight.text);
     const base = { balanceBefore: before.text.slice(0, 400), cost: preflight.text.slice(0, 400) };
     if (preflight.isError) {
       return { ok: true, stage: "preflight_failed", ...base, jobId: null, imageUrl: null, balanceAfter: null, detail: preflight.text.slice(0, 600) };
     }
 
-    const submit = await callMcpTool(token, "generate_image", args);
+    const submit = await callMcpTool(token, "generate_image", { params, context });
     logChunks(`submit isError=${submit.isError}`, submit.text);
     const jobId = submit.text.match(UUID_RE)?.[0] ?? null;
     if (submit.isError || !jobId) {
