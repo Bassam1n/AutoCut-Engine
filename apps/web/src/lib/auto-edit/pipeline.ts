@@ -235,8 +235,8 @@ async function saveVideoAsset(supabase: SupabaseClient, run: RunRow, file: strin
     .from("assets")
     .insert({
       org_id: run.org_id,
+      // Ad assets carry ad_id only (assets_ad_or_brand_check).
       ad_id: run.ad_id,
-      brand_id: run.brand_id,
       scene_id: null,
       kind: "final",
       version: (last?.[0]?.version ?? 0) + 1,
@@ -245,6 +245,7 @@ async function saveVideoAsset(supabase: SupabaseClient, run: RunRow, file: strin
       // A preview is a working file: archived from the start, so the
       // archive purge clears it in time and nothing lists it as a cut.
       archived: role === "preview",
+      archived_at: role === "preview" ? new Date().toISOString() : null,
       meta: { autoEdit: { runId: run.id, role, mode: run.mode, bytes: bytes.length } },
     })
     .select("id")
