@@ -7,6 +7,7 @@ import { getAccessibleAd } from "@/lib/access";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
+import { storageFullError } from "@/lib/storage-quota";
 import { EXPORT_FORMATS, type ExportFormat } from "@/lib/auto-edit/exports/bundle";
 import { autoEditErrorMessage, type AutoEditStatus } from "@/lib/auto-edit/messages";
 import { AUTO_EDIT_MODES, EditPlan, type AutoEditMode, type ReviewIssue } from "@/lib/auto-edit/plan-schema";
@@ -60,6 +61,8 @@ export type EditorScene = {
   voiceoverUrl: string | null;
   /** "separate" voiceovers are played on their own track; "inClip" ones are in the video. */
   voiceoverMode: "separate" | "inClip" | null;
+  /** Set for a clip the editor uploaded (index 1000 and up). */
+  upload?: { assetId: string; name: string; duration: number };
 };
 
 export type RenderView = {
@@ -191,6 +194,58 @@ export async function requestRender(orgId: string, adId: string, kind: "mp4" | "
   return { ok: true, renderId: data.id };
 }
 
+/** Largest clip the editor can upload: the storage upload limit on the current plan. */
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Step 1 of uploading a clip from the device: checks access, the agency's
+ * storage and the file, and says where the browser should put it.
+ */
+export async function reserveTimelineUpload(orgId: string, adId: string, fileName: string, bytes: number, type: string): Promise<Result<{ path: string }>> {
+  await requireOrgMember(orgId);
+  if (!(await getAccessibleAd(orgId, adId))) return { ok: false, error: "Ad not found." };
+  if (!type.startsWith("video/")) return { ok: false, error: "Pick a video file (MP4 or MOV)." };
+  if (!(bytes > 0) || bytes > MAX_UPLOAD_BYTES) return { ok: false, error: "Clips can be up to 50 MB. Export a shorter or smaller version and try again." };
+  const full = await storageFullError(orgId);
+  if (full) return { ok: false, error: full };
+  const supabase = await createClient();
+  const { data: folder, error } = await supabase.rpc("timeline_upload_folder", { target_ad_id: adId });
+  if (error || !folder) return { ok: false, error: plainRpcError(error?.message ?? "Could not start the upload.") };
+  const safe = fileName.normalize("NFKD").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80) || "clip.mp4";
+  return { ok: true, path: `${folder}${crypto.randomUUID()}-${safe}` };
+}
+
+/** Step 2: records the uploaded file as one of the ad's clips. */
+export async function addTimelineUpload(
+  orgId: string, adId: string, path: string, meta: { name: string; duration: number; width: number; height: number }
+): Promise<Result<{ scene: EditorScene }>> {
+  await requireOrgMember(orgId);
+  if (!(await getAccessibleAd(orgId, adId))) return { ok: false, error: "Ad not found." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("add_timeline_upload", {
+    target_ad_id: adId,
+    upload_path: path,
+    clip_meta: { name: String(meta.name ?? "").slice(0, 120), duration: Number(meta.duration), width: Math.round(Number(meta.width) || 0), height: Math.round(Number(meta.height) || 0) },
+  });
+  if (error || !data) return { ok: false, error: plainRpcError(error?.message ?? "Could not add the clip.") };
+  const { data: signed } = await createServiceClient().storage.from("renders").createSignedUrl(data.storage_path, 3600);
+  const m = data.meta as { clipIndex: number; name: string; duration: number };
+  return {
+    ok: true,
+    scene: { index: m.clipIndex, copy: "", videoUrl: signed?.signedUrl ?? null, voiceoverUrl: null, voiceoverMode: null, upload: { assetId: data.id, name: m.name, duration: Number(m.duration) } },
+  };
+}
+
+/** Takes an uploaded clip out of the ad's media (not while the timeline uses it). */
+export async function removeTimelineUpload(orgId: string, adId: string, assetId: string): Promise<Result<object>> {
+  await requireOrgMember(orgId);
+  if (!(await getAccessibleAd(orgId, adId))) return { ok: false, error: "Ad not found." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remove_timeline_upload", { target_asset_id: assetId });
+  if (error) return { ok: false, error: plainRpcError(error.message) };
+  return { ok: true };
+}
+
 export async function getAutoEditState(orgId: string, adId: string): Promise<Result<AutoEditState>> {
   await requireOrgMember(orgId);
   const ad = await getAccessibleAd(orgId, adId);
@@ -214,14 +269,18 @@ export async function getAutoEditState(orgId: string, adId: string): Promise<Res
   // Signed URLs (renders is a private bucket), with the service client after the access check above.
   const service = createServiceClient();
   const { data: assets } = await service.from("assets")
-    .select("id, kind, scene_id, version, storage_path, source, created_at")
-    .eq("org_id", orgId).eq("ad_id", adId).eq("archived", false).in("kind", ["video", "vo", "final"]);
+    .select("id, kind, scene_id, version, storage_path, source, meta, created_at")
+    .eq("org_id", orgId).eq("ad_id", adId).eq("archived", false).in("kind", ["video", "vo", "final", "broll"]);
   const rows = assets ?? [];
   const videos = latestByScene(rows, "video");
   const vos = latestByScene(rows, "vo");
   const finalPath = new Map(rows.filter((r) => r.kind === "final").map((r) => [r.id, r.storage_path]));
   const exportPaths = (renders ?? []).flatMap((r) => (r.status === "succeeded" ? ((r.files ?? []) as { storagePath: string }[]).map((f) => f.storagePath) : []));
-  const scenePaths = [...videos.values(), ...vos.values()].map((r) => r.storage_path);
+  const uploads = rows
+    .filter((r) => r.kind === "broll" && typeof (r.meta as { clipIndex?: unknown } | null)?.clipIndex === "number")
+    .map((r) => ({ row: r, meta: r.meta as { clipIndex: number; name?: string; duration?: number } }))
+    .sort((a, b) => a.meta.clipIndex - b.meta.clipIndex);
+  const scenePaths = [...videos.values(), ...vos.values(), ...uploads.map((u) => u.row)].map((r) => r.storage_path);
   const toSign = [...new Set([...scenePaths, ...exportPaths])];
   const signed = new Map<string, string>();
   if (toSign.length) {
@@ -276,6 +335,13 @@ export async function getAutoEditState(orgId: string, adId: string): Promise<Res
       voiceoverMode: vo && video ? voiceoverMode(video, vo) : null,
     };
   });
+
+  for (const { row, meta } of uploads) {
+    editorScenes.push({
+      index: meta.clipIndex, copy: "", videoUrl: signed.get(row.storage_path) ?? null, voiceoverUrl: null, voiceoverMode: null,
+      upload: { assetId: row.id, name: meta.name ?? "Clip", duration: Number(meta.duration ?? 0) },
+    });
+  }
 
   return {
     ok: true,

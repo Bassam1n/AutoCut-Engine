@@ -1,5 +1,6 @@
 import { cuesToSrt } from "@/lib/captions/srt";
 import type { EditPlan } from "../plan-schema";
+import { transitionLabel } from "../transitions";
 import { fcp7Xml } from "./fcp7";
 import { fcpxml } from "./fcpxml";
 import { otioJson } from "./otio";
@@ -42,6 +43,10 @@ export function exportText(format: ExportFormat, plan: EditPlan, media: ExportMe
   const capcutCuts: CapcutCut[] = [];
   if (t.captions.length) files.push({ path: "captions.srt", content: srt(t) });
 
+  const swapped = [...new Set(t.video.flatMap((c) => (c.transitionType && c.transitionType !== "cross-fade" ? [transitionLabel(c.transitionType)] : [])))];
+  const transitionsNote = swapped.length
+    ? `${EXPORT_LABEL[format]} doesn't have AutoCut's ${swapped.join(", ")} transition${swapped.length > 1 ? "s" : ""}, so ${swapped.length > 1 ? "they come" : "it comes"} in as cross dissolves of the same length at the same cuts.`
+    : null;
   const hasPans = t.video.some((c) => c.motion.some((k) => k.offsetX !== 0 || k.offsetY !== 0));
   const graphicsNote = "Motion graphics are rendered clips (ProRes 4444 with transparency for overlays, H.264 for full-frame cards), so their animation can't be edited, only moved and trimmed.";
   const captionsNote = "Captions are in captions.srt; import it as a caption track. Their on-screen style is not carried over.";
@@ -51,23 +56,26 @@ export function exportText(format: ExportFormat, plan: EditPlan, media: ExportMe
       files.push({ path: `${name}.xml`, content: fcp7Xml(t) });
       notes.push("Open with File > Import and pick the .xml; keep it next to the media folder.", captionsNote, graphicsNote);
       notes.push("Ken Burns moves come across as Basic Motion scale and position keyframes; check the framing on clips with a move.");
+      if (transitionsNote) notes.push(transitionsNote);
       break;
     case "resolve":
       files.push({ path: `${name}.fcpxml`, content: fcpxml(t) }, { path: `${name}.otio`, content: otioJson(t) });
       notes.push("Import the .fcpxml (File > Import > Timeline); the .otio is the same timeline in OpenTimelineIO form, without the zoom keyframes.", captionsNote, graphicsNote);
       if (hasPans) notes.push("Zoom keyframes come across; side-to-side and up-down pans don't, so pan clips start centred.");
+      if (transitionsNote) notes.push(transitionsNote);
       break;
     case "fcp":
       files.push({ path: `${name}.fcpxml`, content: fcpxml(t) });
       notes.push("Open with File > Import > XML and pick the .fcpxml; keep it next to the media folder.", captionsNote, graphicsNote);
       if (hasPans) notes.push("Zoom keyframes come across; side-to-side and up-down pans don't, so pan clips start centred.");
+      if (transitionsNote) notes.push(transitionsNote);
       break;
     case "capcut": {
       const lines: string[] = [];
       t.video.forEach((c, i) => {
         const out = `media/${String(i + 1).padStart(3, "0")} ${c.name}.mp4`;
         capcutCuts.push({ out, source: c.file, fromSeconds: c.in / FPS, toSeconds: c.out / FPS });
-        lines.push(`${String(i + 1).padStart(3, "0")}  ${timecode(c.start)}  ${((c.end - c.start) / FPS).toFixed(2)}s  ${c.name}${c.transitionIn ? "  (cross-fade in)" : ""}`);
+        lines.push(`${String(i + 1).padStart(3, "0")}  ${timecode(c.start)}  ${((c.end - c.start) / FPS).toFixed(2)}s  ${c.name}${c.transitionType ? `  (${transitionLabel(c.transitionType).toLowerCase()} in, ${(c.transitionIn / FPS).toFixed(2)}s)` : ""}`);
       });
       t.overlays.forEach((o, i) => lines.push(`G${String(i + 1).padStart(2, "0")}  ${timecode(o.start)}  ${((o.end - o.start) / FPS).toFixed(2)}s  graphic ${o.name} (${o.layout === "overlay" ? "overlay track" : "full frame"})`));
       t.voiceover.forEach((v) => lines.push(`VO   ${timecode(v.start)}  ${((v.end - v.start) / FPS).toFixed(2)}s  ${v.name}`));
@@ -75,7 +83,7 @@ export function exportText(format: ExportFormat, plan: EditPlan, media: ExportMe
       notes.push(
         "CapCut can't import a project file, so the shots are already cut and numbered in timeline order: drop media/001, 002, ... onto the main track in order.",
         "Graphics are transparent clips: put each on an overlay track at the time in timeline.txt. Import captions.srt with Text > Import captions (or Auto captions > Import).",
-        "Cross-fades, Ken Burns moves and clip volumes are listed in timeline.txt but not applied."
+        "Transitions, Ken Burns moves and clip volumes are listed in timeline.txt but not applied."
       );
       break;
     }

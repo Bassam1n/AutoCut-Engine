@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import cleanFixture from "./__fixtures__/clean-plan.json";
 import designedFixture from "./__fixtures__/designed-plan.json";
-import { lintPlan, previewSampleTimes, unsafeGraphics, type LintContext } from "./lint";
+import { lintPlan, previewSampleTimes, problemForEditors, unsafeGraphics, type LintContext } from "./lint";
 import { EditPlan, planLength, voiceoverStarts } from "./plan-schema";
 
 // The two plans Claude wrote in the labs proof (clean = its template
@@ -97,5 +97,14 @@ describe("previewSampleTimes", () => {
     const ts = previewSampleTimes(designed(), 16);
     expect(ts.length).toBeLessThanOrEqual(16);
     expect([...ts].sort((a, b) => a - b)).toEqual(ts);
+  });
+});
+
+describe("problemForEditors", () => {
+  it("names clips, captions and transitions the way the editor shows them", () => {
+    expect(problemForEditors("clips[2]: concat.whip-pan of 0.6s needs 0.3s of unused footage before sourceIn and after the previous clip's sourceOut"))
+      .toBe("Clip 3: the Whip pan (0.6 s) needs 0.3s of unused footage before this clip's start and after the previous clip's end; trim them in a little or shorten the transition");
+    expect(problemForEditors("captions[0]: overlaps the previous caption")).toBe("Caption 1: overlaps the previous caption");
+    expect(problemForEditors("clips[0]: source 0-9 is outside 0-6.04 or under 0.5 s")).toBe("Clip 1: the part used (0-9 s) is outside 0-6.04 or under 0.5 s");
   });
 });

@@ -1,4 +1,4 @@
-import { clipStarts, planLength, voiceoverStarts, type EditPlan } from "../plan-schema";
+import { clipStarts, footageLabel, planLength, voiceoverStarts, type EditPlan } from "../plan-schema";
 
 /**
  * The plan as an editing timeline in whole frames at 30 fps, the common
@@ -42,8 +42,10 @@ export type VideoItem = {
   height: number;
   hasAudio: boolean;
   volume: number;
-  /** Cross-dissolve centred on this clip's head, total frames (0 = cut). */
+  /** Transition centred on this clip's head, total frames (0 = cut). */
   transitionIn: number;
+  /** The engine's transition id, when there is one; editors get a cross dissolve of the same length. */
+  transitionType: string | null;
   /** Ken Burns keys at timeline-relative frames within the clip (0..end-start). */
   motion: MotionKey[];
 };
@@ -76,8 +78,8 @@ export function buildExportTimeline(plan: EditPlan, media: ExportMedia, name: st
     const motion = (c.motion?.keys ?? []).map((k) => ({ frame: Math.round(k.at * len), scale: k.scale, offsetX: k.offsetX, offsetY: k.offsetY }));
     const t = c.transitionIn && c.transitionIn.type !== "cut" && i > 0 ? Math.max(2, 2 * Math.round(f(c.transitionIn.duration) / 2)) : 0;
     return {
-      index: i, name: `Scene ${c.scene + 1}`, file: m.file, scene: c.scene, start, end, in: inF, out: inF + len,
-      mediaFrames: f(m.duration), width: m.width, height: m.height, hasAudio: m.hasAudio, volume: c.volume, transitionIn: t, motion,
+      index: i, name: footageLabel(c.scene), file: m.file, scene: c.scene, start, end, in: inF, out: inF + len,
+      mediaFrames: f(m.duration), width: m.width, height: m.height, hasAudio: m.hasAudio, volume: c.volume, transitionIn: t, transitionType: t ? c.transitionIn!.type : null, motion,
     };
   });
 

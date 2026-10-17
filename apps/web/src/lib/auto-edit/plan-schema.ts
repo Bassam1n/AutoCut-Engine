@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRANSITION_CATALOGUE, type TransitionId } from "./transitions";
 
 /**
  * Auto-edit's edit plan: one JSON document that fully describes the cut.
@@ -20,11 +21,8 @@ import { z } from "zod";
 export const AUTO_EDIT_MODES = ["designed", "clean"] as const;
 export type AutoEditMode = (typeof AUTO_EDIT_MODES)[number];
 
-// Render-engine transition ids; "cut" means none.
-export const TRANSITIONS = [
-  "cut", "cross-fade", "fade-black", "fade-white", "push", "zoom", "wipe-left", "wipe-right",
-  "concat.whip-pan", "concat.blur-dissolve", "concat.light-leak-transition", "concat.zoom-blur-transition", "concat.slide",
-] as const;
+// Render-engine transition ids (see transitions.ts); "cut" means none.
+export const TRANSITIONS = ["cut", ...TRANSITION_CATALOGUE.map((t) => t.id)] as ["cut", ...TransitionId[]];
 
 const MotionKey = z.object({
   at: z.number().describe("0..1, fraction of the clip's length on the timeline"),
@@ -34,7 +32,7 @@ const MotionKey = z.object({
 });
 
 const Clip = z.object({
-  scene: z.number().int().describe("scene index this footage comes from"),
+  scene: z.number().int().describe("which footage: a scene index, or the index (1000 and up) of a clip the editor uploaded"),
   sourceIn: z.number().describe("seconds into the scene clip where this shot starts"),
   sourceOut: z.number().describe("seconds into the scene clip where this shot ends"),
   transitionIn: z.object({ type: z.enum(TRANSITIONS), duration: z.number() }).nullable()
@@ -126,6 +124,23 @@ export function planLength(plan: Pick<EditPlan, "clips" | "endCardHold">): numbe
 }
 
 /** Timeline start of each plan clip. */
+/** Clips the editor uploads are numbered from here; scenes are 0..n. */
+export const UPLOAD_INDEX_BASE = 1000;
+
+export function isUploadIndex(index: number): boolean {
+  return index >= UPLOAD_INDEX_BASE;
+}
+
+/** "Scene 3" or "Upload 2": how people see a footage index. */
+export function footageLabel(index: number): string {
+  return isUploadIndex(index) ? `Upload ${index - UPLOAD_INDEX_BASE + 1}` : `Scene ${index + 1}`;
+}
+
+/** "S3" or "U2", for the timeline's clip blocks. */
+export function footageShortLabel(index: number): string {
+  return isUploadIndex(index) ? `U${index - UPLOAD_INDEX_BASE + 1}` : `S${index + 1}`;
+}
+
 export function clipStarts(plan: Pick<EditPlan, "clips">): number[] {
   const starts: number[] = [];
   let t = 0;

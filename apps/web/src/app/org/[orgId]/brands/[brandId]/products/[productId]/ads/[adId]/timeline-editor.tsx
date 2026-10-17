@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { renderProblems } from "@/lib/auto-edit/lint";
-import { clipStarts, planLength, voiceoverStarts, type EditPlan } from "@/lib/auto-edit/plan-schema";
+import { problemForEditors, renderProblems } from "@/lib/auto-edit/lint";
+import { clipStarts, footageLabel, footageShortLabel, planLength, voiceoverStarts, type EditPlan, type TRANSITIONS } from "@/lib/auto-edit/plan-schema";
 import { previewAt } from "@/lib/auto-edit/preview-model";
+import { TRANSITION_CATALOGUE, TRANSITION_GROUPS, transitionLabel } from "@/lib/auto-edit/transitions";
 import {
-  addCaption, deleteCaption, deleteClip, deleteGraphic, kenBurnsOf, moveCaption, moveClip, retimeGraphic,
+  addCaption, deleteCaption, deleteClip, deleteGraphic, insertClip, kenBurnsOf, moveCaption, moveClip, retimeGraphic,
   setClipVolume, setGraphicText, setKenBurns, setTransition, splitClip, trimClip, updateCaption, type KenBurns,
 } from "@/lib/auto-edit/timeline-ops";
 import { saveTimeline, type EditorScene, type TimelineView } from "../auto-edit-actions";
 import { LivePreview } from "./live-preview";
+import { MediaBin } from "./media-bin";
 
 /**
  * The ad's timeline: the EditPlan shown as tracks (footage with trims,
@@ -20,6 +22,7 @@ import { LivePreview } from "./live-preview";
  * Auto-edit, the revision chat and "Render MP4" all use.
  */
 
+type TransitionType = (typeof TRANSITIONS)[number];
 type Selection = { kind: "clip"; index: number } | { kind: "caption"; index: number } | { kind: "graphic"; id: string } | null;
 type SaveState = "saved" | "dirty" | "saving" | "error" | "conflict";
 type Drag = { start: number; startPlan: EditPlan; apply: (p: EditPlan, dt: number) => EditPlan };
@@ -31,7 +34,7 @@ export function TimelineEditor({
   orgId,
   adId,
   timeline,
-  scenes,
+  scenes: loadedScenes,
   locked,
   onSaved,
   onReload,
@@ -60,6 +63,9 @@ export function TimelineEditor({
   const [measured, setMeasured] = useState<Record<number, number>>({});
   const [voDur, setVoDur] = useState<Record<number, number>>({});
   const drag = useRef<Drag | null>(null);
+  // Clips uploaded in this session, until the next reload lists them.
+  const [fresh, setFresh] = useState<EditorScene[]>([]);
+  const scenes = useMemo(() => [...loadedScenes, ...fresh.filter((f) => !loadedScenes.some((s) => s.index === f.index))], [loadedScenes, fresh]);
   const shown = draft ?? plan;
 
   // A newer version from the server (Auto-edit, revision, restore) replaces local state.
@@ -72,10 +78,13 @@ export function TimelineEditor({
     setSel(null);
   }
 
-  const clipDurations = useMemo(() => ({ ...measured, ...timeline.clipDurations }), [measured, timeline.clipDurations]);
+  const clipDurations = useMemo(() => {
+    const uploaded: Record<number, number> = Object.fromEntries(scenes.flatMap((s) => (s.upload?.duration ? [[s.index, s.upload.duration]] : [])));
+    return { ...uploaded, ...measured, ...timeline.clipDurations };
+  }, [scenes, measured, timeline.clipDurations]);
   const duration = planLength(shown);
   const state = useMemo(() => previewAt(shown, Math.min(t, Math.max(0, duration - 1e-3)), voDur), [shown, t, duration, voDur]);
-  const problemsKey = useMemo(() => renderProblems(plan, { clipDurations }).join("\n"), [plan, clipDurations]);
+  const problemsKey = useMemo(() => renderProblems(plan, { clipDurations }).map(problemForEditors).join("\n"), [plan, clipDurations]);
   const reportProblems = useRef(onProblems);
   useEffect(() => {
     reportProblems.current = onProblems;
@@ -200,6 +209,7 @@ export function TimelineEditor({
     setDraft(null);
   };
 
+  const uploadName = (index: number) => scenes.find((s) => s.index === index)?.upload?.name;
   const starts = clipStarts(shown);
   const width = Math.max(duration, 1) * zoom + 40;
   const voStarts = voiceoverStarts(shown);
@@ -244,6 +254,24 @@ export function TimelineEditor({
           graphic={selectedGraphic}
         />
       </div>
+
+      <MediaBin
+        orgId={orgId}
+        adId={adId}
+        scenes={scenes}
+        locked={locked}
+        durations={clipDurations}
+        onInsert={(index, d) => commit(insertClip(plan, t, index, d))}
+        onUploaded={(scene) => {
+          setFresh((f) => [...f, scene]);
+          if (scene.upload) commit(insertClip(plan, t, scene.index, scene.upload.duration));
+          onReload();
+        }}
+        onRemoved={(index) => {
+          setFresh((f) => f.filter((x) => x.index !== index));
+          onReload();
+        }}
+      />
 
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <button type="button" className="btn-secondary btn-sm" disabled={!past.length || locked} onClick={undo} title="Undo (Ctrl/Cmd+Z)">Undo</button>
@@ -292,10 +320,10 @@ export function TimelineEditor({
                   onClick={() => setSel({ kind: "clip", index: i })}
                   className={`absolute top-1 flex h-[26px] items-center overflow-hidden rounded border px-1.5 text-[10px] font-medium ${selected ? "border-accent bg-accent/25" : "border-sky-500/50 bg-sky-500/20"}`}
                   style={{ left: starts[i] * zoom, width: Math.max(4, len * zoom - 1) }}
-                  title={`Scene ${c.scene + 1}: ${c.sourceIn.toFixed(2)}-${c.sourceOut.toFixed(2)} s of the clip. Drag to reorder.`}
+                  title={`${footageLabel(c.scene)}${uploadName(c.scene) ? ` (${uploadName(c.scene)})` : ""}: ${c.sourceIn.toFixed(2)}-${c.sourceOut.toFixed(2)} s of the clip. Drag to reorder.`}
                 >
-                  {c.transitionIn && <span className="mr-1 text-foreground-muted">⧓</span>}
-                  <span className="truncate">S{c.scene + 1}{c.motion ? " · KB" : ""}</span>
+                  {c.transitionIn && <span className="mr-1 text-foreground-muted" title={transitionLabel(c.transitionIn.type)}>⧓</span>}
+                  <span className="truncate">{footageShortLabel(c.scene)}{c.motion ? " · KB" : ""}</span>
                   <Handle side="left" onPointerDown={(e) => beginDrag(e, (p, dt) => trimClip(p, i, "in", p.clips[i].sourceIn + dt, dur))} />
                   <Handle side="right" onPointerDown={(e) => beginDrag(e, (p, dt) => trimClip(p, i, "out", p.clips[i].sourceOut + dt, dur))} />
                 </div>
@@ -429,7 +457,7 @@ function Inspector({
 
       {sel?.kind === "clip" && clip && (
         <>
-          <div className="font-medium">Clip {sel.index + 1}: scene {clip.scene + 1}</div>
+          <div className="font-medium">Clip {sel.index + 1}: {footageLabel(clip.scene).toLowerCase()}</div>
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1">In (s)
               <input type="number" step={0.1} className="field field-sm" value={clip.sourceIn} onChange={(e) => { const v = num(e.target.value); if (!Number.isNaN(v)) onCommit(trimClip(plan, sel.index, "in", v, clipDurations[clip.scene] ?? clip.sourceOut)); }} />
@@ -438,13 +466,17 @@ function Inspector({
               <input type="number" step={0.1} className="field field-sm" value={clip.sourceOut} onChange={(e) => { const v = num(e.target.value); if (!Number.isNaN(v)) onCommit(trimClip(plan, sel.index, "out", v, clipDurations[clip.scene] ?? clip.sourceOut)); }} />
             </label>
             <label className="flex flex-col gap-1">Transition in
-              <select className="field field-sm" disabled={sel.index === 0} value={clip.transitionIn && clip.transitionIn.type !== "cut" ? "cross-fade" : "cut"} onChange={(e) => onCommit(setTransition(plan, sel.index, e.target.value as "cut" | "cross-fade", clip.transitionIn?.duration ?? 0.4))}>
+              <select className="field field-sm" disabled={sel.index === 0} value={clip.transitionIn?.type ?? "cut"} onChange={(e) => onCommit(setTransition(plan, sel.index, e.target.value as TransitionType, clip.transitionIn?.duration ?? 0.5))}>
                 <option value="cut">Cut</option>
-                <option value="cross-fade">Cross-fade</option>
+                {TRANSITION_GROUPS.map((g) => (
+                  <optgroup key={g} label={g}>
+                    {TRANSITION_CATALOGUE.filter((t) => t.group === g).map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1">Fade length (s)
-              <input type="number" step={0.1} min={0.1} max={2} className="field field-sm" disabled={!clip.transitionIn} value={clip.transitionIn?.duration ?? 0.4} onChange={(e) => { const v = num(e.target.value); if (v > 0) onCommit(setTransition(plan, sel.index, "cross-fade", v)); }} />
+            <label className="flex flex-col gap-1">Transition length (s)
+              <input type="number" step={0.1} min={0.1} max={2} className="field field-sm" disabled={!clip.transitionIn} value={clip.transitionIn?.duration ?? 0.5} onChange={(e) => { const v = num(e.target.value); if (v > 0 && clip.transitionIn) onCommit(setTransition(plan, sel.index, clip.transitionIn.type, v)); }} />
             </label>
             <label className="flex flex-col gap-1">Ken Burns
               <select className="field field-sm" value={kenBurnsOf(clip)} onChange={(e) => onCommit(setKenBurns(plan, sel.index, e.target.value as KenBurns))}>

@@ -18,6 +18,12 @@ export type ExecuteInputs = {
    * carries the spoken line have none.
    */
   voiceoverFiles: Record<number, string>;
+  /**
+   * Each footage file's frame size. The engine fits footage inside the
+   * frame; footage that isn't 9:16 (uploads) is scaled up to fill it, as
+   * the live preview shows it.
+   */
+  footageSize?: Record<number, { width: number; height: number }>;
   /** Rendered graphic files by graphic id: ProRes 4444 .mov for overlays, MP4 for full-frame cards. */
   graphicFiles: Record<string, string>;
   /** A font file to register as Inter; empty to use the engine's own Inter (project exports). */
@@ -26,6 +32,14 @@ export type ExecuteInputs = {
   name: string;
   log?: (m: string) => void;
 };
+
+/** How much footage of this size must grow, from fitting the 1080x1920 frame to filling it. */
+export function fillFactor(size: { width: number; height: number } | undefined): number {
+  if (!size || !(size.width > 0) || !(size.height > 0)) return 1;
+  const sx = 1080 / size.width;
+  const sy = 1920 / size.height;
+  return Math.max(sx, sy) / Math.min(sx, sy);
+}
 
 export async function buildProject(rpc: EngineRpc, inputs: ExecuteInputs): Promise<string> {
   const { plan, location, name, log = () => {} } = inputs;
@@ -55,11 +69,13 @@ export async function buildProject(rpc: EngineRpc, inputs: ExecuteInputs): Promi
     const patch: Record<string, unknown> = { volume: c.volume };
     if (c.transitionIn && c.transitionIn.type !== "cut") patch.transitionIn = { id: c.transitionIn.type, duration: c.transitionIn.duration };
     const cmds: Record<string, unknown>[] = [{ op: "updateClip", clipId: id, patch }];
+    const fill = fillFactor(inputs.footageSize?.[c.scene]);
     for (const k of c.motion?.keys ?? []) {
       for (const prop of ["scale", "offsetX", "offsetY"] as const) {
-        cmds.push({ op: "setClipKey", clipId: id, property: prop, at: k.at, value: k[prop], ease: c.motion!.ease });
+        cmds.push({ op: "setClipKey", clipId: id, property: prop, at: k.at, value: prop === "scale" ? k.scale * fill : k[prop], ease: c.motion!.ease });
       }
     }
+    if (!c.motion?.keys.length && fill > 1.001) cmds.push({ op: "setClipKey", clipId: id, property: "scale", at: 0, value: fill, ease: "linear" });
     await engine.apply(path, { op: "batch", commands: cmds });
     cursor += want;
   }

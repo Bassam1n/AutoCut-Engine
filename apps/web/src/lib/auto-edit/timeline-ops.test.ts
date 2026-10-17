@@ -4,8 +4,9 @@ import designedFixture from "./__fixtures__/designed-plan.json";
 import { renderProblems } from "./lint";
 import { EditPlan, clipStarts, planLength } from "./plan-schema";
 import { previewAt } from "./preview-model";
+import { TRANSITION_CATALOGUE } from "./transitions";
 import {
-  addCaption, deleteClip, deleteGraphic, kenBurnsOf, moveCaption, moveClip, planFromScenes, retimeGraphic,
+  addCaption, deleteClip, insertClip, deleteGraphic, kenBurnsOf, moveCaption, moveClip, planFromScenes, retimeGraphic,
   setKenBurns, setTransition, splitClip, trimClip, updateCaption,
 } from "./timeline-ops";
 
@@ -43,6 +44,20 @@ describe("clip edits", () => {
         expect(renderProblems(q, { clipDurations: durations }).filter((m) => m.includes("overlaps"))).toEqual([]);
       }
     }
+  });
+
+  it("inserts footage after the clip under the playhead and moves what follows", () => {
+    const p = plan();
+    const starts = clipStarts(p);
+    const later = p.captions.filter((c) => c.start >= starts[2]).map((c) => c.start);
+    const q = insertClip(p, starts[1] + 0.5, 1000, 4);
+    expect(q.clips.map((c) => c.scene)).toEqual([0, 1, 1000, 2, 4, 5]);
+    expect(q.clips[2]).toMatchObject({ sourceIn: 0, sourceOut: 4, transitionIn: null, volume: 1 });
+    expect(planLength(q)).toBeCloseTo(planLength(p) + 4, 6);
+    expect(q.captions.filter((c) => c.start >= starts[2] + 4).map((c) => c.start)).toEqual(later.map((s) => s + 4));
+    expect(renderProblems(q, { clipDurations: { ...durations, 1000: 4 } })).toEqual([]);
+    // Past the footage (on the end card): appended.
+    expect(insertClip(p, planLength(p) - 0.1, 1001, 3).clips.at(-1)!.scene).toBe(1001);
   });
 
   it("splits a clip at the playhead without changing the cut", () => {
@@ -129,6 +144,28 @@ describe("previewAt", () => {
     expect(s.clips[1].opacity).toBeCloseTo(0.25, 6);
     expect(s.clips[0].sourceTime).toBeCloseTo(p.clips[0].sourceOut - 0.1, 6);
     expect(s.clips[1].sourceTime).toBeCloseTo(p.clips[1].sourceIn - 0.1, 6);
+  });
+
+  it("draws every engine transition on both clips, inside the frame", () => {
+    for (const t of TRANSITION_CATALOGUE) {
+      const p = setTransition(plan(), 1, t.id, 0.6);
+      expect(EditPlan.parse(p).clips[1].transitionIn).toEqual({ type: t.id, duration: 0.6 });
+      const cut = clipStarts(p)[1];
+      for (const dt of [-0.29, -0.1, 0, 0.1, 0.29]) {
+        const s = previewAt(p, cut + dt);
+        expect(s.clips.map((c) => c.index)).toEqual([0, 1]);
+        for (const c of s.clips) expect(c.opacity >= 0 && c.opacity <= 1).toBe(true);
+        if (s.wash) expect(s.wash.opacity).toBeLessThanOrEqual(1);
+      }
+      // Fully the incoming clip once the transition is over.
+      expect(previewAt(p, cut + 0.31).clips.map((c) => [c.index, c.look])).toEqual([[1, undefined]]);
+    }
+  });
+
+  it("dips through the colour mid-way", () => {
+    const p = setTransition(plan(), 1, "fade-black", 0.6);
+    const s = previewAt(p, clipStarts(p)[1]);
+    expect(s.wash).toEqual({ color: "#000", opacity: expect.closeTo(1, 6) });
   });
 
   it("interpolates Ken Burns keys", () => {

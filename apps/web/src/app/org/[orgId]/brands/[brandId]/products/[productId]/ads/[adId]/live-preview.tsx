@@ -108,11 +108,15 @@ export function LivePreview({
             style={{
               opacity: v ? v.opacity : 0,
               zIndex: v ? 1 + i : 0,
-              transform: v ? `translate(${v.offsetX * 100}%, ${v.offsetY * 100}%) scale(${v.scale})` : undefined,
+              transform: v ? `${v.look?.transform ?? ""} translate(${v.offsetX * 100}%, ${v.offsetY * 100}%) scale(${v.scale})` : undefined,
+              clipPath: v?.look?.clipPath,
+              filter: v?.look?.filter,
             }}
           />
         );
       })}
+
+      {state.wash && <div className="pointer-events-none absolute inset-0" style={{ background: state.wash.color, opacity: state.wash.opacity, zIndex: 40 }} />}
 
       {plan.graphics.map((g) => (
         <GraphicFrame key={g.id} graphic={g} local={shownGraphics.get(g.id)} scale={scale} />

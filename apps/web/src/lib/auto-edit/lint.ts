@@ -1,6 +1,7 @@
 import { captionRuleProblems } from "./captions";
 import { checkGraphicCode } from "./graphics-sandbox";
-import { TEMPLATE_REQUIRED, planLength, voiceoverStarts, type AutoEditMode, type EditPlan } from "./plan-schema";
+import { transitionLabel } from "./transitions";
+import { TEMPLATE_REQUIRED, TRANSITIONS, footageLabel, isUploadIndex, planLength, voiceoverStarts, type AutoEditMode, type EditPlan } from "./plan-schema";
 
 /** What lint needs to know about the ad beyond the plan. */
 export type LintContext = {
@@ -33,7 +34,7 @@ export function renderProblems(plan: EditPlan, ctx: Pick<LintContext, "clipDurat
   plan.clips.forEach((c, i) => {
     const dur = clipDurations[c.scene];
     if (dur == null) {
-      p.push(`clips[${i}]: there is no scene ${c.scene}`);
+      p.push(isUploadIndex(c.scene) ? `clips[${i}]: uploaded clip ${c.scene} (${footageLabel(c.scene)}) is no longer in the ad's media` : `clips[${i}]: there is no scene ${c.scene}`);
       return;
     }
     if (c.sourceIn < 0 || c.sourceOut > dur + 1e-3 || c.sourceOut - c.sourceIn < 0.5) {
@@ -142,4 +143,18 @@ export function previewSampleTimes(plan: EditPlan, max = 16): number[] {
   const sorted = [...ts].sort((a, b) => a - b);
   const step = Math.max(1, Math.ceil(sorted.length / max));
   return sorted.filter((_, i) => i % step === 0);
+}
+
+/**
+ * A render problem in the editor's words: the checks are written for
+ * Claude (clips[1], sourceIn), and the timeline shows them to people.
+ */
+export function problemForEditors(problem: string): string {
+  return problem
+    .replace(/^clips\[(\d+)\]:/, (_, i) => `Clip ${Number(i) + 1}:`)
+    .replace(/^captions\[(\d+)\]:/, (_, i) => `Caption ${Number(i) + 1}:`)
+    .replace(/^graphic (\S+):/, "Graphic $1:")
+    .replace(/\b((?:concat\.)?[a-z]+(?:-[a-z]+)*) of ([\d.]+)s needs/, (m, id: string, d: string) => (TRANSITIONS.includes(id as never) ? `the ${transitionLabel(id)} (${d} s) needs` : m))
+    .replace(/before sourceIn and after the previous clip's sourceOut/, "before this clip's start and after the previous clip's end; trim them in a little or shorten the transition")
+    .replace(/\bsource ([\d.]+)-([\d.]+) is outside/, "the part used ($1-$2 s) is outside");
 }

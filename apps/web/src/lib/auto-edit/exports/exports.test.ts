@@ -117,6 +117,17 @@ describe("bundles", () => {
     }
   });
 
+  it("brings engine-only transitions in as dissolves and says so", () => {
+    const p = clean();
+    p.clips[1].transitionIn = { type: "concat.whip-pan", duration: 0.6 };
+    p.clips[2].transitionIn = { type: "fade-black", duration: 0.6 };
+    const out = exportText("premiere", p, media(p), "Ad");
+    expect(out.notes.join(" ")).toContain("Whip pan, Dip to black transitions, so they come in as cross dissolves");
+    expect(out.files.find((f) => f.path === "Ad.xml")!.content.match(/<transitionitem>/g)).toHaveLength(2);
+    expect(exportText("capcut", p, media(p), "Ad").files.find((f) => f.path === "timeline.txt")!.content).toContain("(whip pan in, 0.60s)");
+    expect(exportText("fcp", clean(), media(clean()), "Ad").notes.join(" ")).not.toContain("cross dissolves");
+  });
+
   it("writes fixtures for the OpenTimelineIO re-import check", () => {
     const dir = process.env.EXPORT_FIXTURE_DIR;
     if (!dir) return;

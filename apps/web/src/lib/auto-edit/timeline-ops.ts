@@ -1,4 +1,4 @@
-import { clipStarts, planLength, type EditPlan, type PlanClip } from "./plan-schema";
+import { TRANSITIONS, clipStarts, planLength, type EditPlan, type PlanClip } from "./plan-schema";
 
 /**
  * The timeline editor's manual edits, as pure functions from plan to plan
@@ -86,6 +86,24 @@ export function moveClip(plan: EditPlan, from: number, to: number): EditPlan {
   return next;
 }
 
+/**
+ * Puts a whole piece of footage (a scene or an uploaded clip) into the
+ * edit right after the clip under timeline time t, or at the end. Later
+ * clips, their captions and graphics, and the end card move along.
+ */
+export function insertClip(plan: EditPlan, t: number, footage: number, footageDuration: number): EditPlan {
+  if (!(footageDuration >= MIN_CLIP_SECONDS)) return plan;
+  const starts = clipStarts(plan);
+  let at = plan.clips.length;
+  for (let k = 0; k < plan.clips.length; k++) {
+    if (t >= starts[k] && t < starts[k] + (plan.clips[k].sourceOut - plan.clips[k].sourceIn)) at = k + 1;
+  }
+  const clip: PlanClip = { scene: footage, sourceIn: 0, sourceOut: round(footageDuration), transitionIn: null, motion: null, volume: 1 };
+  return withAnchored(plan, (p) => {
+    p.clips.splice(at, 0, clip);
+  }, (old) => (old >= at ? old + 1 : old));
+}
+
 /** Moves a clip's in or out point to a new source time, within its footage. */
 export function trimClip(plan: EditPlan, i: number, edge: "in" | "out", sourceTime: number, clipDuration: number): EditPlan {
   const c = plan.clips[i];
@@ -120,10 +138,10 @@ export function deleteClip(plan: EditPlan, i: number): EditPlan {
   return next;
 }
 
-export function setTransition(plan: EditPlan, i: number, type: "cut" | "cross-fade", duration = 0.4): EditPlan {
-  if (i <= 0 || !plan.clips[i]) return plan;
+export function setTransition(plan: EditPlan, i: number, type: (typeof TRANSITIONS)[number], duration = 0.4): EditPlan {
+  if (i <= 0 || !plan.clips[i] || !TRANSITIONS.includes(type)) return plan;
   const next = clone(plan);
-  next.clips[i].transitionIn = type === "cut" ? null : { type: "cross-fade", duration: round(duration) };
+  next.clips[i].transitionIn = type === "cut" ? null : { type, duration: round(Math.min(2, Math.max(0.1, duration))) };
   return next;
 }
 

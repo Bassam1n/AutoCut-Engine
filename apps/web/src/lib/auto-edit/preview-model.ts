@@ -1,4 +1,5 @@
 import { clipStarts, planLength, voiceoverStarts, type EditPlan, type PlanClip } from "./plan-schema";
+import { transitionLook, type TransitionStyle } from "./transitions";
 
 /**
  * What the live preview shows at timeline time t, computed from the plan
@@ -19,6 +20,8 @@ export type ClipView = {
   offsetX: number;
   offsetY: number;
   volume: number;
+  /** Mid-transition: how this clip is drawn on top of its Ken Burns move. */
+  look?: TransitionStyle;
 };
 
 export type PreviewState = {
@@ -30,6 +33,8 @@ export type PreviewState = {
   graphics: { id: string; local: number }[];
   /** Separate voiceovers sounding, by scene, with seconds into each. */
   voiceovers: { scene: number; local: number }[];
+  /** A colour over the picture (dips, flashes, light leaks). */
+  wash?: { color: string; opacity: number };
 };
 
 const EASE: Record<string, (x: number) => number> = {
@@ -57,13 +62,16 @@ export function previewAt(plan: EditPlan, t: number, voiceoverDurations: Record<
   const starts = clipStarts(plan);
   const duration = planLength(plan);
   const clips: ClipView[] = [];
-  const view = (i: number, opacity: number) => {
-    const c = plan.clips[i];
-    const len = c.sourceOut - c.sourceIn;
-    const local = t - starts[i];
-    const m = motionAt(c, Math.min(1, Math.max(0, local / len)));
-    clips.push({ index: i, scene: c.scene, sourceTime: c.sourceIn + local, opacity, ...m, volume: c.volume });
-  };
+  let wash: PreviewState["wash"];
+  // The transition live at t, if any: into clip `into`, at progress p.
+  let tr: { into: number; id: string; p: number } | null = null;
+  for (let i = 1; i < plan.clips.length; i++) {
+    const ti = plan.clips[i].transitionIn;
+    if (!ti || ti.type === "cut") continue;
+    if (t >= starts[i] - ti.duration / 2 && t < starts[i] + ti.duration / 2) tr = { into: i, id: ti.type, p: (t - (starts[i] - ti.duration / 2)) / ti.duration };
+  }
+  const look = tr ? transitionLook(tr.id, tr.p) : null;
+  if (look?.wash && look.wash.opacity > 0) wash = look.wash;
   plan.clips.forEach((c, i) => {
     const len = c.sourceOut - c.sourceIn;
     const inT = c.transitionIn && c.transitionIn.type !== "cut" && i > 0 ? c.transitionIn.duration : 0;
@@ -72,9 +80,18 @@ export function previewAt(plan: EditPlan, t: number, voiceoverDurations: Record<
     const from = starts[i] - inT / 2;
     const to = starts[i] + len + outT / 2;
     if (t < from || t >= to) return;
-    // Incoming clip fades in over its transition; the outgoing one stays opaque underneath.
-    const opacity = inT && t < starts[i] + inT / 2 ? (t - from) / inT : 1;
-    view(i, opacity);
+    const local = t - starts[i];
+    const m = motionAt(c, Math.min(1, Math.max(0, local / len)));
+    const v: ClipView = { index: i, scene: c.scene, sourceTime: c.sourceIn + local, opacity: 1, ...m, volume: c.volume };
+    // The incoming clip is drawn over the outgoing one, which stays underneath.
+    if (tr && look && tr.into === i) {
+      v.look = look.incoming;
+      v.opacity = look.incoming.opacity ?? 1;
+    } else if (tr && look && tr.into === i + 1) {
+      v.look = look.outgoing;
+      v.opacity = look.outgoing.opacity ?? 1;
+    }
+    clips.push(v);
   });
   clips.sort((a, b) => a.index - b.index);
 
@@ -85,5 +102,5 @@ export function previewAt(plan: EditPlan, t: number, voiceoverDurations: Record<
     .map(([scene, d]) => ({ scene: Number(scene), start: vo[Number(scene)], d }))
     .filter((v) => v.start !== undefined && t >= v.start && t < v.start + v.d)
     .map((v) => ({ scene: v.scene, local: t - v.start }));
-  return { t, duration, clips, captions, graphics, voiceovers };
+  return { t, duration, clips, captions, graphics, voiceovers, wash };
 }

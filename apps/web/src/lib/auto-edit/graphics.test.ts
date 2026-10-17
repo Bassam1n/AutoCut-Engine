@@ -1,8 +1,12 @@
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import designedFixture from "./__fixtures__/designed-plan.json";
-import { renderPlanGraphics, type RenderOne } from "./graphics-render";
+import { hyperframesRenderer, renderPlanGraphics, type GraphicCache, type RenderOne } from "./graphics-render";
 import { checkGraphicCode, documentFor, resolveGraphic, templateCode } from "./graphics-sandbox";
 import { EditPlan } from "./plan-schema";
+import type { ToolchainPaths } from "./toolchain";
 
 const designed = () => EditPlan.parse(structuredClone(designedFixture));
 const ok = { css: "#a{color:#fff}", html: '<div id="a">Hi</div>', js: 'tl.to("#a",{opacity:1,duration:.3},0);' };
@@ -91,5 +95,58 @@ describe("documentFor (live preview)", () => {
     expect(doc).toContain("/*gsap*/var gsap={};");
     expect(doc).toContain('src: url(data:font/woff2;base64,AAAA) format("woff2")');
     expect(doc).toContain('d.type === "seek"');
+  });
+});
+
+describe("hyperframesRenderer shared cache", () => {
+  const setup = async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hf-cache-"));
+    const bin = join(dir, "hyperframes");
+    // Stands in for Hyperframes: writes the --output file and counts renders.
+    await writeFile(bin, `#!/bin/sh\nwhile [ "$1" != "--output" ]; do shift; done\necho rendered > "$2"\necho x >> "${dir}/renders"\n`, { mode: 0o755 });
+    await writeFile(join(dir, "gsap.js"), "");
+    const paths = { hyperframesBin: bin, hyperframesEnv: process.env, gsapJs: join(dir, "gsap.js") } as unknown as ToolchainPaths;
+    const renders = async () => (await readFile(join(dir, "renders"), "utf8").catch(() => "")).split("\n").filter(Boolean).length;
+    return { dir, paths, renders };
+  };
+  const memoryCache = () => {
+    const store = new Map<string, string>();
+    const cache: GraphicCache = {
+      async get(key, to) {
+        if (!store.has(key)) return false;
+        await writeFile(to, store.get(key)!);
+        return true;
+      },
+      async put(key, file) {
+        store.set(key, await readFile(file, "utf8"));
+      },
+    };
+    return { store, cache };
+  };
+
+  it("renders once, stores it, and the next job on another disk reuses it", async () => {
+    const { dir, paths, renders } = await setup();
+    const { store, cache } = memoryCache();
+    const g = designed().graphics[0];
+    const first = await hyperframesRenderer(paths, join(dir, "job1"), { cache })(g, ok);
+    expect(first.cached).toBe(false);
+    expect(store.size).toBe(1);
+    const second = await hyperframesRenderer(paths, join(dir, "job2"), { cache })(g, ok);
+    expect(second.cached).toBe(true);
+    expect(await readFile(second.file, "utf8")).toBe("rendered\n");
+    expect(await renders()).toBe(1);
+    // Different code is a different key.
+    await hyperframesRenderer(paths, join(dir, "job3"), { cache })(g, { ...ok, css: "#a{color:#000}" });
+    expect(await renders()).toBe(2);
+  });
+
+  it("still renders when the cache fails", async () => {
+    const { dir, paths, renders } = await setup();
+    const broken: GraphicCache = { get: async () => { throw new Error("down"); }, put: async () => { throw new Error("down"); } };
+    const log = vi.fn();
+    const r = await hyperframesRenderer(paths, join(dir, "job"), { cache: broken, log })(designed().graphics[0], ok);
+    expect(r.cached).toBe(false);
+    expect(await renders()).toBe(1);
+    expect(log).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import { promisify } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdContext, FrameImage } from "./director";
@@ -47,7 +47,7 @@ export type LoadedAd = {
   brandId: string;
   adId: string;
   targetLengthSeconds: number;
-  /** Local scene clip files by scene index. */
+  /** Local footage files by footage index (scenes 0..n, uploaded clips 1000 and up). */
   sceneFiles: Record<number, string>;
   /** Separate voiceovers by scene index (inClip ones are left out: the clip carries them). */
   voiceoverFiles: Record<number, string>;
@@ -67,12 +67,30 @@ async function download(supabase: SupabaseClient, path: string, to: string): Pro
 export type MediaProbe = { duration: number; width: number; height: number; hasAudio: boolean };
 
 export async function probeMedia(paths: ToolchainPaths, file: string): Promise<MediaProbe> {
-  const { stdout } = await run(paths.ffprobe, ["-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height", "-of", "json", file], { env: paths.concatEnv });
-  const j = JSON.parse(stdout) as { format?: { duration?: string }; streams?: { codec_type: string; width?: number; height?: number }[] };
+  const { stdout } = await run(paths.ffprobe, [
+    "-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height:stream_tags=rotate:stream_side_data=rotation", "-of", "json", file,
+  ], { env: paths.concatEnv });
+  return parseProbe(JSON.parse(stdout), file);
+}
+
+type ProbeJson = {
+  format?: { duration?: string };
+  streams?: { codec_type: string; width?: number; height?: number; tags?: { rotate?: string }; side_data_list?: { rotation?: number }[] }[];
+};
+
+/**
+ * Display size: phones store portrait video as landscape pixels plus a
+ * rotation, which the render engine applies, so a quarter turn swaps
+ * width and height.
+ */
+export function parseProbe(j: ProbeJson, file: string): MediaProbe {
   const v = j.streams?.find((s) => s.codec_type === "video");
   const duration = Math.round(Number(j.format?.duration) * 1000) / 1000;
   if (!Number.isFinite(duration) || duration <= 0) throw new Error(`could not read the length of ${file}`);
-  return { duration, width: v?.width ?? 0, height: v?.height ?? 0, hasAudio: Boolean(j.streams?.some((s) => s.codec_type === "audio")) };
+  const rotation = Number(v?.side_data_list?.find((d) => d.rotation != null)?.rotation ?? v?.tags?.rotate ?? 0);
+  const quarter = Math.abs(Math.round(rotation / 90)) % 2 === 1;
+  const [width, height] = quarter ? [v?.height ?? 0, v?.width ?? 0] : [v?.width ?? 0, v?.height ?? 0];
+  return { duration, width, height, hasAudio: Boolean(j.streams?.some((s) => s.codec_type === "audio")) };
 }
 
 export async function probeDuration(paths: ToolchainPaths, file: string): Promise<number> {
@@ -109,7 +127,7 @@ export async function loadAd(
       .select("id, kind, scene_id, version, storage_path, source, meta, created_at")
       .eq("ad_id", adId)
       .eq("archived", false)
-      .in("kind", ["video", "vo", "caption"]),
+      .in("kind", ["video", "vo", "caption", "broll"]),
   ]);
   if (!scenes?.length) throw new AdNotReadyError("This ad has no scenes yet.");
 
@@ -177,6 +195,26 @@ export async function loadAd(
     });
   }
 
+  // Clips the editor uploaded from their device, by their footage index (1000 and up).
+  const adUploads: Record<string, unknown>[] = [];
+  const uploads = rows
+    .filter((r) => r.kind === "broll" && typeof r.meta?.clipIndex === "number")
+    .sort((a, b) => (a.meta!.clipIndex as number) - (b.meta!.clipIndex as number));
+  for (const u of uploads) {
+    const idx = u.meta!.clipIndex as number;
+    const file = await download(supabase, u.storage_path, join(workDir, "media", `upload-${idx}${extname(u.storage_path) || ".mp4"}`));
+    const meta = await probeMedia(paths, file);
+    sceneMeta[idx] = meta;
+    sceneFiles[idx] = file;
+    clipDurations[idx] = meta.duration;
+    const name = String(u.meta!.name ?? "clip");
+    const ts = withFrames ? [0.2, 0.7].map((f) => +(meta.duration * f).toFixed(2)) : [];
+    for (const [i, t] of ts.entries()) {
+      frames.push({ label: `Uploaded clip ${idx} ("${name}"), ${t.toFixed(1)}s into it:`, jpeg: await frameAt(paths, file, t, join(workDir, "frames", `u${idx}-${i}.jpg`)) });
+    }
+    adUploads.push({ index: idx, name, clipDuration: meta.duration, hasSound: meta.hasAudio, shape: meta.width >= meta.height ? "landscape or square (cropped to fill 9:16)" : "vertical" });
+  }
+
   const brandContext = (brand?.brand_context ?? {}) as Record<string, unknown>;
   const hasVoice = adScenes.some((s) => s.voiceover);
   return {
@@ -199,6 +237,12 @@ export async function loadAd(
           ? "Some scenes have a voiceover with word timings; captions follow the spoken words."
           : "This ad has no voiceover. The clips carry only their own sound, so the captions carry the script.",
         scenes: adScenes,
+        ...(adUploads.length
+          ? {
+              uploadedClips: adUploads,
+              uploadedClipsNote: "Extra footage the editor uploaded. Use a clip by its index as a clip's scene. They have no voiceover or script of their own: use them where they fit the script, for example as cutaways.",
+            }
+          : {}),
       },
       frames,
     },

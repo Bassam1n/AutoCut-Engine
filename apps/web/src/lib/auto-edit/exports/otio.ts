@@ -54,7 +54,7 @@ export function otioJson(t: ExportTimeline): string {
   const v1: unknown[] = [];
   t.video.forEach((c, i) => {
     if (c.transitionIn && i > 0) {
-      v1.push({ OTIO_SCHEMA: "Transition.1", metadata: {}, name: "Cross Dissolve", transition_type: "SMPTE_Dissolve", in_offset: rt(c.transitionIn / 2), out_offset: rt(c.transitionIn / 2) });
+      v1.push({ OTIO_SCHEMA: "Transition.1", metadata: c.transitionType && c.transitionType !== "cross-fade" ? { autocut: { transition: c.transitionType } } : {}, name: "Cross Dissolve", transition_type: "SMPTE_Dissolve", in_offset: rt(c.transitionIn / 2), out_offset: rt(c.transitionIn / 2) });
     }
     v1.push(clip(c.name, c.file, c.mediaFrames, c.in, c.end - c.start, c.motion.length ? { autocut: { kenBurns: c.motion, volume: c.volume } } : { autocut: { volume: c.volume } }));
   });

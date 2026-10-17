@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import cleanFixture from "./__fixtures__/clean-plan.json";
 import type { EngineRpc } from "./engine-client";
-import { buildProject, exportProject, PREVIEW_EXPORT } from "./executor";
+import { buildProject, fillFactor, exportProject, PREVIEW_EXPORT } from "./executor";
 import { EditPlan } from "./plan-schema";
 
 /**
@@ -118,6 +118,23 @@ describe("buildProject", () => {
     const batch = engine.commands("batch")[1].commands as Record<string, unknown>[];
     expect(batch[0]).toMatchObject({ op: "updateClip", patch: { volume: p.clips[1].volume, transitionIn: { id: "cross-fade", duration: 0.4 } } });
     expect(batch.filter((c) => c.op === "setClipKey")).toHaveLength(6);
+  });
+
+  it("scales footage that isn't 9:16 up to fill the frame, Ken Burns included", async () => {
+    expect(fillFactor({ width: 720, height: 1280 })).toBeCloseTo(1, 9);
+    expect(fillFactor({ width: 1280, height: 720 })).toBeCloseTo((1920 / 720) / (1080 / 1280), 9);
+    expect(fillFactor(undefined)).toBe(1);
+    const engine = new FakeEngine(lengthOf);
+    const p = plan();
+    p.clips[1].scene = 1000;
+    p.clips[2].scene = 1000;
+    p.clips[2].motion = { ease: "linear", keys: [{ at: 0, scale: 1, offsetX: 0, offsetY: 0 }, { at: 1, scale: 1.1, offsetX: 0, offsetY: 0 }] };
+    await buildProject(engine, { ...inputs(p), sceneFiles: { ...inputs(p).sceneFiles, 1000: "/media/upload.mov" }, footageSize: { 1000: { width: 1920, height: 1080 } } });
+    const keys = (n: number) => (engine.commands("batch")[n].commands as Record<string, unknown>[]).filter((c) => c.op === "setClipKey" && c.property === "scale").map((c) => c.value);
+    const f = fillFactor({ width: 1920, height: 1080 });
+    expect(keys(0)).toEqual((p.clips[0].motion?.keys ?? []).map((k) => k.scale));
+    expect(keys(1)).toEqual([expect.closeTo(f, 9)]);
+    expect(keys(2)).toEqual([expect.closeTo(f, 9), expect.closeTo(1.1 * f, 9)]);
   });
 
   it("puts a separate voiceover on its own track from its scene's first clip", async () => {

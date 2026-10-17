@@ -8,9 +8,9 @@ import { EngineProcess } from "./engine-client";
 import { FINAL_EXPORT, buildProject } from "./executor";
 import { CONCAT_PATH_SCRIPTS, exportText, type ExportFormat } from "./exports/bundle";
 import type { ExportMedia } from "./exports/timeline";
-import { hyperframesRenderer, renderPlanGraphics, type GraphicOutcome } from "./graphics-render";
+import { graphicCachePrefix, hyperframesRenderer, renderPlanGraphics, storageGraphicCache, type GraphicOutcome } from "./graphics-render";
 import { renderProblems } from "./lint";
-import { EditPlan, type AutoEditMode } from "./plan-schema";
+import { EditPlan, UPLOAD_INDEX_BASE, isUploadIndex, type AutoEditMode } from "./plan-schema";
 import {
   AutoEditFailure, claim, classify, graphicsParallelism, graphicsSummary, loadAdOrFail, renderVideo,
 } from "./pipeline";
@@ -89,7 +89,7 @@ export async function runAdRender(o: RenderOptions): Promise<{ status: string }>
     }
 
     const graphics = await timed("graphicsMs", () =>
-      renderPlanGraphics(plan, hyperframesRenderer(paths, workDir), { parallel: graphicsParallelism(), log })
+      renderPlanGraphics(plan, hyperframesRenderer(paths, workDir, { cache: storageGraphicCache(supabase, graphicCachePrefix(row.org_id, row.ad_id)), log }), { parallel: graphicsParallelism(), log })
     );
     await update({ notes: graphicsSummary(graphics).filter((g) => g.fallback).map((g) => `Graphic ${g.id} used its Clean template: ${g.fallback}`) });
 
@@ -124,8 +124,12 @@ export async function buildBundle(
   const media: ExportMedia = { scenes: {}, voiceovers: {}, graphics: {} };
   const abs = (rel: string) => join(dir, rel);
   const used = new Set(plan.clips.map((c) => c.scene));
+  const sourceOf = new Map<string, string>();
   for (const scene of used) {
-    const rel = `media/scene-${pad2(scene + 1)}.mp4`;
+    const rel = isUploadIndex(scene)
+      ? `media/upload-${pad2(scene - UPLOAD_INDEX_BASE + 1)}${extname(ad.sceneFiles[scene]) || ".mp4"}`
+      : `media/scene-${pad2(scene + 1)}.mp4`;
+    sourceOf.set(rel, ad.sceneFiles[scene]);
     if (format !== "capcut") await copyFile(ad.sceneFiles[scene], abs(rel));
     const m = ad.sceneMeta[scene];
     media.scenes[scene] = { file: rel, duration: ad.lint.clipDurations[scene], width: m.width, height: m.height, hasAudio: m.hasAudio };
@@ -150,7 +154,7 @@ export async function buildBundle(
 
   if (format === "capcut") {
     for (const cut of text.capcutCuts) {
-      const src = ad.sceneFiles[Number(/scene-(\d+)/.exec(cut.source)![1]) - 1];
+      const src = sourceOf.get(cut.source)!;
       await run(paths.ffmpeg, [
         "-v", "error", "-y", "-ss", cut.fromSeconds.toFixed(3), "-to", cut.toSeconds.toFixed(3), "-i", src,
         "-c:v", "libx264", "-crf", "18", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", abs(cut.out),
@@ -165,6 +169,7 @@ export async function buildBundle(
       await buildProject(rpc, {
         plan,
         sceneFiles: Object.fromEntries(Object.entries(media.scenes).map(([s, m]) => [s, abs(m.file)])),
+        footageSize: ad.sceneMeta,
         voiceoverFiles: Object.fromEntries(Object.entries(media.voiceovers).map(([s, m]) => [s, abs(m.file)])),
         graphicFiles: Object.fromEntries(Object.entries(media.graphics).map(([id, m]) => [id, abs(m.file)])),
         fontPath: "", location: dir, name: "project", log,

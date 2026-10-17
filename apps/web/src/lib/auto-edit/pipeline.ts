@@ -11,7 +11,7 @@ import { AdNotReadyError, loadAd, type LoadedAd } from "./context";
 import { Director, type ClaudeCallRecord, type FrameImage } from "./director";
 import { EngineProcess } from "./engine-client";
 import { buildProject, exportProject, type ExportSettings } from "./executor";
-import { hyperframesRenderer, renderPlanGraphics, type GraphicOutcome } from "./graphics-render";
+import { graphicCachePrefix, hyperframesRenderer, renderPlanGraphics, storageGraphicCache, type GraphicOutcome } from "./graphics-render";
 import { lintPlan, previewSampleTimes } from "./lint";
 import type { AutoEditErrorCode, AutoEditStatus } from "./messages";
 import { EditPlan, type AutoEditMode, type Review, type ReviewIssue } from "./plan-schema";
@@ -155,7 +155,7 @@ export async function runAutoEdit(o: PipelineOptions): Promise<{ status: AutoEdi
     if (!revising && !row.review) {
       await update({ status: "rendering_preview" });
       const outcomes = await timed("reviewGraphicsMs", () =>
-        renderPlanGraphics(row.plan!, hyperframesRenderer(paths, workDir), { parallel: graphicsParallelism(), log })
+        renderPlanGraphics(row.plan!, hyperframesRenderer(paths, workDir, { cache: storageGraphicCache(supabase, graphicCachePrefix(row.org_id, row.ad_id)), log }), { parallel: graphicsParallelism(), log })
       );
       await update({ graphics: graphicsSummary(outcomes) });
       const frames = await timed("reviewFramesMs", () => reviewFrames(ad, row.plan!, outcomes, paths, workDir, log));
@@ -192,7 +192,7 @@ export async function reviewFrames(ad: LoadedAd, plan: EditPlan, graphics: Graph
     await mkdir(location, { recursive: true });
     await mkdir(join(workDir, "review-frames"), { recursive: true });
     const path = await buildProject(rpc, {
-      plan, sceneFiles: ad.sceneFiles, voiceoverFiles: ad.voiceoverFiles,
+      plan, sceneFiles: ad.sceneFiles, voiceoverFiles: ad.voiceoverFiles, footageSize: ad.sceneMeta,
       graphicFiles: Object.fromEntries(graphics.map((g) => [g.id, g.file])),
       fontPath: paths.interFont, location, name: "review", log,
     });
@@ -275,7 +275,7 @@ export async function renderVideo(
     await rm(join(location, label), { recursive: true, force: true });
     await mkdir(location, { recursive: true });
     const projectPath = await buildProject(rpc, {
-      plan, sceneFiles: ad.sceneFiles, voiceoverFiles: ad.voiceoverFiles,
+      plan, sceneFiles: ad.sceneFiles, voiceoverFiles: ad.voiceoverFiles, footageSize: ad.sceneMeta,
       graphicFiles: Object.fromEntries(graphics.map((g) => [g.id, g.file])),
       fontPath: paths.interFont, location, name: label, log,
     });
