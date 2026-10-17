@@ -12,6 +12,7 @@ on:
     paths:
       - "apps/web/src/**"
       - "apps/web/trigger.config.ts"
+      - "apps/web/trigger/**"
       - "apps/web/package.json"
       - "apps/web/package-lock.json"
       - ".github/workflows/trigger-deploy.yml"

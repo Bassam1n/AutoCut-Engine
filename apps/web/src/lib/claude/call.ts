@@ -6,8 +6,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getActivePrompt } from "./prompt-registry";
 import { hashInput, redactedInputSummary } from "./redact";
 import { PINNED_MODEL_PER_TASK, LlmCallError } from "./types";
+import { assertCanSpend, estimateUsd, getAnthropicKey, mapAnthropicError, recordLlmSpend } from "./core";
 import type { LlmCallParams, LlmCallResult } from "./types";
-import { spendLimitMessage } from "@/lib/spend-limit-message";
 
 /**
  * llm.call({ task, schema, input }), spec §4 M4's own naming. One
@@ -30,20 +30,11 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
   const supabase = createServiceClient();
 
   // Spend guard: refuse before spending anything, per spec §5.10
-  // ("paid jobs refused when paused"). claim_paid_job() raises a raw
-  // Postgres exception shaped like "org_paused: Spend guard: 24h
-  // spend $X crossed the $Y stop threshold" — plain-language-ify it
-  // here rather than letting that string reach an end user with no
-  // context for what "org_paused" means (spec §5.10's error
-  // vocabulary names SPEND_LIMIT as the code for exactly this case).
-  const claimError =
-    (await supabase.rpc("claim_paid_job", { target_org_id: orgId })).error ??
-    (brandId ? (await supabase.rpc("assert_brand_active", { target_org_id: orgId, target_brand_id: brandId })).error : null);
-  if (claimError) {
-    throw new LlmCallError(spendLimitMessage(claimError.message), "SPEND_LIMIT", claimError);
-  }
+  // ("paid jobs refused when paused"), with the raw Postgres
+  // exception turned into plain language (see core.ts).
+  await assertCanSpend(supabase, orgId, brandId);
 
-  const apiKey = await getOrgAnthropicKey(orgId, brandId);
+  const apiKey = await getAnthropicKey(supabase, orgId, brandId);
   const prompt = await getActivePrompt(task);
   const inputHash = hashInput(input);
 
@@ -110,7 +101,7 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
     }
 
     const usdEstimate = estimateUsd(model, response.usage);
-    await recordSpend(supabase, orgId, model, usdEstimate, task);
+    await recordLlmSpend(supabase, { orgId, model, usd: usdEstimate, task });
 
     if (response.parsed_output === null) {
       // Defensive fallback — not currently reachable given
@@ -133,103 +124,5 @@ export async function llmCall<Schema extends z.ZodTypeAny>(
   throw new LlmCallError(
     `task "${task}" failed schema validation twice (input ${redactedInputSummary(input)}, hash ${inputHash})`,
     "NEEDS_HUMAN"
-  );
-}
-
-/**
- * brandId present: resolves the brand's own Anthropic key, falling
- * back to the org's key via get_brand_secret_value's own fallback
- * chain when this brand has none saved — see migration
- * 00000000000051_rpc_brand_secrets.sql. brandId absent (e.g.
- * distill-feedback-rules.ts, which clusters feedback across an
- * entire org in one batch before any per-brand split): org-level key
- * only, same as before this function took a brandId at all.
- */
-async function getOrgAnthropicKey(orgId: string, brandId?: string): Promise<string> {
-  const supabase = createServiceClient();
-  const { data, error } = brandId
-    ? await supabase.rpc("get_brand_secret_value", {
-        target_org_id: orgId,
-        target_brand_id: brandId,
-        target_provider: "anthropic",
-      })
-    : await supabase.rpc("get_org_secret_value", {
-        target_org_id: orgId,
-        target_provider: "anthropic",
-      });
-
-  if (error || !data) {
-    throw new LlmCallError(
-      error?.message ?? "no Anthropic key saved for this org",
-      "KEY_INVALID",
-      error
-    );
-  }
-
-  return data;
-}
-
-async function recordSpend(
-  supabase: ReturnType<typeof createServiceClient>,
-  orgId: string,
-  model: string,
-  usdEstimate: number,
-  task: string
-): Promise<void> {
-  const { error } = await supabase.rpc("record_spend_event", {
-    target_org_id: orgId,
-    target_ad_id: null,
-    target_provider: "anthropic",
-    target_model: model,
-    target_usd_est: usdEstimate,
-    target_kind: `llm:${task}`,
-  });
-  if (error) {
-    // Spend recording failing should never silently swallow a
-    // successful generation — but it also shouldn't be allowed to
-    // throw away real output over a logging-path failure. Re-thrown
-    // as PROVIDER_ERROR so the caller/job runner sees it and can
-    // decide (M9), rather than failing silently here.
-    throw new LlmCallError(`record_spend_event failed: ${error.message}`, "PROVIDER_ERROR", error);
-  }
-}
-
-/** claude-api skill's current pricing table (cached 2026-10-06). Sonnet 5.5: $2/$10 per MTok. */
-const PRICE_PER_MTOK: Record<string, { input: number; output: number }> = {
-  "claude-sonnet-5-5": { input: 2.0, output: 10.0 },
-  "claude-opus-5-5": { input: 4.0, output: 20.0 },
-  "claude-haiku-5-5": { input: 0.1, output: 0.5 },
-};
-
-function estimateUsd(model: string, usage: { input_tokens: number; output_tokens: number }): number {
-  const price = PRICE_PER_MTOK[model];
-  if (!price) return 0; // unpriced model — price_table (spec §4) is the real source of truth once populated for LLM tasks too
-  return (usage.input_tokens / 1_000_000) * price.input + (usage.output_tokens / 1_000_000) * price.output;
-}
-
-function mapAnthropicError(err: unknown): LlmCallError {
-  if (err instanceof Anthropic.AuthenticationError) {
-    return new LlmCallError("Anthropic key is invalid.", "KEY_INVALID", err);
-  }
-  if (err instanceof Anthropic.RateLimitError) {
-    return new LlmCallError("Anthropic rate limit hit.", "RATE_LIMIT", err);
-  }
-  if (err instanceof Anthropic.APIConnectionError) {
-    return new LlmCallError("Could not reach Anthropic.", "TIMEOUT", err);
-  }
-  if (err instanceof Anthropic.APIError) {
-    // billing_error (HTTP 402, out of credit) has no dedicated typed
-    // class in the SDK — confirmed from the claude-api skill's own
-    // error-codes reference, which lists a distinct exception class
-    // for every other 4xx/5xx but not 402. Check status/.type instead.
-    if (err.status === 402) {
-      return new LlmCallError("Anthropic key has no credit.", "KEY_NO_CREDIT", err);
-    }
-    return new LlmCallError(err.message, "PROVIDER_ERROR", err);
-  }
-  return new LlmCallError(
-    err instanceof Error ? err.message : "unknown Anthropic client error",
-    "PROVIDER_ERROR",
-    err
   );
 }

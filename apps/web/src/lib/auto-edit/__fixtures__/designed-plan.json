@@ -1,0 +1,364 @@
+{
+ "summary": "Problem-to-payoff story told entirely in captions: a grimacing office worker sets up the burnt-coffee problem, a rushed cafe shows the cause, and slow-steeped cans in the fridge, on the desk and on the street deliver the fix. Hard cuts keep it punchy, with a bold hook pill, an 18-hour steep badge and a warm full-frame end card CTA.",
+ "clips": [
+  {
+   "scene": 0,
+   "sourceIn": 0,
+   "sourceOut": 5.5,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.08,
+      "offsetX": 0.02,
+      "offsetY": -0.02
+     }
+    ],
+    "ease": "inOut"
+   },
+   "volume": 0.4
+  },
+  {
+   "scene": 1,
+   "sourceIn": 0.1,
+   "sourceOut": 4,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1.08,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.02,
+      "offsetX": 0,
+      "offsetY": 0
+     }
+    ],
+    "ease": "out"
+   },
+   "volume": 0.45
+  },
+  {
+   "scene": 2,
+   "sourceIn": 0,
+   "sourceOut": 6,
+   "transitionIn": null,
+   "motion": null,
+   "volume": 0.35
+  },
+  {
+   "scene": 3,
+   "sourceIn": 0.2,
+   "sourceOut": 3.8,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.1,
+      "offsetX": 0.03,
+      "offsetY": 0.03
+     }
+    ],
+    "ease": "inOut"
+   },
+   "volume": 0.35
+  },
+  {
+   "scene": 4,
+   "sourceIn": 0,
+   "sourceOut": 6,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1.04,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.1,
+      "offsetX": 0,
+      "offsetY": 0.02
+     }
+    ],
+    "ease": "linear"
+   },
+   "volume": 0.45
+  },
+  {
+   "scene": 5,
+   "sourceIn": 0.5,
+   "sourceOut": 4.5,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.08,
+      "offsetX": 0,
+      "offsetY": 0.02
+     }
+    ],
+    "ease": "inOut"
+   },
+   "volume": 0.35
+  }
+ ],
+ "captionStyles": [
+  {
+   "name": "main",
+   "fontSize": 0.044,
+   "fontWeight": 800,
+   "color": "#ffffff",
+   "background": "",
+   "strokeWidth": 0.004,
+   "strokeColor": "#000000",
+   "maxWidth": 0.86,
+   "offsetY": 0.22
+  },
+  {
+   "name": "top",
+   "fontSize": 0.044,
+   "fontWeight": 800,
+   "color": "#ffffff",
+   "background": "",
+   "strokeWidth": 0.004,
+   "strokeColor": "#000000",
+   "maxWidth": 0.86,
+   "offsetY": -0.24
+  }
+ ],
+ "captions": [
+  {
+   "start": 0.2,
+   "end": 1.3,
+   "text": "Okay, confession:",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 1.3,
+   "end": 2.9,
+   "text": "You think black coffee tastes",
+   "style": "main",
+   "popIn": false
+  },
+  {
+   "start": 2.9,
+   "end": 4.2,
+   "text": "like burnt toast. Fair.",
+   "style": "main",
+   "popIn": false
+  },
+  {
+   "start": 4.2,
+   "end": 5.4,
+   "text": "Most of it kinda does.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 5.5,
+   "end": 7.4,
+   "text": "Bitterness usually comes from rushing.",
+   "style": "main",
+   "popIn": false
+  },
+  {
+   "start": 7.4,
+   "end": 9.3,
+   "text": "We don't rush.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 9.4,
+   "end": 11,
+   "text": "Slow-steeped for 18 whole hours",
+   "style": "top",
+   "popIn": true
+  },
+  {
+   "start": 11,
+   "end": 12.2,
+   "text": "in small batches",
+   "style": "top",
+   "popIn": false
+  },
+  {
+   "start": 12.2,
+   "end": 13.9,
+   "text": "deep, mellow, genuinely smooth.",
+   "style": "top",
+   "popIn": false
+  },
+  {
+   "start": 13.9,
+   "end": 15.3,
+   "text": "Never bitter.",
+   "style": "top",
+   "popIn": true
+  },
+  {
+   "start": 15.4,
+   "end": 16.8,
+   "text": "No added sugar.",
+   "style": "top",
+   "popIn": true
+  },
+  {
+   "start": 16.8,
+   "end": 18.9,
+   "text": "Honestly? You won't miss it.",
+   "style": "top",
+   "popIn": false
+  },
+  {
+   "start": 19,
+   "end": 20.3,
+   "text": "Just good coffee,",
+   "style": "top",
+   "popIn": true
+  },
+  {
+   "start": 20.3,
+   "end": 21.9,
+   "text": "the way it should've tasted",
+   "style": "top",
+   "popIn": false
+  },
+  {
+   "start": 21.9,
+   "end": 22.8,
+   "text": "all along.",
+   "style": "top",
+   "popIn": false
+  },
+  {
+   "start": 22.8,
+   "end": 24.9,
+   "text": "In a slim can you take anywhere.",
+   "style": "top",
+   "popIn": true
+  },
+  {
+   "start": 25,
+   "end": 26.3,
+   "text": "Grab a can from the fridge.",
+   "style": "top",
+   "popIn": true
+  },
+  {
+   "start": 26.3,
+   "end": 27.7,
+   "text": "One sip. Taste the difference.",
+   "style": "top",
+   "popIn": false
+  },
+  {
+   "start": 27.7,
+   "end": 29,
+   "text": "Find it at your store today.",
+   "style": "top",
+   "popIn": true
+  }
+ ],
+ "graphics": [
+  {
+   "id": "hook",
+   "role": "hook",
+   "start": 0,
+   "duration": 2.6,
+   "layout": "overlay",
+   "template": {
+    "name": "hookPill",
+    "props": {
+     "headline": "Black coffee = burnt toast?",
+     "sub": "",
+     "text": "",
+     "cta": "",
+     "bg": "",
+     "accent": ""
+    }
+   },
+   "code": {
+    "css": "#hook{position:absolute;left:90px;top:900px;width:900px;text-align:center;font-family:Inter,'DejaVu Sans',sans-serif;opacity:0}#hook .pill{display:inline-block;background:#f5e6c8;color:#1a0f08;font-weight:900;font-size:70px;line-height:1.05;padding:30px 48px;border-radius:56px;box-shadow:0 12px 40px rgba(0,0,0,0.45);border:6px solid #c8823a}#hook .acc{color:#b5651d}",
+    "html": "<div id='hook'><div class='pill'>BLACK COFFEE<br><span class='acc'>= BURNT TOAST?</span></div></div>",
+    "js": "tl.fromTo('#hook',{scale:0.6,opacity:0},{scale:1,opacity:1,duration:0.3,ease:'back.out(2)'},0.1);tl.to('#hook',{rotation:-2,duration:0.15,yoyo:true,repeat:1},0.9);tl.to('#hook',{opacity:0,y:-30,duration:0.25,ease:'power2.in'},2.3);"
+   }
+  },
+  {
+   "id": "steep",
+   "role": "callout",
+   "start": 9.8,
+   "duration": 5,
+   "layout": "overlay",
+   "template": {
+    "name": "callout",
+    "props": {
+     "headline": "",
+     "sub": "",
+     "text": "18-hour steep",
+     "cta": "",
+     "bg": "",
+     "accent": ""
+    }
+   },
+   "code": {
+    "css": "#badge{position:absolute;left:70px;top:820px;width:300px;height:300px;border-radius:50%;background:#f5e6c8;color:#1a0f08;border:8px solid #c8823a;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Inter,'DejaVu Sans',sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.45);opacity:0}#badge .n{font-size:130px;font-weight:900;line-height:0.9}#badge .t{font-size:34px;font-weight:800;letter-spacing:2px;margin-top:6px}",
+    "html": "<div id='badge'><div class='n'>18</div><div class='t'>HOUR STEEP</div></div>",
+    "js": "tl.fromTo('#badge',{scale:0.3,rotation:-25,opacity:0},{scale:1,rotation:-8,opacity:1,duration:0.35,ease:'back.out(1.8)'},0);tl.to('#badge',{rotation:-4,duration:3.8,ease:'sine.inOut'},0.35);tl.to('#badge',{scale:0.6,opacity:0,duration:0.25,ease:'power2.in'},4.6);"
+   }
+  },
+  {
+   "id": "endcard",
+   "role": "endCard",
+   "start": 29,
+   "duration": 2,
+   "layout": "fullFrame",
+   "template": {
+    "name": "endCard",
+    "props": {
+     "headline": "Cold brew, done slow.",
+     "sub": "",
+     "text": "",
+     "cta": "Find it at your store today",
+     "bg": "",
+     "accent": ""
+    }
+   },
+   "code": {
+    "css": "#ec{position:absolute;left:0;top:0;width:1080px;height:1920px;background:radial-gradient(circle at 50% 35%,#3a2214 0%,#1a0f08 70%);font-family:Inter,'DejaVu Sans',sans-serif;color:#f5e6c8;overflow:hidden}#can{position:absolute;left:430px;top:330px;width:220px;height:520px;border-radius:30px;background:linear-gradient(90deg,#111 0%,#333 45%,#111 100%);border-top:14px solid #9a9a9a;box-shadow:0 30px 60px rgba(0,0,0,0.6)}#can .lbl{position:absolute;left:0;top:170px;width:220px;text-align:center;font-weight:900;font-size:44px;line-height:1.05;color:#f5e6c8}#can .bar{position:absolute;left:30px;top:300px;width:160px;height:8px;background:#c8823a}#hl{position:absolute;left:60px;top:960px;width:960px;text-align:center;font-weight:900;font-size:110px;line-height:1.02}#sub{position:absolute;left:80px;top:1250px;width:920px;text-align:center;font-weight:600;font-size:44px;color:#e0c9a0}#cta{position:absolute;left:140px;top:1420px;width:800px;height:130px;border-radius:65px;background:#c8823a;color:#1a0f08;font-weight:900;font-size:52px;display:flex;align-items:center;justify-content:center}",
+    "html": "<div id='ec'><div id='can'><div class='lbl'>COLD<br>BREW</div><div class='bar'></div></div><div id='hl'>Cold brew,<br>done slow.</div><div id='sub'>18-hour steep \u00b7 small batches \u00b7 no added sugar</div><div id='cta'>Find it at your store today</div></div>",
+    "js": "tl.fromTo('#can',{y:120,opacity:0},{y:0,opacity:1,duration:0.4,ease:'power3.out'},0);tl.fromTo('#hl',{y:60,opacity:0},{y:0,opacity:1,duration:0.35,ease:'power3.out'},0.15);tl.fromTo('#sub',{opacity:0},{opacity:1,duration:0.3},0.35);tl.fromTo('#cta',{scale:0.7,opacity:0},{scale:1,opacity:1,duration:0.3,ease:'back.out(2)'},0.5);tl.to('#cta',{scale:1.05,duration:0.3,yoyo:true,repeat:1,ease:'sine.inOut'},1.1);"
+   }
+  }
+ ],
+ "endCardHold": 2
+}

@@ -1,0 +1,50 @@
+name: Auto-edit - dispatch a run
+
+# Ops tool: (re)queues an existing auto_edit_runs row on the production
+# render worker, for a smoke test after a worker deploy or to re-run a
+# run that was never picked up. The row itself is created the normal way
+# (request_auto_edit from the app, or by an operator with database
+# access). Uses the same TRIGGER_ACCESS_TOKEN secret as the deploy
+# workflow, which resolves the production key exactly as `trigger
+# deploy` does; the key is masked in the log.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "auto_edit_runs.id to queue"
+        required: true
+      org_id:
+        description: "The run's org id (its concurrency key)"
+        required: true
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - name: Queue the run
+        env:
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+          RUN_ID: ${{ inputs.run_id }}
+          ORG_ID: ${{ inputs.org_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9a-f-]{36}$ && "$ORG_ID" =~ ^[0-9a-f-]{36}$ ]] || { echo "::error::run_id and org_id must be UUIDs"; exit 1; }
+          REF=$(node -p "require('fs').readFileSync('trigger.config.ts','utf8').match(/project: \"(proj_[a-z0-9]+)\"/)[1]")
+          KEY=$(curl -fsS -H "Authorization: Bearer $TRIGGER_ACCESS_TOKEN" "https://api.trigger.dev/api/v1/projects/$REF/prod" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).apiKey))')
+          echo "::add-mask::$KEY"
+          TRIGGER_SECRET_KEY="$KEY" node --input-type=module -e '
+            import { tasks } from "@trigger.dev/sdk";
+            const h = await tasks.trigger("auto-edit", { runId: process.env.RUN_ID }, { concurrencyKey: process.env.ORG_ID, idempotencyKey: `auto-edit:${process.env.RUN_ID}`, tags: [`org_${process.env.ORG_ID}`] });
+            console.log("queued", h.id);
+          '

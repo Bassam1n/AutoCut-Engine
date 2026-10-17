@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import JSZip from "jszip";
 import { AsyncButton } from "@/components/async-button";
+import { AutoEditPanel } from "./auto-edit-panel";
 import { MediaLightbox } from "@/components/media-lightbox";
 import { getExportManifest, type ExportManifestEntry } from "../export-data";
 import { buildZipManifest, extensionFromStoragePath, type DownloadScope } from "@/lib/download/zip-naming";
@@ -154,9 +155,12 @@ export function ExportStep({
           Every generated asset for this ad, organized by scene. Preview and
           hand-pick exactly what you want, or download everything at once —
           then bring the files into your own editing tool for captions,
-          trimming, and the final cut.
+          trimming, and the final cut. Or let Auto-edit cut the final video
+          for you.
         </p>
       </div>
+
+      <AutoEditPanel orgId={orgId} adId={ad.id} />
 
       <div className="card-inset flex flex-col gap-2 p-3">
         <div className="flex flex-wrap items-center gap-2">

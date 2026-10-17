@@ -163,6 +163,21 @@ export const PINNED_MODEL_PER_TASK = {
   // but the scope here is much smaller (one short line, no multi-part
   // context synthesis), so Sonnet is the right pin rather than Opus.
   suggest_voiceover_delivery: "claude-sonnet-5-5",
+  // Auto-edit: Claude cuts the finished scene videos into the final
+  // ad (shot choice, timing, captions, motion graphics) and reviews
+  // the rendered preview, which is editorial judgment under vision
+  // input. Every call in one run must share a model, or the cached
+  // system prompt and ad context can't be reused between them, so
+  // the whole family is pinned to Opus. auto_edit_system and the two
+  // mode blocks are prompt-only rows (the system prompt the calls
+  // share); the model pin on them is never used on its own.
+  auto_edit_system: "claude-opus-5-5",
+  auto_edit_mode_clean: "claude-opus-5-5",
+  auto_edit_mode_designed: "claude-opus-5-5",
+  auto_edit_plan: "claude-opus-5-5",
+  auto_edit_review: "claude-opus-5-5",
+  auto_edit_fix: "claude-opus-5-5",
+  auto_edit_revise: "claude-opus-5-5",
 } as const satisfies Record<string, string>;
 
 export type Task = keyof typeof PINNED_MODEL_PER_TASK;

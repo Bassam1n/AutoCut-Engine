@@ -1,0 +1,261 @@
+{
+ "summary": "A relatable-grimace hook (burnt office coffee) pivots to the 'we don't rush' story: cafe rush, then the 18-hour slow steep, no added sugar and the slim can on the go, closing on a fridge-cold can and a 'Taste the difference' end card. Hard cuts keep it punchy, and bold captions carry the script.",
+ "clips": [
+  {
+   "scene": 0,
+   "sourceIn": 0.3,
+   "sourceOut": 5.8,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1.15,
+      "offsetX": 0,
+      "offsetY": 0.07
+     },
+     {
+      "at": 1,
+      "scale": 1.08,
+      "offsetX": 0,
+      "offsetY": 0.04
+     }
+    ],
+    "ease": "inOut"
+   },
+   "volume": 0.3
+  },
+  {
+   "scene": 1,
+   "sourceIn": 0,
+   "sourceOut": 4,
+   "transitionIn": null,
+   "motion": null,
+   "volume": 0.35
+  },
+  {
+   "scene": 2,
+   "sourceIn": 0,
+   "sourceOut": 6,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1.04,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.12,
+      "offsetX": 0.02,
+      "offsetY": 0.02
+     }
+    ],
+    "ease": "linear"
+   },
+   "volume": 0.3
+  },
+  {
+   "scene": 4,
+   "sourceIn": 0,
+   "sourceOut": 6.016,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.08,
+      "offsetX": 0,
+      "offsetY": 0.02
+     }
+    ],
+    "ease": "inOut"
+   },
+   "volume": 0.35
+  },
+  {
+   "scene": 5,
+   "sourceIn": 0.3,
+   "sourceOut": 5.8,
+   "transitionIn": null,
+   "motion": {
+    "keys": [
+     {
+      "at": 0,
+      "scale": 1,
+      "offsetX": 0,
+      "offsetY": 0
+     },
+     {
+      "at": 1,
+      "scale": 1.1,
+      "offsetX": 0,
+      "offsetY": 0.02
+     }
+    ],
+    "ease": "out"
+   },
+   "volume": 0.3
+  }
+ ],
+ "captionStyles": [
+  {
+   "name": "main",
+   "fontSize": 0.042,
+   "fontWeight": 800,
+   "color": "#ffffff",
+   "background": "",
+   "strokeWidth": 0.004,
+   "strokeColor": "#000000",
+   "maxWidth": 0.86,
+   "offsetY": 0.28
+  }
+ ],
+ "captions": [
+  {
+   "start": 2.6,
+   "end": 5.4,
+   "text": "Fair. Most of it kinda does.",
+   "style": "main",
+   "popIn": false
+  },
+  {
+   "start": 5.6,
+   "end": 7.6,
+   "text": "Bitterness comes from rushing it.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 7.7,
+   "end": 9.4,
+   "text": "We don't rush.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 9.6,
+   "end": 11.6,
+   "text": "Slow-steeped 18 whole hours.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 11.7,
+   "end": 13.5,
+   "text": "Small batches. Deep, mellow, smooth.",
+   "style": "main",
+   "popIn": false
+  },
+  {
+   "start": 13.6,
+   "end": 15.4,
+   "text": "Never bitter.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 15.6,
+   "end": 16.8,
+   "text": "No added sugar.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 16.9,
+   "end": 18.5,
+   "text": "Honestly? You won't miss it.",
+   "style": "main",
+   "popIn": false
+  },
+  {
+   "start": 18.6,
+   "end": 21.3,
+   "text": "Just good coffee, as it should've tasted.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 21.6,
+   "end": 24,
+   "text": "In a slim can, take it anywhere.",
+   "style": "main",
+   "popIn": true
+  },
+  {
+   "start": 24.1,
+   "end": 26.9,
+   "text": "Grab one straight from the fridge.",
+   "style": "main",
+   "popIn": true
+  }
+ ],
+ "graphics": [
+  {
+   "id": "hook",
+   "role": "hook",
+   "start": 0,
+   "duration": 2.5,
+   "layout": "overlay",
+   "template": {
+    "name": "hookPill",
+    "props": {
+     "headline": "Black coffee = burnt toast?",
+     "sub": "Okay, confession time.",
+     "text": "",
+     "cta": "",
+     "bg": "",
+     "accent": "#c8873a"
+    }
+   },
+   "code": null
+  },
+  {
+   "id": "steep",
+   "role": "callout",
+   "start": 9.8,
+   "duration": 2.6,
+   "layout": "overlay",
+   "template": {
+    "name": "callout",
+    "props": {
+     "headline": "",
+     "sub": "",
+     "text": "18-HOUR STEEP",
+     "cta": "",
+     "bg": "",
+     "accent": "#c8873a"
+    }
+   },
+   "code": null
+  },
+  {
+   "id": "endcard",
+   "role": "endCard",
+   "start": 27.016,
+   "duration": 3,
+   "layout": "fullFrame",
+   "template": {
+    "name": "endCard",
+    "props": {
+     "headline": "Taste the difference",
+     "sub": "18-hour cold brew. Small batches. No added sugar.",
+     "text": "",
+     "cta": "Find it in store today",
+     "bg": "#14100c",
+     "accent": "#c8873a"
+    }
+   },
+   "code": null
+  }
+ ],
+ "endCardHold": 3
+}
