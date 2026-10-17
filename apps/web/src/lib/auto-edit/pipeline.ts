@@ -1,30 +1,41 @@
 import { mkdir, readFile, rm, stat } from "node:fs/promises";
 import { totalmem } from "node:os";
 import { join } from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAnthropicKey } from "@/lib/claude/core";
 import { LlmCallError } from "@/lib/claude/types";
 import { spendLimitMessage } from "@/lib/spend-limit-message";
-import { AdNotReadyError, frameAt, loadAd, type LoadedAd } from "./context";
+import { AdNotReadyError, loadAd, type LoadedAd } from "./context";
 import { Director, type ClaudeCallRecord, type FrameImage } from "./director";
 import { EngineProcess } from "./engine-client";
-import { FINAL_EXPORT, PREVIEW_EXPORT, buildProject, exportProject, type ExportSettings } from "./executor";
+import { buildProject, exportProject, type ExportSettings } from "./executor";
 import { hyperframesRenderer, renderPlanGraphics, type GraphicOutcome } from "./graphics-render";
 import { lintPlan, previewSampleTimes } from "./lint";
 import type { AutoEditErrorCode, AutoEditStatus } from "./messages";
 import { EditPlan, type AutoEditMode, type Review, type ReviewIssue } from "./plan-schema";
 import { toolchainPaths, type ToolchainPaths } from "./toolchain";
 
+const run = promisify(execFile);
+
 /**
  * One Auto-edit run, as steps:
- *   plan (or revise) -> lint -> graphics + preview -> review -> fix -> final
- * Each step's result is written to the auto_edit_runs row before the
- * next starts. A retry (Trigger.dev re-runs the task after a crash or a
- * failed render) reads the row and skips every Claude step that already
- * has a result, so a failed render never pays Claude twice.
- * Revisions skip the preview and review: the proof's single review
- * round belongs to the first cut, and its findings travel with every
- * revision instead.
+ *   plan (or revise the timeline) -> lint -> review frames -> review -> fix -> timeline
+ * The result goes onto the ad's timeline (ad_timelines), where the editor
+ * previews it live in the browser and edits it; nothing is rendered to
+ * MP4 here ("Render MP4" is its own job, render-pipeline.ts).
+ *
+ * Claude reviews stills of the true composite: the engine renders each
+ * sampled instant with preview.frame (graphics included), which takes a
+ * second or two per frame instead of a preview video export. The browser
+ * can't capture the sandboxed graphics iframes or a closed tab, so the
+ * review is done here.
+ *
+ * Each step's result is written to the run before the next starts; a
+ * retry skips every Claude step that already has a result, so a failed
+ * render never pays Claude twice. Revisions skip the review: their
+ * findings travel with the timeline instead.
  */
 
 export type RunRow = {
@@ -39,6 +50,7 @@ export type RunRow = {
   instruction: string | null;
   initial_plan: EditPlan | null;
   plan: EditPlan | null;
+  base_plan: EditPlan | null;
   review: Review | null;
   findings: ReviewIssue[];
   graphics: unknown[];
@@ -57,8 +69,8 @@ export class AutoEditFailure extends Error {
   }
 }
 
-const EXPORT_TIMEOUT_MS = { preview: 6 * 60_000, final: 12 * 60_000 };
 const MAX_LINT_ROUNDS = 2;
+const REVIEW_FRAME = { width: 405, height: 720 };
 
 export type PipelineOptions = {
   supabase: SupabaseClient;
@@ -69,77 +81,69 @@ export type PipelineOptions = {
   log?: (m: string, extra?: Record<string, unknown>) => void;
 };
 
-export async function runAutoEdit(o: PipelineOptions): Promise<{ status: AutoEditStatus; finalAssetId?: string }> {
+export async function runAutoEdit(o: PipelineOptions): Promise<{ status: AutoEditStatus }> {
   const { supabase, runId } = o;
   const log = o.log ?? (() => {});
   const paths = o.paths ?? toolchainPaths();
 
-  let run = await readRun(supabase, runId);
-  if (["succeeded", "failed", "cancelled"].includes(run.status)) {
-    log("run already finished", { status: run.status });
-    return { status: run.status };
+  let row = await readRun(supabase, runId);
+  if (["succeeded", "failed", "cancelled"].includes(row.status)) {
+    log("run already finished", { status: row.status });
+    return { status: row.status };
   }
 
   const update = async (patch: Partial<RunRow> & Record<string, unknown>) => {
     const { data, error } = await supabase.from("auto_edit_runs").update(patch).eq("id", runId).select("*").single();
     if (error) throw new Error(`could not update the run: ${error.message}`);
-    run = data as RunRow;
+    row = data as RunRow;
   };
   const timed = async <T>(key: string, f: () => Promise<T>): Promise<T> => {
     const t0 = performance.now();
     const r = await f();
-    await update({ timings: { ...run.timings, [key]: Math.round(performance.now() - t0) } });
+    await update({ timings: { ...row.timings, [key]: Math.round(performance.now() - t0) } });
     return r;
   };
 
-  await update({ status: run.plan ? run.status : "planning", started_at: run.started_at ?? new Date().toISOString(), machine: o.machine ?? null, error: null, error_code: null });
-
-  // Refuse before spending anything: suspended, unpaid, paused, storage
-  // full, or an archived brand.
-  const claim =
-    (await supabase.rpc("claim_paid_media_job", { target_org_id: run.org_id })).error ??
-    (await supabase.rpc("assert_brand_active", { target_org_id: run.org_id, target_brand_id: run.brand_id })).error;
-  if (claim) throw new AutoEditFailure("SPEND_LIMIT", spendLimitMessage(claim.message));
+  await update({ status: row.plan ? row.status : "planning", started_at: row.started_at ?? new Date().toISOString(), machine: o.machine ?? null, error: null, error_code: null });
+  await claim(supabase, row.org_id, row.brand_id);
 
   const workDir = join(o.workRoot, runId);
   await mkdir(workDir, { recursive: true });
   try {
-    const ad = await timed("loadMs", () => loadAd(supabase, run.ad_id, paths, workDir)).catch((e) => {
-      if (e instanceof AdNotReadyError) throw new AutoEditFailure("AD_NOT_READY", e.message);
-      throw e;
-    });
+    const ad = await timed("loadMs", () => loadAdOrFail(supabase, row.ad_id, paths, workDir));
 
     const director = new Director({
-      supabase, orgId: run.org_id, brandId: run.brand_id, adId: run.ad_id, mode: run.mode,
-      apiKey: await getAnthropicKey(supabase, run.org_id, run.brand_id),
+      supabase, orgId: row.org_id, brandId: row.brand_id, adId: row.ad_id, mode: row.mode,
+      apiKey: await getAnthropicKey(supabase, row.org_id, row.brand_id),
       context: ad.context,
       onCall: async (rec) => {
         log(`claude ${rec.label}: ${rec.ms} ms, $${rec.usd.toFixed(4)}`, rec as unknown as Record<string, unknown>);
-        await update({ claude_calls: [...run.claude_calls, rec], claude_usd: +(Number(run.claude_usd) + rec.usd).toFixed(6) });
+        await update({ claude_calls: [...row.claude_calls, rec], claude_usd: +(Number(row.claude_usd) + rec.usd).toFixed(6) });
       },
     });
 
     // Lint problems go back to Claude, at most twice.
     const valid = async (plan: EditPlan, label: string): Promise<EditPlan> => {
       plan = EditPlan.parse(plan);
-      let problems = lintPlan(plan, ad.lint, run.mode);
+      let problems = lintPlan(plan, ad.lint, row.mode);
       for (let round = 0; problems.length && round < MAX_LINT_ROUNDS; round++) {
         log(`${label}: ${problems.length} lint problems`, { problems });
         plan = EditPlan.parse(await director.fix(plan, problems, "lint_fix"));
-        problems = lintPlan(plan, ad.lint, run.mode);
+        problems = lintPlan(plan, ad.lint, row.mode);
       }
       if (problems.length) throw new AutoEditFailure("VALIDATION", `plan still invalid: ${problems.join(" | ")}`);
       return plan;
     };
 
-    // 1. Plan, or revise the parent's plan.
-    if (!run.plan) {
-      if (run.kind === "revision") {
-        const parent = await readRun(supabase, run.parent_run_id!);
-        if (!parent.plan) throw new AutoEditFailure("INTERNAL", "the cut being revised has no plan");
-        const revised = await timed("claudePlanMs", () => director.revise(parent.plan!, run.instruction ?? "", run.findings ?? []));
+    // 1. Plan, or revise the timeline as it stood when the editor asked.
+    const revising = Boolean(row.instruction);
+    if (!row.plan) {
+      if (revising) {
+        const base = row.base_plan ?? (row.parent_run_id ? (await readRun(supabase, row.parent_run_id)).plan : null);
+        if (!base) throw new AutoEditFailure("INTERNAL", "there is no timeline to revise");
+        const revised = await timed("claudePlanMs", () => director.revise(EditPlan.parse(base), row.instruction ?? "", row.findings ?? []));
         const plan = await valid(revised, "revise");
-        await update({ initial_plan: revised, plan, status: "rendering_final" });
+        await update({ initial_plan: revised, plan });
       } else {
         const first = await timed("claudePlanMs", () => director.plan());
         const plan = await valid(first, "plan");
@@ -147,45 +151,31 @@ export async function runAutoEdit(o: PipelineOptions): Promise<{ status: AutoEdi
       }
     }
 
-    const parallel = totalmem() >= 7e9 ? 2 : 1;
-    const renderOne = hyperframesRenderer(paths, workDir);
-    const render = async (label: "preview" | "final", settings: ExportSettings) => {
-      const outcomes = await timed(`${label}GraphicsMs`, () => renderPlanGraphics(run.plan!, renderOne, { parallel, log }));
-      await update({ graphics: outcomes.map((g) => ({ id: g.id, source: g.source, ms: g.ms, cached: g.cached, fallback: g.fallback ?? null })) });
-      return timed(`${label}RenderMs`, () => renderVideo(ad, run.plan!, outcomes, paths, workDir, label, settings, log));
-    };
-
-    // 2. Preview, review and one round of fixes (first cuts only).
-    if (run.kind === "edit" && !run.review) {
+    // 2. Review stills of the real composite, and one round of fixes (first cuts only).
+    if (!revising && !row.review) {
       await update({ status: "rendering_preview" });
-      const preview = await render("preview", PREVIEW_EXPORT);
-      const previewAssetId = await saveVideoAsset(supabase, run, preview, "preview");
-      await update({ preview_asset_id: previewAssetId, status: "reviewing" });
-
-      const frames: FrameImage[] = [];
-      await mkdir(join(workDir, "preview-frames"), { recursive: true });
-      for (const [i, t] of previewSampleTimes(run.plan!).entries()) {
-        frames.push({ label: `t=${t.toFixed(2)}s`, jpeg: await frameAt(paths, preview, t, join(workDir, "preview-frames", `p${i}.jpg`), 405) });
-      }
-      const review = await timed("claudeReviewMs", () => director.review(run.plan!, frames));
+      const outcomes = await timed("reviewGraphicsMs", () =>
+        renderPlanGraphics(row.plan!, hyperframesRenderer(paths, workDir), { parallel: graphicsParallelism(), log })
+      );
+      await update({ graphics: graphicsSummary(outcomes) });
+      const frames = await timed("reviewFramesMs", () => reviewFrames(ad, row.plan!, outcomes, paths, workDir, log));
+      await update({ status: "reviewing" });
+      const review = await timed("claudeReviewMs", () => director.review(row.plan!, frames));
       log(`review: ${review.verdict}, ${review.issues.length} issues`, { issues: review.issues });
       await update({ review });
       if (review.verdict === "fix" && review.issues.length) {
         await update({ status: "fixing" });
         const problems = review.issues.map((i) => `${i.at == null ? "" : `at ${i.at}s: `}${i.problem} Fix: ${i.fix}`);
-        const fixed = await timed("claudeFixMs", () => director.fix(run.plan!, problems, "review_fix"));
+        const fixed = await timed("claudeFixMs", () => director.fix(row.plan!, problems, "review_fix"));
         const plan = await valid(fixed, "review_fix");
-        await update({ plan, findings: [...(run.findings ?? []), ...review.issues] });
+        await update({ plan, findings: [...(row.findings ?? []), ...review.issues] });
       }
-      await update({ status: "rendering_final" });
     }
 
-    // 3. Final render.
-    if (run.status !== "rendering_final") await update({ status: "rendering_final" });
-    const final = await render("final", FINAL_EXPORT);
-    const finalAssetId = await saveVideoAsset(supabase, run, final, "final");
-    await update({ final_asset_id: finalAssetId, status: "succeeded", finished_at: new Date().toISOString() });
-    return { status: "succeeded", finalAssetId };
+    // 3. Onto the timeline.
+    await saveToTimeline(supabase, row, ad);
+    await update({ status: "succeeded", finished_at: new Date().toISOString() });
+    return { status: "succeeded" };
   } catch (e) {
     throw classify(e);
   } finally {
@@ -193,9 +183,91 @@ export async function runAutoEdit(o: PipelineOptions): Promise<{ status: AutoEdi
   }
 }
 
-async function renderVideo(
+/** Builds the project once and renders each sampled instant as a still. */
+export async function reviewFrames(ad: LoadedAd, plan: EditPlan, graphics: GraphicOutcome[], paths: ToolchainPaths, workDir: string, log: (m: string) => void): Promise<FrameImage[]> {
+  const rpc = new EngineProcess({ bin: paths.concatBin, env: paths.concatEnv, cwd: workDir });
+  try {
+    const location = join(workDir, "projects");
+    await rm(join(location, "review"), { recursive: true, force: true });
+    await mkdir(location, { recursive: true });
+    await mkdir(join(workDir, "review-frames"), { recursive: true });
+    const path = await buildProject(rpc, {
+      plan, sceneFiles: ad.sceneFiles, voiceoverFiles: ad.voiceoverFiles,
+      graphicFiles: Object.fromEntries(graphics.map((g) => [g.id, g.file])),
+      fontPath: paths.interFont, location, name: "review", log,
+    });
+    const frames: FrameImage[] = [];
+    for (const [i, t] of previewSampleTimes(plan).entries()) {
+      const png = join(workDir, "review-frames", `f${i}.png`);
+      const jpg = join(workDir, "review-frames", `f${i}.jpg`);
+      await rpc.call("preview.frame", { path, time: t, output: png, ...REVIEW_FRAME });
+      await run(paths.ffmpeg, ["-v", "error", "-y", "-i", png, "-q:v", "4", jpg], { env: paths.concatEnv });
+      frames.push({ label: `t=${t.toFixed(2)}s`, jpeg: await readFile(jpg) });
+    }
+    return frames;
+  } finally {
+    await rpc.close().catch(() => {});
+  }
+}
+
+/** Writes the run's plan onto the ad's timeline (creating it), bumping its version. */
+async function saveToTimeline(supabase: SupabaseClient, r: RunRow, ad: LoadedAd): Promise<void> {
+  const patch = {
+    plan: r.plan,
+    findings: r.findings ?? [],
+    mode: r.mode,
+    source_run_id: r.id,
+    clip_durations: ad.lint.clipDurations,
+  };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: current } = await supabase.from("ad_timelines").select("version").eq("ad_id", r.ad_id).maybeSingle();
+    if (!current) {
+      const { error } = await supabase.from("ad_timelines").insert({ ad_id: r.ad_id, org_id: r.org_id, brand_id: r.brand_id, ...patch });
+      if (!error) return;
+      continue; // created meanwhile: update instead
+    }
+    const { data, error } = await supabase
+      .from("ad_timelines")
+      .update({ ...patch, version: current.version + 1 })
+      .eq("ad_id", r.ad_id)
+      .eq("version", current.version)
+      .select("version");
+    if (!error && data?.length) return;
+  }
+  throw new Error("could not save the timeline");
+}
+
+// ---- Shared by the Auto-edit and render pipelines. ----
+
+export async function claim(supabase: SupabaseClient, orgId: string, brandId: string): Promise<void> {
+  // Refuse before spending anything: suspended, unpaid, paused, storage
+  // full, or an archived brand.
+  const claimError =
+    (await supabase.rpc("claim_paid_media_job", { target_org_id: orgId })).error ??
+    (await supabase.rpc("assert_brand_active", { target_org_id: orgId, target_brand_id: brandId })).error;
+  if (claimError) throw new AutoEditFailure("SPEND_LIMIT", spendLimitMessage(claimError.message));
+}
+
+export async function loadAdOrFail(supabase: SupabaseClient, adId: string, paths: ToolchainPaths, workDir: string, opts?: { frames?: boolean }): Promise<LoadedAd> {
+  return loadAd(supabase, adId, paths, workDir, opts).catch((e) => {
+    if (e instanceof AdNotReadyError) throw new AutoEditFailure("AD_NOT_READY", e.message);
+    throw e;
+  });
+}
+
+/** Two graphics at once when the machine has the memory (Chromium peaks near 1.8 GB). */
+export function graphicsParallelism(): number {
+  return totalmem() >= 7e9 ? 2 : 1;
+}
+
+export function graphicsSummary(outcomes: GraphicOutcome[]) {
+  return outcomes.map((g) => ({ id: g.id, source: g.source, ms: g.ms, cached: g.cached, fallback: g.fallback ?? null }));
+}
+
+/** Builds the project and exports one video file. */
+export async function renderVideo(
   ad: LoadedAd, plan: EditPlan, graphics: GraphicOutcome[], paths: ToolchainPaths, workDir: string,
-  label: "preview" | "final", settings: ExportSettings, log: (m: string) => void
+  label: string, settings: ExportSettings, timeoutMs: number, log: (m: string) => void
 ): Promise<string> {
   const rpc = new EngineProcess({ bin: paths.concatBin, env: paths.concatEnv, cwd: workDir });
   try {
@@ -208,7 +280,7 @@ async function renderVideo(
       fontPath: paths.interFont, location, name: label, log,
     });
     const out = join(workDir, `${label}.mp4`);
-    await exportProject(rpc, projectPath, out, settings, { timeoutMs: EXPORT_TIMEOUT_MS[label], onProgress: (pct) => log(`${label} export ${pct}%`) });
+    await exportProject(rpc, projectPath, out, settings, { timeoutMs, onProgress: (pct) => log(`${label} export ${pct}%`) });
     if (!(await stat(out).then((s) => s.size > 0, () => false))) throw new Error(`${label} export produced no file`);
     return out;
   } finally {
@@ -220,38 +292,6 @@ async function readRun(supabase: SupabaseClient, id: string): Promise<RunRow> {
   const { data, error } = await supabase.from("auto_edit_runs").select("*").eq("id", id).single();
   if (error || !data) throw new Error(`Auto-edit run ${id} not found (${error?.message ?? "no row"})`);
   return data as RunRow;
-}
-
-/** Uploads a rendered video to the ad's folder in the renders bucket and records it as an asset. */
-async function saveVideoAsset(supabase: SupabaseClient, run: RunRow, file: string, role: "preview" | "final"): Promise<string> {
-  const storagePath = `${run.org_id}/renders/${run.ad_id}/auto-edit/${run.id}/${role}.mp4`;
-  const bytes = await readFile(file);
-  const { error: upErr } = await supabase.storage.from("renders").upload(storagePath, bytes, { contentType: "video/mp4", upsert: true });
-  if (upErr) throw new Error(`upload failed: ${upErr.message}`);
-  const { data: last } = await supabase
-    .from("assets").select("version").eq("ad_id", run.ad_id).eq("kind", "final").is("scene_id", null)
-    .order("version", { ascending: false }).limit(1);
-  const { data, error } = await supabase
-    .from("assets")
-    .insert({
-      org_id: run.org_id,
-      // Ad assets carry ad_id only (assets_ad_or_brand_check).
-      ad_id: run.ad_id,
-      scene_id: null,
-      kind: "final",
-      version: (last?.[0]?.version ?? 0) + 1,
-      storage_path: storagePath,
-      source: `auto-edit:${run.mode}`,
-      // A preview is a working file: archived from the start, so the
-      // archive purge clears it in time and nothing lists it as a cut.
-      archived: role === "preview",
-      archived_at: role === "preview" ? new Date().toISOString() : null,
-      meta: { autoEdit: { runId: run.id, role, mode: run.mode, bytes: bytes.length } },
-    })
-    .select("id")
-    .single();
-  if (error || !data) throw new Error(`could not record the ${role} video: ${error?.message}`);
-  return data.id as string;
 }
 
 /** Maps any failure to an AutoEditFailure; render and network errors are retryable. */

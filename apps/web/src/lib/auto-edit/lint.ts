@@ -14,13 +14,19 @@ export type LintContext = {
 export const LENGTH_TOLERANCE_SECONDS = 3;
 
 /**
- * Checks the JSON schema can't express. Returns problems worded for
- * Claude, which gets them back to fix (at most twice). Designed-mode
- * graphic code that fails the sandbox checks is reported too, but
- * the worker doesn't send it back: it falls back to the graphic's
- * template instead (see graphics.ts).
+ * Checks the JSON schema can't express. lintPlan() is what Claude is held
+ * to: renderProblems() (the plan must be renderable) plus the editorial
+ * rules (target length, the caption rule, the mode's graphics, voiceover
+ * spacing). Problems are worded for Claude, which gets them back to fix
+ * (at most twice). Designed-mode graphic code that fails the sandbox
+ * checks isn't a lint problem: it falls back to the graphic's template
+ * (see graphics-sandbox.ts).
+ *
+ * Manual edits in the timeline editor and "Render MP4" are held to
+ * renderProblems() only: an editor may make the ad longer, or split a
+ * caption, on purpose.
  */
-export function lintPlan(plan: EditPlan, ctx: LintContext, mode: AutoEditMode): string[] {
+export function renderProblems(plan: EditPlan, ctx: Pick<LintContext, "clipDurations">): string[] {
   const p: string[] = [];
   const { clipDurations } = ctx;
   if (plan.clips.length === 0) p.push("clips: the edit has no footage");
@@ -53,11 +59,36 @@ export function lintPlan(plan: EditPlan, ctx: LintContext, mode: AutoEditMode): 
   });
 
   const end = planLength(plan);
+  if (plan.endCardHold < 0) p.push("endCardHold cannot be negative");
+
+  let last = -1;
+  plan.captions.forEach((c, i) => {
+    if (!plan.captionStyles.some((st) => st.name === c.style)) p.push(`captions[${i}]: unknown style ${c.style}`);
+    if (c.start < last - 1e-3) p.push(`captions[${i}]: overlaps the previous caption`);
+    if (c.end - c.start < 0.4) p.push(`captions[${i}]: shorter than 0.4s`);
+    if (c.end > end + 0.05) p.push(`captions[${i}]: runs past the end (${end.toFixed(2)}s)`);
+    last = c.end;
+  });
+
+  const ids = new Set<string>();
+  for (const g of plan.graphics) {
+    if (ids.has(g.id)) p.push(`graphic ${g.id}: duplicate id`);
+    ids.add(g.id);
+    for (const k of TEMPLATE_REQUIRED[g.template.name]) {
+      if (!g.template.props[k]) p.push(`graphic ${g.id}: ${g.template.name} needs props.${k}`);
+    }
+    if (g.duration < 0.5) p.push(`graphic ${g.id}: shorter than 0.5s`);
+    if (g.start < 0 || g.start + g.duration > end + 0.05) p.push(`graphic ${g.id}: runs outside the timeline (0-${end.toFixed(2)}s)`);
+  }
+  return p;
+}
+
+export function lintPlan(plan: EditPlan, ctx: LintContext, mode: AutoEditMode): string[] {
+  const p = renderProblems(plan, ctx);
+  const end = planLength(plan);
   if (Math.abs(end - ctx.targetLengthSeconds) > LENGTH_TOLERANCE_SECONDS) {
     p.push(`total length ${end.toFixed(1)}s is more than ${LENGTH_TOLERANCE_SECONDS}s from the ${ctx.targetLengthSeconds}s target`);
   }
-  if (plan.endCardHold < 0) p.push("endCardHold cannot be negative");
-
   // A separate voiceover runs from its scene's first clip; the next
   // scene's line must not start before it ends.
   const voStarts = voiceoverStarts(plan);
@@ -74,27 +105,10 @@ export function lintPlan(plan: EditPlan, ctx: LintContext, mode: AutoEditMode): 
     if (endsAt > end + 0.05) p.push(`scene ${v.scene}'s voiceover ends at ${endsAt.toFixed(2)}s, after the edit ends (${end.toFixed(2)}s)`);
   });
 
-  let last = -1;
-  plan.captions.forEach((c, i) => {
-    if (!plan.captionStyles.some((st) => st.name === c.style)) p.push(`captions[${i}]: unknown style ${c.style}`);
-    if (c.start < last - 1e-3) p.push(`captions[${i}]: overlaps the previous caption`);
-    if (c.end - c.start < 0.4) p.push(`captions[${i}]: shorter than 0.4s`);
-    if (c.end > end + 0.05) p.push(`captions[${i}]: runs past the end (${end.toFixed(2)}s)`);
-    last = c.end;
-  });
   p.push(...captionRuleProblems(plan.captions));
-
-  const ids = new Set<string>();
   for (const g of plan.graphics) {
-    if (ids.has(g.id)) p.push(`graphic ${g.id}: duplicate id`);
-    ids.add(g.id);
-    for (const k of TEMPLATE_REQUIRED[g.template.name]) {
-      if (!g.template.props[k]) p.push(`graphic ${g.id}: ${g.template.name} needs props.${k}`);
-    }
     if (mode === "clean" && g.code) p.push(`graphic ${g.id}: clean mode uses templates only; set code to null`);
     if (mode === "designed" && !g.code) p.push(`graphic ${g.id}: designed mode needs code`);
-    if (g.duration < 0.5) p.push(`graphic ${g.id}: shorter than 0.5s`);
-    if (g.start < 0 || g.start + g.duration > end + 0.05) p.push(`graphic ${g.id}: runs outside the timeline (0-${end.toFixed(2)}s)`);
   }
   return p;
 }

@@ -160,7 +160,7 @@ export function ExportStep({
         </p>
       </div>
 
-      <AutoEditPanel orgId={orgId} adId={ad.id} />
+      <AutoEditPanel orgId={orgId} adId={ad.id} adName={ad.name ?? "ad"} />
 
       <div className="card-inset flex flex-col gap-2 p-3">
         <div className="flex flex-wrap items-center gap-2">

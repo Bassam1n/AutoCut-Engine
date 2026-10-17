@@ -20,6 +20,7 @@ export type ExecuteInputs = {
   voiceoverFiles: Record<number, string>;
   /** Rendered graphic files by graphic id: ProRes 4444 .mov for overlays, MP4 for full-frame cards. */
   graphicFiles: Record<string, string>;
+  /** A font file to register as Inter; empty to use the engine's own Inter (project exports). */
   fontPath: string;
   location: string;
   name: string;
@@ -32,7 +33,9 @@ export async function buildProject(rpc: EngineRpc, inputs: ExecuteInputs): Promi
   const path = `${location}/${name}`;
 
   await rpc.call("project.create", { location, name, video: { width: 1080, height: 1920, rateNum: 30, rateDen: 1 } });
-  await engine.apply(path, { op: "addFont", family: "Inter", path: inputs.fontPath }).catch((e: Error) => log(`addFont: ${e.message}`));
+  if (inputs.fontPath) {
+    await engine.apply(path, { op: "addFont", family: "Inter", path: inputs.fontPath }).catch((e: Error) => log(`addFont: ${e.message}`));
+  }
 
   const media: Record<number, string> = {};
   for (const scene of new Set(plan.clips.map((c) => c.scene))) {

@@ -82,3 +82,14 @@ describe("renderPlanGraphics", () => {
     await expect(renderPlanGraphics(plan, async () => { throw new Error("boom"); }, { parallel: 1 })).rejects.toThrow("boom");
   });
 });
+
+describe("documentFor (live preview)", () => {
+  it("inlines GSAP, refuses connections and listens for seeks", () => {
+    const doc = documentFor("g", 2, ok, false, { gsap: "/*gsap*/var gsap={};", interWoff2DataUrl: "data:font/woff2;base64,AAAA" });
+    expect(doc).toContain("connect-src 'none'");
+    expect(doc).not.toContain('src="gsap.min.js"');
+    expect(doc).toContain("/*gsap*/var gsap={};");
+    expect(doc).toContain('src: url(data:font/woff2;base64,AAAA) format("woff2")');
+    expect(doc).toContain('d.type === "seek"');
+  });
+});

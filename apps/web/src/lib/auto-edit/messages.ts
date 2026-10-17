@@ -13,10 +13,10 @@ export type AutoEditStatus = (typeof AUTO_EDIT_STATUSES)[number];
 export const STATUS_LABEL: Record<AutoEditStatus, string> = {
   queued: "Queued",
   planning: "Planning the edit",
-  rendering_preview: "Rendering a preview",
+  rendering_preview: "Rendering review frames",
   reviewing: "Reviewing the preview",
   fixing: "Fixing what the review found",
-  rendering_final: "Rendering the final video",
+  rendering_final: "Rendering",
   succeeded: "Done",
   failed: "Failed",
   cancelled: "Cancelled",

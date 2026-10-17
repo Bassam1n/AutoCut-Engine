@@ -23,6 +23,16 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      # Auto-edit's project exports (Premiere XML, FCPXML, OTIO), re-imported
+      # with OpenTimelineIO's own readers as an independent format check.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Re-import project exports with OpenTimelineIO
+        run: |
+          pip install --quiet opentimelineio==0.18.1 otio-fcp-adapter==1.0.0 otio-fcpx-xml-adapter==1.0.0
+          EXPORT_FIXTURE_DIR="$RUNNER_TEMP/exports" npx vitest run src/lib/auto-edit/exports
+          python scripts/validate-exports.py "$RUNNER_TEMP/exports"
       # next build generates .next/types/ (the LayoutProps/PageProps
       # helper types every route file references) — tsc --noEmit must
       # run AFTER a build exists, never before. This had been in the

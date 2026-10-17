@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdContext, FrameImage } from "./director";
 import type { LintContext } from "./lint";
 import type { ToolchainPaths } from "./toolchain";
+import { latestByScene, voiceoverMode } from "./voiceover-mode";
 
 const run = promisify(execFile);
 
@@ -14,9 +15,6 @@ const run = promisify(execFile);
  * script and scenes, each scene's current video, any voiceover with its
  * word timings, and the brand's look. Media is downloaded into workDir.
  */
-
-/** Video models that take the scene's voiceover as reference audio, so their clip already carries the spoken line (see KieAdapter). */
-const VOICE_IN_CLIP_MODELS = new Set(["bytedance/seedance-2", "bytedance/seedance-2-5", "kling-3.0/video"]);
 
 export class AdNotReadyError extends Error {
   constructor(message: string) {
@@ -53,26 +51,28 @@ export type LoadedAd = {
   sceneFiles: Record<number, string>;
   /** Separate voiceovers by scene index (inClip ones are left out: the clip carries them). */
   voiceoverFiles: Record<number, string>;
+  /** Each scene clip's size and whether it has sound, for project exports. */
+  sceneMeta: Record<number, MediaProbe>;
   lint: LintContext;
   context: AdContext;
 };
-
-/** Newest non-archived asset of a kind for each scene. */
-function latestByScene(rows: AssetRow[], kind: string): Map<string, AssetRow> {
-  const out = new Map<string, AssetRow>();
-  for (const r of rows) {
-    if (r.kind !== kind || !r.scene_id) continue;
-    const cur = out.get(r.scene_id);
-    if (!cur || r.version > cur.version || (r.version === cur.version && r.created_at > cur.created_at)) out.set(r.scene_id, r);
-  }
-  return out;
-}
 
 async function download(supabase: SupabaseClient, path: string, to: string): Promise<string> {
   const { data, error } = await supabase.storage.from("renders").download(path);
   if (error || !data) throw new Error(`could not download ${path}: ${error?.message ?? "no data"}`);
   await writeFile(to, Buffer.from(await data.arrayBuffer()));
   return to;
+}
+
+export type MediaProbe = { duration: number; width: number; height: number; hasAudio: boolean };
+
+export async function probeMedia(paths: ToolchainPaths, file: string): Promise<MediaProbe> {
+  const { stdout } = await run(paths.ffprobe, ["-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height", "-of", "json", file], { env: paths.concatEnv });
+  const j = JSON.parse(stdout) as { format?: { duration?: string }; streams?: { codec_type: string; width?: number; height?: number }[] };
+  const v = j.streams?.find((s) => s.codec_type === "video");
+  const duration = Math.round(Number(j.format?.duration) * 1000) / 1000;
+  if (!Number.isFinite(duration) || duration <= 0) throw new Error(`could not read the length of ${file}`);
+  return { duration, width: v?.width ?? 0, height: v?.height ?? 0, hasAudio: Boolean(j.streams?.some((s) => s.codec_type === "audio")) };
 }
 
 export async function probeDuration(paths: ToolchainPaths, file: string): Promise<number> {
@@ -88,7 +88,9 @@ export async function frameAt(paths: ToolchainPaths, video: string, t: number, o
   return readFile(out);
 }
 
-export async function loadAd(supabase: SupabaseClient, adId: string, paths: ToolchainPaths, workDir: string): Promise<LoadedAd> {
+export async function loadAd(
+  supabase: SupabaseClient, adId: string, paths: ToolchainPaths, workDir: string, { frames: withFrames = true }: { frames?: boolean } = {}
+): Promise<LoadedAd> {
   const { data: ad, error: adError } = await supabase
     .from("ads")
     .select("id, org_id, brand_id, product_id, name, target_length_seconds, brief")
@@ -126,6 +128,7 @@ export async function loadAd(supabase: SupabaseClient, adId: string, paths: Tool
   const sceneFiles: Record<number, string> = {};
   const voiceoverFiles: Record<number, string> = {};
   const clipDurations: Record<number, number> = {};
+  const sceneMeta: Record<number, MediaProbe> = {};
   const voiceoverDurations: Record<number, number> = {};
   const frames: FrameImage[] = [];
   const adScenes: Record<string, unknown>[] = [];
@@ -133,10 +136,12 @@ export async function loadAd(supabase: SupabaseClient, adId: string, paths: Tool
   for (const s of scenes) {
     const video = videos.get(s.id)!;
     const file = await download(supabase, video.storage_path, join(workDir, "media", `scene-${s.idx}.mp4`));
-    const duration = await probeDuration(paths, file);
+    const meta = await probeMedia(paths, file);
+    const duration = meta.duration;
+    sceneMeta[s.idx] = meta;
     sceneFiles[s.idx] = file;
     clipDurations[s.idx] = duration;
-    const ts = [0.15, 0.5, 0.85].map((f) => +(duration * f).toFixed(2));
+    const ts = withFrames ? [0.15, 0.5, 0.85].map((f) => +(duration * f).toFixed(2)) : [];
     for (const [i, t] of ts.entries()) {
       frames.push({ label: `Scene ${s.idx}, ${t.toFixed(1)}s into its clip:`, jpeg: await frameAt(paths, file, t, join(workDir, "frames", `s${s.idx}-${i}.jpg`)) });
     }
@@ -147,7 +152,7 @@ export async function loadAd(supabase: SupabaseClient, adId: string, paths: Tool
       const voFile = await download(supabase, vo.storage_path, join(workDir, "media", `vo-${s.idx}${vo.storage_path.match(/\.\w+$/)?.[0] ?? ".mp3"}`));
       const caption = captions.get(s.id);
       const words = Array.isArray(caption?.meta?.words) ? (caption!.meta!.words as Voiceover["words"]) : [];
-      const inClip = VOICE_IN_CLIP_MODELS.has(video.source ?? "") && vo.created_at < video.created_at;
+      const inClip = voiceoverMode(video, vo) === "inClip";
       voiceover = { mode: inClip ? "inClip" : "separate", file: voFile, duration: await probeDuration(paths, voFile), words };
       if (!inClip) {
         voiceoverFiles[s.idx] = voFile;
@@ -181,6 +186,7 @@ export async function loadAd(supabase: SupabaseClient, adId: string, paths: Tool
     targetLengthSeconds: ad.target_length_seconds ?? 30,
     sceneFiles,
     voiceoverFiles,
+    sceneMeta,
     lint: { targetLengthSeconds: ad.target_length_seconds ?? 30, clipDurations, voiceoverDurations },
     context: {
       ad: {

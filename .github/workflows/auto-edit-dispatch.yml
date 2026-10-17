@@ -1,8 +1,9 @@
 name: Auto-edit - dispatch a run
 
-# Ops tool: (re)queues an existing auto_edit_runs row on the production
-# render worker, for a smoke test after a worker deploy or to re-run a
-# run that was never picked up. The row itself is created the normal way
+# Ops tool: (re)queues an existing auto_edit_runs row (task auto-edit)
+# or ad_renders row (task ad-render) on the production render worker,
+# for a smoke test after a worker deploy or to re-run a run that was
+# never picked up. The row itself is created the normal way
 # (request_auto_edit from the app, or by an operator with database
 # access). Uses the same TRIGGER_ACCESS_TOKEN secret as the deploy
 # workflow, which resolves the production key exactly as `trigger
@@ -11,8 +12,13 @@ name: Auto-edit - dispatch a run
 on:
   workflow_dispatch:
     inputs:
+      task:
+        description: "auto-edit (an auto_edit_runs row) or ad-render (an ad_renders row)"
+        type: choice
+        options: [auto-edit, ad-render]
+        default: auto-edit
       run_id:
-        description: "auto_edit_runs.id to queue"
+        description: "The row id to queue"
         required: true
       org_id:
         description: "The run's org id (its concurrency key)"
@@ -37,6 +43,7 @@ jobs:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
           RUN_ID: ${{ inputs.run_id }}
           ORG_ID: ${{ inputs.org_id }}
+          TASK: ${{ inputs.task }}
         run: |
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9a-f-]{36}$ && "$ORG_ID" =~ ^[0-9a-f-]{36}$ ]] || { echo "::error::run_id and org_id must be UUIDs"; exit 1; }
@@ -45,6 +52,8 @@ jobs:
           echo "::add-mask::$KEY"
           TRIGGER_SECRET_KEY="$KEY" node --input-type=module -e '
             import { tasks } from "@trigger.dev/sdk";
-            const h = await tasks.trigger("auto-edit", { runId: process.env.RUN_ID }, { concurrencyKey: process.env.ORG_ID, idempotencyKey: `auto-edit:${process.env.RUN_ID}`, tags: [`org_${process.env.ORG_ID}`] });
+            const { TASK, RUN_ID, ORG_ID } = process.env;
+            const payload = TASK === "ad-render" ? { renderId: RUN_ID } : { runId: RUN_ID };
+            const h = await tasks.trigger(TASK, payload, { concurrencyKey: ORG_ID, idempotencyKey: `${TASK}:${RUN_ID}`, tags: [`org_${ORG_ID}`] });
             console.log("queued", h.id);
           '

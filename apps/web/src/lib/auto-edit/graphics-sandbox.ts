@@ -73,14 +73,35 @@ const CSP = [
 
 export const FONT_NOTE = "Fonts installed for rendering: Inter (100-900 weights) and DejaVu Sans. Do not load web fonts.";
 
-/** The Hyperframes composition for one graphic. */
-export function documentFor(id: string, duration: number, code: { css: string; html: string; js: string }, opaque: boolean): string {
+/**
+ * The composition for one graphic. For the worker, Hyperframes serves it
+ * with gsap.min.js next to it. For the live preview (`inline`), the
+ * browser runs it in an iframe sandboxed to scripts only, with GSAP and
+ * Inter inlined, connections refused outright, and a listener the editor
+ * uses to seek the timeline to the playhead.
+ */
+export function documentFor(
+  id: string,
+  duration: number,
+  code: { css: string; html: string; js: string },
+  opaque: boolean,
+  inline?: { gsap: string; interWoff2DataUrl?: string }
+): string {
+  const csp = inline ? CSP.replace("connect-src 'self'", "connect-src 'none'").replace("font-src 'self' data:", "font-src data:") : CSP;
+  const gsapTag = inline ? `<script>${inline.gsap.replace(/<\/script/gi, "<\\/script")}</script>` : `<script src="gsap.min.js"></script>`;
+  const font = inline?.interWoff2DataUrl
+    ? `@font-face { font-family: Inter; src: url(${inline.interWoff2DataUrl}) format("woff2"); font-weight: 100 900; }`
+    : "";
+  const seek = inline
+    ? `window.addEventListener("message", function (e) { var d = e.data; if (d && d.type === "seek" && typeof d.t === "number") tl.seek(Math.max(0, Math.min(d.t, ${duration})), false); });`
+    : "";
   return `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="${CSP}" />
+<meta http-equiv="Content-Security-Policy" content="${csp}" />
 <meta name="viewport" content="width=1080, height=1920" />
-<script src="gsap.min.js"></script>
+${gsapTag}
 <style>
+${font}
 html, body { width: 1080px; height: 1920px; margin: 0; overflow: hidden; background: ${opaque ? "#000" : "transparent"}; }
 #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: Inter, "DejaVu Sans", sans-serif; }
 ${code.css}
@@ -97,6 +118,7 @@ ${code.js}
 })(tl, document.getElementById("root"));
 tl.set({}, {}, ${duration});
 window.__timelines["${id}"] = tl;
+${seek}
 </script>
 </body></html>`;
 }
