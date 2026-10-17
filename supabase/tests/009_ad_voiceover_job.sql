@@ -73,7 +73,7 @@ select set_config('role', 'authenticated', true);
 select throws_ok(
   $$ select public.request_ad_voiceover('d3333333-3333-3333-3333-333333333333'::uuid) $$,
   'P0001',
-  'not a member of this org',
+  'you don''t have access to this ad',
   'org B member cannot request a voiceover job for org A''s ad'
 );
 

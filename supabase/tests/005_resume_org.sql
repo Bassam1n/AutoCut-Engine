@@ -24,14 +24,14 @@ values
   ('d1111111-1111-1111-1111-111111111111', 'd0000000-0000-0000-0000-000000000001', 'owner', true),
   ('d1111111-1111-1111-1111-111111111111', 'd0000000-0000-0000-0000-000000000002', 'editor', true);
 
--- An editor (non-admin) cannot resume the org.
+-- An editor cannot resume the org (owner-only since migration 052).
 select set_config('request.jwt.claims', '{"sub":"d0000000-0000-0000-0000-000000000002","role":"authenticated"}', true);
 select set_config('role', 'authenticated', true);
 
 select throws_ok(
   $$ select public.resume_org('d1111111-1111-1111-1111-111111111111'::uuid) $$,
   'P0001',
-  'only an owner or admin of this org can resume it',
+  'only the owner of this org can resume it',
   'resume_org rejects a non-admin (editor) caller'
 );
 

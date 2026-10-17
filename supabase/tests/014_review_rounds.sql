@@ -2,10 +2,11 @@
 -- In review opens a round and notifies admins; only owners/admins can
 -- submit a review; requested changes send the task to Revisions and
 -- notify the assignee, who can read the scene comments; approval moves
--- it to Done; a round can't be submitted twice.
+-- it to Done; a round can't be submitted twice; the ad under review is
+-- locked while a round is open and the review is bound to it (064).
 
 begin;
-select plan(9);
+select plan(11);
 
 insert into auth.users (id, email, aud, role) values
   ('b0000000-0000-0000-0000-000000000001', 'review-admin@example.invalid', 'authenticated', 'authenticated'),
@@ -44,7 +45,7 @@ select is(
   'moving to In review opens a round'
 );
 select throws_ok(
-  $$ select public.submit_review((select id from public.review_rounds where task_id = 'b6666666-6666-6666-6666-666666666666'), null, '[]') $$,
+  $$ select public.submit_review((select id from public.review_rounds where task_id = 'b6666666-6666-6666-6666-666666666666'), 'b4444444-4444-4444-4444-444444444444', null, '[]') $$,
   'only an owner or admin can review',
   'a user cannot submit a review'
 );
@@ -55,8 +56,19 @@ select is(
   1,
   'admins are notified of a review request'
 );
+select throws_ok(
+  $$ select public.link_task_ad('b6666666-6666-6666-6666-666666666666', null) $$,
+  'this task is in review, so its ad can''t be changed until the review is submitted',
+  'the ad cannot be unlinked while a round is open'
+);
+select throws_ok(
+  $$ select public.submit_review((select id from public.review_rounds where task_id = 'b6666666-6666-6666-6666-666666666666' and round_no = 1), gen_random_uuid(), null, '[]') $$,
+  'the ad under review changed; reload and review again',
+  'a review for a different ad is refused'
+);
 select public.submit_review(
   (select id from public.review_rounds where task_id = 'b6666666-6666-6666-6666-666666666666' and round_no = 1),
+  'b4444444-4444-4444-4444-444444444444',
   null,
   '[{"scene_id":"b5555555-5555-5555-5555-555555555551","verdict":"changes","comment":"Bigger bottle"}]'
 );
@@ -66,7 +78,7 @@ select is(
   'requested changes move the task to Revisions'
 );
 select throws_ok(
-  $$ select public.submit_review((select id from public.review_rounds where task_id = 'b6666666-6666-6666-6666-666666666666' and round_no = 1), null, '[]') $$,
+  $$ select public.submit_review((select id from public.review_rounds where task_id = 'b6666666-6666-6666-6666-666666666666' and round_no = 1), 'b4444444-4444-4444-4444-444444444444', null, '[]') $$,
   'this review round has already been submitted',
   'a round cannot be submitted twice'
 );
@@ -94,6 +106,7 @@ select is(
 );
 select public.submit_review(
   (select id from public.review_rounds where task_id = 'b6666666-6666-6666-6666-666666666666' and round_no = 2),
+  'b4444444-4444-4444-4444-444444444444',
   null,
   '[{"scene_id":"b5555555-5555-5555-5555-555555555551","verdict":"approved"}]'
 );
