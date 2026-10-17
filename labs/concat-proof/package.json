@@ -1,0 +1,14 @@
+{
+  "name": "concat-proof",
+  "private": true,
+  "type": "module",
+  "description": "Proof of concept: Claude edits an AutoCut ad with Concat (engine) and Hyperframes (graphics).",
+  "scripts": {
+    "alpha": "node src/test-alpha.mjs",
+    "edit": "node src/run.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "zod": "^4.6.7"
+  }
+}

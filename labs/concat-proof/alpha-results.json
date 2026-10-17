@@ -1,0 +1,59 @@
+{
+  "prores4444_mov": {
+    "png": "/home/user/work/alpha/prores4444_mov.png",
+    "previewMs": 672
+  },
+  "vp9alpha_webm": {
+    "png": "/home/user/work/alpha/vp9alpha_webm.png",
+    "previewMs": 580
+  },
+  "png_still": {
+    "png": "/home/user/work/alpha/png_still.png",
+    "previewMs": 662
+  },
+  "opaque_mp4_screen": {
+    "png": "/home/user/work/alpha/opaque_mp4_screen.png",
+    "previewMs": 680
+  },
+  "opaque_mp4_normal": {
+    "png": "/home/user/work/alpha/opaque_mp4_normal.png",
+    "previewMs": 108
+  },
+  "concat_title": {
+    "png": "/home/user/work/alpha/concat_title.png",
+    "previewMs": 1760
+  },
+  "exportMs": 23765,
+  "compare": {
+    "prores4444_mov.png": {
+      "footageThroughPct": 83.9,
+      "changedPct": 16.1,
+      "meanLuma": 104.1
+    },
+    "vp9alpha_webm.png": {
+      "footageThroughPct": 0.8,
+      "changedPct": 99.2,
+      "meanLuma": 20.3
+    },
+    "png_still.png": {
+      "footageThroughPct": 83.9,
+      "changedPct": 16.1,
+      "meanLuma": 104.1
+    },
+    "opaque_mp4_screen.png": {
+      "footageThroughPct": 0.4,
+      "changedPct": 99.6,
+      "meanLuma": 243.7
+    },
+    "opaque_mp4_normal.png": {
+      "footageThroughPct": 0.3,
+      "changedPct": 99.7,
+      "meanLuma": 238.3
+    },
+    "concat_title.png": {
+      "footageThroughPct": 87.3,
+      "changedPct": 12.7,
+      "meanLuma": 102.5
+    }
+  }
+}

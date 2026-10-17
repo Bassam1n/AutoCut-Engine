@@ -66,7 +66,6 @@ export class Concat {
 
 /** Find a clip in the EditorView by id. */
 export function findClip(view, clipId) {
-  const tl = view.project.timelines?.find((t) => t.id === view.project.activeTimeline) ?? view.project.timelines?.[0];
-  for (const tr of tl?.tracks ?? []) for (const c of tr.clips ?? []) if (c.id === clipId) return c;
-  return null;
+  const tl = view.project.timelines.find((t) => t.id === view.project.activeTimelineId) ?? view.project.timelines[0];
+  return tl.clips.find((c) => c.id === clipId) ?? null;
 }

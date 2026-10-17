@@ -1,0 +1,28 @@
+{
+  "name": "Cold brew, demo org",
+  "product": "Slow-steeped cold brew coffee in a slim can (18-hour steep, small batches, no added sugar)",
+  "targetLengthSeconds": 30,
+  "aspect": "9:16",
+  "voiceover": null,
+  "voiceoverNote": "This ad has no voiceover. Scene clips carry only ambient sound. On-screen captions carry the script, so the viewer reads it.",
+  "scenes": [
+    { "index": 0, "role": "hook", "plannedDuration": 5.5, "clip": "01.mp4",
+      "copy": "Okay, confession: you think black coffee tastes like burnt toast. Fair. Most of it kinda does.",
+      "visual": "A busy city sidewalk outside a small corner cafe with a fogged front window and a morning queue spilling out the door." },
+    { "index": 1, "role": "body", "plannedDuration": 4.5, "clip": "02.mp4",
+      "copy": "Here's the thing, bitterness usually comes from rushing it. We don't rush.",
+      "visual": "A busy city sidewalk outside a small corner cafe with a fogged front window and a morning queue spilling out the door." },
+    { "index": 2, "role": "body", "plannedDuration": 8.0, "clip": "03.mp4",
+      "copy": "Our cold brew steeps slow for eighteen whole hours, in small batches, until it's deep, mellow, and genuinely smooth. Never bitter.",
+      "visual": "A small city apartment kitchen with a white laminate counter, a stainless-steel fridge, a round wall clock, and a single dim overhead light." },
+    { "index": 3, "role": "body", "plannedDuration": 3.5, "clip": "04.mp4",
+      "copy": "No added sugar, and honestly? You won't miss it.",
+      "visual": "An open-plan office desk by a large window, with a laptop, scattered papers, a mug of pens, and flat fluorescent light mixed with grey daylight." },
+    { "index": 4, "role": "body", "plannedDuration": 6.5, "clip": "05.mp4",
+      "copy": "It's just good coffee, the way it should've tasted all along, in a slim can you can take anywhere.",
+      "visual": "A busy city sidewalk outside a small corner cafe with a fogged front window and a morning queue spilling out the door." },
+    { "index": 5, "role": "cta", "plannedDuration": 4.0, "clip": "06.mp4",
+      "copy": "Grab a can, take one sip straight from the fridge, and taste the difference. Find it at your store today.",
+      "visual": "A small city apartment kitchen with a white laminate counter, a stainless-steel fridge, a round wall clock, and a single dim overhead light." }
+  ]
+}

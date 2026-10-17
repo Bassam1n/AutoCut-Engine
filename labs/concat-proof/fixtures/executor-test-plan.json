@@ -1,0 +1,29 @@
+{
+  "summary": "HAND-WRITTEN EXECUTOR TEST PLAN, not Claude output. Exercises trims, a cross-fade, two Ken Burns moves, captions, a hook overlay and a full-frame end card.",
+  "clips": [
+    { "scene": 0, "sourceIn": 0.3, "sourceOut": 5.0, "transitionIn": null, "motion": { "keys": [ { "at": 0, "scale": 1.0, "offsetX": 0, "offsetY": 0 }, { "at": 1, "scale": 1.12, "offsetX": 0, "offsetY": -0.02 } ], "ease": "inOut" }, "volume": 0.6 },
+    { "scene": 1, "sourceIn": 0.4, "sourceOut": 3.9, "transitionIn": { "type": "cross-fade", "duration": 0.4 }, "motion": null, "volume": 0.4 },
+    { "scene": 2, "sourceIn": 0.2, "sourceOut": 5.9, "transitionIn": null, "motion": { "keys": [ { "at": 0, "scale": 1.1, "offsetX": 0.03, "offsetY": 0 }, { "at": 1, "scale": 1.0, "offsetX": 0, "offsetY": 0 } ], "ease": "linear" }, "volume": 0.6 },
+    { "scene": 3, "sourceIn": 0.3, "sourceOut": 3.6, "transitionIn": null, "motion": null, "volume": 0.6 },
+    { "scene": 4, "sourceIn": 0.3, "sourceOut": 5.8, "transitionIn": null, "motion": null, "volume": 0.4 },
+    { "scene": 5, "sourceIn": 0.3, "sourceOut": 4.8, "transitionIn": null, "motion": null, "volume": 0.6 }
+  ],
+  "captionStyles": {
+    "main": { "fontSize": 0.042, "fontWeight": 800, "color": "#ffffff", "background": "#000000a6", "strokeWidth": 0, "strokeColor": "#000000", "maxWidth": 0.86, "offsetY": 0.27 }
+  },
+  "captions": [
+    { "start": 2.6, "end": 4.7, "text": "Black coffee = burnt toast?", "style": "main", "popIn": true },
+    { "start": 4.8, "end": 6.7, "text": "Bitterness comes from rushing.", "style": "main", "popIn": true },
+    { "start": 6.8, "end": 8.1, "text": "We don't rush.", "style": "main", "popIn": true },
+    { "start": 8.3, "end": 10.6, "text": "Steeped 18 whole hours", "style": "main", "popIn": true },
+    { "start": 10.7, "end": 13.7, "text": "Deep, mellow, never bitter.", "style": "main", "popIn": true },
+    { "start": 13.9, "end": 16.9, "text": "No added sugar. Won't miss it.", "style": "main", "popIn": true },
+    { "start": 17.1, "end": 22.3, "text": "Good coffee, in a slim can.", "style": "main", "popIn": true },
+    { "start": 22.5, "end": 26.6, "text": "One sip straight from the fridge.", "style": "main", "popIn": true }
+  ],
+  "graphics": [
+    { "id": "hook", "role": "hook", "start": 0, "duration": 2.5, "layout": "overlay", "template": { "name": "hookPill", "props": { "headline": "BLACK COFFEE TASTES BURNT?", "sub": "it doesn't have to", "accent": "#ff4628" } }, "code": null },
+    { "id": "endcard", "role": "endCard", "start": 26.7, "duration": 3.3, "layout": "fullFrame", "template": { "name": "endCard", "props": { "headline": "Cold brew, never bitter", "sub": "18-hour steep. No added sugar.", "cta": "Find it in store today", "bg": "#14110f", "accent": "#ff4628" } }, "code": null }
+  ],
+  "endCardHold": 2.8
+}
