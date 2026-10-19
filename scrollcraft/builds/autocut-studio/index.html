@@ -17,7 +17,7 @@
 <meta name="twitter:description" content="Scripts, prompts, scene images and videos, review and tasks for every brand your agency runs, in one studio.">
 <meta name="twitter:image" content="https://autocutengine.app/assets/img/og.png">
 <link rel="icon" type="image/png" href="/assets/img/favicon.png">
-<link rel="preload" href="/assets/fonts/Archivo-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Archivo-sub.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <script>document.documentElement.classList.add('js');if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion');</script>
 <link rel="stylesheet" href="/site.css">
@@ -77,14 +77,64 @@
       </div>
       <div class="win__bar"><span class="win__url" data-url>chatgpt.com</span><i class="win__spin" data-spin></i><i class="win__load" data-load></i></div>
       <div class="win__body">
-        <div class="pane is-on" data-pane="0"><p class="pane__chore">Write the script. Then the cast. Then a prompt for every scene. Copy, paste, repeat.</p></div>
-        <div class="pane" data-pane="1"><p class="pane__chore">Generate scene one. Wait. Scene two. Wait. Something looks off: back to the chat for a fix prompt.</p></div>
-        <div class="pane" data-pane="2"><p class="pane__chore">Download every clip. Upload them again. Cut the ad by hand.</p></div>
-        <div class="pane" data-pane="3"><p class="pane__chore">Export, upload, share a link with the team lead. Hope it is the latest version.</p></div>
-        <div class="pane" data-pane="4"><p class="pane__chore">“Scene three, can the bottle be bigger?” A voice note at 11:40 pm.</p></div>
-        <div class="pane" data-pane="5"><p class="pane__chore">Move the card to Revisions. Tell everyone you moved the card.</p></div>
+        <div class="pane is-on" data-pane="0">
+          <p class="pane__chore">Write the script. Then the cast. Then a prompt for every scene. Copy, paste, repeat.</p>
+          <div class="art art--chat">
+            <p class="msg msg--me">Write a 30 second script for a cold brew ad. Commuters, vertical.</p>
+            <p class="msg">Here are three hooks and a six scene script…</p>
+            <p class="msg msg--me">Now a prompt for scene 3. The bottle came out wrong.</p>
+            <p class="msg msg--me">Same for scene 4, keep the look of scene 2.</p>
+          </div>
+        </div>
+        <div class="pane" data-pane="1">
+          <p class="pane__chore">Generate scene one. Wait. Scene two. Wait. Something looks off: back to the chat for a fix prompt.</p>
+          <ul class="art art--queue">
+            <li><span>Scene 1</span><b class="ok">Done</b></li>
+            <li><span>Scene 2</span><b class="ok">Done</b></li>
+            <li><span>Scene 3</span><b class="bad">Failed. Needs a new prompt</b></li>
+            <li><span>Scene 4</span><b class="run">Generating 41%</b></li>
+            <li><span>Scene 5</span><b>Not started</b></li>
+            <li><span>Scene 6</span><b>Not started</b></li>
+          </ul>
+        </div>
+        <div class="pane" data-pane="2">
+          <p class="pane__chore">Download every clip. Upload them again. Cut the ad by hand.</p>
+          <div class="art art--cut">
+            <div class="cut__ruler"><span>0:00</span><span>0:10</span><span>0:20</span><span>0:30</span></div>
+            <div class="cut__track"><i style="--w:14">s1</i><i style="--w:18">s2</i><i style="--w:12">s3</i><i style="--w:20">s4</i><i style="--w:16">s5</i><i style="--w:20">s6</i></div>
+            <div class="cut__track cut__track--audio"><i style="--w:100">voiceover_take3.wav</i></div>
+            <b class="cut__head"></b>
+          </div>
+        </div>
+        <div class="pane" data-pane="3">
+          <p class="pane__chore">Export, upload, share a link with the team lead. Hope it is the latest version.</p>
+          <ul class="art art--files">
+            <li><span>commute_spot_v1.mp4</span><b>48 MB</b></li>
+            <li><span>commute_spot_v2.mp4</span><b>51 MB</b></li>
+            <li><span>commute_spot_v2_final.mp4</span><b>51 MB</b></li>
+            <li><span>commute_spot_v2_final_FINAL.mp4</span><b>52 MB</b></li>
+            <li><span>commute_spot_USE_THIS_ONE.mp4</span><b>52 MB</b></li>
+          </ul>
+        </div>
+        <div class="pane" data-pane="4">
+          <p class="pane__chore">“Scene three, can the bottle be bigger?” A voice note at 11:40 pm.</p>
+          <div class="art art--chat art--group">
+            <p class="msg"><b>Team lead</b>Client says the bottle in scene 3 is too small</p>
+            <p class="msg"><b>Team lead</b>Which file is the latest one?</p>
+            <p class="msg msg--voice"><b>Client</b>Voice note · 0:42</p>
+            <p class="msg msg--me">On it. Sending v3 tonight</p>
+          </div>
+        </div>
+        <div class="pane" data-pane="5">
+          <p class="pane__chore">Move the card to Revisions. Tell everyone you moved the card.</p>
+          <div class="art art--board">
+            <div><b class="col">To do</b><p>Oat latte hooks</p><p>Q4 bundle ad</p></div>
+            <div><b class="col">Revisions</b><p>Commute spot, scene 3</p></div>
+            <div><b class="col">Done</b><p>Serum teaser</p></div>
+          </div>
+        </div>
         <div class="pane pane--ace" data-pane="6">
-          <img src="/assets/shots/storyboard-1440.webp" srcset="/assets/shots/storyboard-800.webp 800w, /assets/shots/storyboard-1440.webp 1440w" sizes="(max-width: 767px) 100vw, 90vw" alt="" width="1440" height="900" loading="lazy" decoding="async">
+          <img src="/assets/shots/storyboard-760.webp" alt="" width="760" height="500" loading="lazy" decoding="async">
         </div>
       </div>
     </div>
@@ -112,55 +162,55 @@
     <p class="product__note">Real screens from the studio, with a demo agency.</p>
   </div>
   <div class="win win--app" data-reveal="up">
-    <div class="win__strip" aria-hidden="true"><div class="tab is-active tab--ace"><i class="tab__ico tab__ico--ace"></i><span class="tab__name">AutoCut · Northbeam Cold Brew</span></div></div>
-    <div class="win__bar" aria-hidden="true"><span class="win__url">studio.autocutengine.app</span></div>
+    <div class="win__strip" aria-hidden="true"><div class="tab is-active tab--ace"><i class="tab__ico tab__ico--ace"></i><span class="tab__name"><span data-app-tab>Brief</span> · Northbeam Cold Brew</span></div></div>
+    <div class="win__bar" aria-hidden="true"><span class="win__url">studio.autocutengine.app/<span data-app-url>ads/commute-spot/brief</span></span></div>
     <div class="app">
       <ul class="app__list" data-app>
       <li class="app__item">
-        <button class="app__btn" type="button" aria-pressed="true" data-shot="script" data-alt="The scripts step of an ad in AutoCut, with generated script variants">
+        <button class="app__btn" type="button" aria-pressed="true" data-shot="script" data-alt="The brief step of an ad in AutoCut, with the running cost and a change request" data-tab-name="Brief" data-path="ads/commute-spot/brief">
           <span class="app__title">Brief to scripts</span>
           <span class="app__text">Fill in the brief once. Claude drafts script variants in the brand’s voice, with its products, audience and rules already loaded.</span>
         </button>
-        <img class="app__thumb" src="/assets/shots/script-app-700.webp" alt="The scripts step of an ad in AutoCut, with generated script variants" width="700" height="438" loading="lazy" decoding="async">
+        <img class="app__thumb" src="/assets/shots/script-380.webp" alt="The brief step of an ad in AutoCut, with the running cost and a change request" width="380" height="280" loading="lazy" decoding="async">
       </li>
       <li class="app__item">
-        <button class="app__btn" type="button" aria-pressed="false" data-shot="storyboard" data-alt="A storyboard in AutoCut, split into numbered scenes with the running cost">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="storyboard" data-alt="A storyboard in AutoCut with numbered scenes, edit by chat and scene styles" data-tab-name="Storyboard" data-path="ads/commute-spot/storyboard">
           <span class="app__title">Storyboard and cast</span>
-          <span class="app__text">The script becomes numbered scenes with a cast and a concept. Split a scene, rewrite a line, regenerate one shot.</span>
+          <span class="app__text">The script becomes numbered scenes with a cast and a concept. Split a scene, rewrite a line, or patch the whole board by chat.</span>
         </button>
-        <img class="app__thumb" src="/assets/shots/storyboard-app-700.webp" alt="A storyboard in AutoCut, split into numbered scenes with the running cost" width="700" height="438" loading="lazy" decoding="async">
+        <img class="app__thumb" src="/assets/shots/storyboard-380.webp" alt="A storyboard in AutoCut with numbered scenes, edit by chat and scene styles" width="380" height="280" loading="lazy" decoding="async">
       </li>
       <li class="app__item">
-        <button class="app__btn" type="button" aria-pressed="false" data-shot="scenes" data-alt="Generated scene images laid out scene by scene in AutoCut">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="scenes" data-alt="Picking an ad style for scene one in AutoCut, from a grid of styles" data-tab-name="Scenes" data-path="ads/commute-spot/scenes">
           <span class="app__title">Scene images and videos</span>
           <span class="app__text">Every scene in one batch on the client’s Higgsfield plan, connected per brand. The cost shows before anything runs.</span>
         </button>
-        <img class="app__thumb" src="/assets/shots/scenes-app-700.webp" alt="Generated scene images laid out scene by scene in AutoCut" width="700" height="438" loading="lazy" decoding="async">
+        <img class="app__thumb" src="/assets/shots/scenes-380.webp" alt="Picking an ad style for scene one in AutoCut, from a grid of styles" width="380" height="280" loading="lazy" decoding="async">
       </li>
       <li class="app__item">
-        <button class="app__btn" type="button" aria-pressed="false" data-shot="styles" data-alt="The visual styles library in AutoCut, a grid of saved looks">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="styles" data-alt="The visual styles library in AutoCut, with search, filters and saved looks" data-tab-name="Styles" data-path="styles">
           <span class="app__title">Visual styles</span>
           <span class="app__text">Save a look once and reuse it across a brand, so the tenth ad still looks like the first.</span>
         </button>
-        <img class="app__thumb" src="/assets/shots/styles-app-700.webp" alt="The visual styles library in AutoCut, a grid of saved looks" width="700" height="438" loading="lazy" decoding="async">
+        <img class="app__thumb" src="/assets/shots/styles-380.webp" alt="The visual styles library in AutoCut, with search, filters and saved looks" width="380" height="280" loading="lazy" decoding="async">
       </li>
       <li class="app__item">
-        <button class="app__btn" type="button" aria-pressed="false" data-shot="review" data-alt="An ad in review in AutoCut, with Approve and Request changes on each scene">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="review" data-alt="A scene in review in AutoCut, with Approve and Request changes" data-tab-name="Review" data-path="review/commute-spot">
           <span class="app__title">Review per scene</span>
           <span class="app__text">Comments sit on the exact shot. Request changes and the ad moves to Revisions; approve and everyone is told.</span>
         </button>
-        <img class="app__thumb" src="/assets/shots/review-app-700.webp" alt="An ad in review in AutoCut, with Approve and Request changes on each scene" width="700" height="438" loading="lazy" decoding="async">
+        <img class="app__thumb" src="/assets/shots/review-380.webp" alt="A scene in review in AutoCut, with Approve and Request changes" width="380" height="280" loading="lazy" decoding="async">
       </li>
       <li class="app__item">
-        <button class="app__btn" type="button" aria-pressed="false" data-shot="board" data-alt="The AutoCut task board with columns from To do to Done">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="board" data-alt="The AutoCut board with To do, In progress and In review columns" data-tab-name="Board" data-path="board">
           <span class="app__title">Board and team</span>
           <span class="app__text">Owners, admins and editors, each assigned to their brands. One board shows where every ad stands.</span>
         </button>
-        <img class="app__thumb" src="/assets/shots/board-app-700.webp" alt="The AutoCut task board with columns from To do to Done" width="700" height="438" loading="lazy" decoding="async">
+        <img class="app__thumb" src="/assets/shots/board-380.webp" alt="The AutoCut board with To do, In progress and In review columns" width="380" height="280" loading="lazy" decoding="async">
       </li>
       </ul>
       <figure class="app__screen" aria-live="polite">
-        <img data-app-img src="/assets/shots/script-app-1168.webp" srcset="/assets/shots/script-app-700.webp 700w, /assets/shots/script-app-1168.webp 1168w" sizes="(max-width: 900px) 100vw, 62vw" alt="The scripts step of an ad in AutoCut, with generated script variants" width="1168" height="730" loading="lazy" decoding="async">
+        <img data-app-img src="/assets/shots/script-760.webp" alt="The brief step of an ad in AutoCut, with the running cost and a change request" width="760" height="500" loading="lazy" decoding="async">
       </figure>
     </div>
   </div>
@@ -169,7 +219,7 @@
 <!-- Asymmetric pair: how you start (a real sequence) -->
 <section class="start" id="start" aria-labelledby="start-h">
   <figure class="start__media" data-reveal="clip">
-    <img src="/assets/shots/brands-1440.webp" srcset="/assets/shots/brands-800.webp 800w, /assets/shots/brands-1440.webp 1440w" sizes="(max-width: 767px) 100vw, 58vw" alt="The brands page of a demo agency in AutoCut, one workspace per client brand" width="1440" height="900" loading="lazy" decoding="async">
+    <img src="/assets/shots/brands-760.webp" alt="The brands page of a demo agency in AutoCut, one workspace per client brand" width="760" height="300" loading="lazy" decoding="async">
     <figcaption>One workspace per client brand.</figcaption>
   </figure>
   <div class="start__copy">

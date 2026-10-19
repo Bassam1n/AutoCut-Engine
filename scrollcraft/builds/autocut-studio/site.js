@@ -191,6 +191,8 @@
   /* The one tab: the sidebar switches the real screen (click, keyboard, or a fine pointer resting on it). */
   var appImg = $('[data-app-img]');
   var appBtns = $$('[data-shot]');
+  var appTab = $('[data-app-tab]');
+  var appUrl = $('[data-app-url]');
   if (appImg && appBtns.length) {
     var current = appBtns[0];
     var select = function (btn) {
@@ -199,9 +201,11 @@
       appBtns.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
       var k = btn.dataset.shot;
       var swap = function () {
-        appImg.setAttribute('srcset', '/assets/shots/' + k + '-app-700.webp 700w, /assets/shots/' + k + '-app-1168.webp 1168w');
-        appImg.setAttribute('src', '/assets/shots/' + k + '-app-1168.webp');
+        appImg.setAttribute('src', '/assets/shots/' + k + '-760.webp');
         appImg.setAttribute('alt', btn.dataset.alt || '');
+        // The tab title and address follow the screen, like moving around inside the one tab.
+        if (appTab) appTab.textContent = btn.dataset.tabName || '';
+        if (appUrl) appUrl.textContent = btn.dataset.path || '';
       };
       if (hoverFx) {
         // Snap: the new screen wipes in from the left, like a page loading into the tab.
@@ -220,7 +224,7 @@
       }
     });
     // Warm the cache so the swap never shows an empty frame.
-    var warm = function () { appBtns.forEach(function (b) { var i = new Image(); i.src = '/assets/shots/' + b.dataset.shot + '-app-1168.webp'; }); };
+    var warm = function () { appBtns.forEach(function (b) { var i = new Image(); i.src = '/assets/shots/' + b.dataset.shot + '-760.webp'; }); };
     if ('requestIdleCallback' in window) requestIdleCallback(warm); else setTimeout(warm, 1500);
   }
 
