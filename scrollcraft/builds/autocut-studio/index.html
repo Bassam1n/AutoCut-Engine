@@ -38,9 +38,16 @@
   </nav>
   <div class="top__actions">
     <a class="top__signin draw" href="https://studio.autocutengine.app/login">Sign in</a>
+    <button class="top__menu" type="button" aria-expanded="false" aria-controls="menu" data-menu-btn>Menu</button>
     <a class="btn btn--ink" href="#access" data-fill><span class="btn__fill" aria-hidden="true"></span><span class="btn__label">Request access</span></a>
   </div>
 </header>
+<nav class="menu" id="menu" aria-label="Menu" hidden data-menu>
+  <a href="#product">Product</a>
+  <a href="#start">How you start</a>
+  <a href="#faq">Questions</a>
+  <a href="https://studio.autocutengine.app/login">Sign in</a>
+</nav>
 
 <main id="main" tabindex="-1">
 
@@ -58,7 +65,7 @@
       </div>
     </div>
 
-    <div class="win" aria-hidden="true" data-reveal="up" data-intro data-delay="0.05">
+    <div class="win" aria-hidden="true" data-vt="browser" data-reveal="up" data-intro data-delay="0.05">
       <div class="win__strip" data-strip>
         <div class="tab is-active" data-tab="0"><i class="tab__ico">c</i><span class="tab__name">Script and prompts</span><b class="tab__x"></b></div>
         <div class="tab" data-tab="1"><i class="tab__ico">h</i><span class="tab__name">Scene images</span><b class="tab__x"></b></div>
@@ -98,45 +105,65 @@
   <h2 id="statement-h" class="statement__text" data-split="lines">Your editors should be directing ads, not carrying prompts from one window to the next.</h2>
 </section>
 
-<!-- Index list: the one tab, with real screenshots of the studio -->
+<!-- The one tab: the product lives inside the AutoCut tab, real screens on the right -->
 <section class="product" id="product" aria-labelledby="product-h">
   <div class="product__head">
     <h2 id="product-h" class="h-xl" data-split="lines">What lives in the one tab</h2>
     <p class="product__note">Real screens from the studio, with a demo agency.</p>
   </div>
-  <ul class="rows" data-rows>
-    <li class="row" data-shot="script">
-      <img class="row__thumb" src="/assets/shots/script-800.webp" alt="The scripts step of an ad in AutoCut, with generated variants" width="800" height="500" loading="lazy" decoding="async">
-      <h3 class="row__title">Brief to scripts</h3>
-      <p class="row__text">Fill in the brief once. Claude drafts script variants in the brand’s voice, with its products, audience and rules already loaded.</p>
-    </li>
-    <li class="row" data-shot="storyboard">
-      <img class="row__thumb" src="/assets/shots/storyboard-800.webp" alt="A storyboard in AutoCut, split into numbered scenes with notes" width="800" height="500" loading="lazy" decoding="async">
-      <h3 class="row__title">Storyboard and cast</h3>
-      <p class="row__text">The script becomes numbered scenes with a cast and a concept. Split a scene, rewrite a line, regenerate one shot.</p>
-    </li>
-    <li class="row" data-shot="scenes">
-      <img class="row__thumb" src="/assets/shots/scenes-800.webp" alt="Generated scene images laid out per scene in AutoCut" width="800" height="500" loading="lazy" decoding="async">
-      <h3 class="row__title">Scene images and videos</h3>
-      <p class="row__text">Every scene in one batch on the client’s Higgsfield plan, connected per brand. The cost shows before anything runs.</p>
-    </li>
-    <li class="row" data-shot="styles">
-      <img class="row__thumb" src="/assets/shots/styles-800.webp" alt="The visual styles library in AutoCut with saved looks" width="800" height="500" loading="lazy" decoding="async">
-      <h3 class="row__title">Visual styles</h3>
-      <p class="row__text">Save a look once and reuse it across a brand, so the tenth ad still looks like the first.</p>
-    </li>
-    <li class="row" data-shot="review">
-      <img class="row__thumb" src="/assets/shots/review-800.webp" alt="An ad in review in AutoCut, with scene comments and the approve button" width="800" height="500" loading="lazy" decoding="async">
-      <h3 class="row__title">Review per scene</h3>
-      <p class="row__text">Comments sit on the exact shot. Request changes and the ad moves to Revisions; approve and everyone is told.</p>
-    </li>
-    <li class="row" data-shot="board">
-      <img class="row__thumb" src="/assets/shots/board-800.webp" alt="The AutoCut task board with columns from To do to Done" width="800" height="500" loading="lazy" decoding="async">
-      <h3 class="row__title">Board and team</h3>
-      <p class="row__text">Owners, admins and editors, each assigned to their brands. One board shows where every ad stands.</p>
-    </li>
-  </ul>
-  <div class="peek" aria-hidden="true" data-peek><img alt="" width="1440" height="900" decoding="async"></div>
+  <div class="win win--app" data-reveal="up">
+    <div class="win__strip" aria-hidden="true"><div class="tab is-active tab--ace"><i class="tab__ico tab__ico--ace"></i><span class="tab__name">AutoCut · Northbeam Cold Brew</span></div></div>
+    <div class="win__bar" aria-hidden="true"><span class="win__url">studio.autocutengine.app</span></div>
+    <div class="app">
+      <ul class="app__list" data-app>
+      <li class="app__item">
+        <button class="app__btn" type="button" aria-pressed="true" data-shot="script" data-alt="The scripts step of an ad in AutoCut, with generated script variants">
+          <span class="app__title">Brief to scripts</span>
+          <span class="app__text">Fill in the brief once. Claude drafts script variants in the brand’s voice, with its products, audience and rules already loaded.</span>
+        </button>
+        <img class="app__thumb" src="/assets/shots/script-app-700.webp" alt="The scripts step of an ad in AutoCut, with generated script variants" width="700" height="438" loading="lazy" decoding="async">
+      </li>
+      <li class="app__item">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="storyboard" data-alt="A storyboard in AutoCut, split into numbered scenes with the running cost">
+          <span class="app__title">Storyboard and cast</span>
+          <span class="app__text">The script becomes numbered scenes with a cast and a concept. Split a scene, rewrite a line, regenerate one shot.</span>
+        </button>
+        <img class="app__thumb" src="/assets/shots/storyboard-app-700.webp" alt="A storyboard in AutoCut, split into numbered scenes with the running cost" width="700" height="438" loading="lazy" decoding="async">
+      </li>
+      <li class="app__item">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="scenes" data-alt="Generated scene images laid out scene by scene in AutoCut">
+          <span class="app__title">Scene images and videos</span>
+          <span class="app__text">Every scene in one batch on the client’s Higgsfield plan, connected per brand. The cost shows before anything runs.</span>
+        </button>
+        <img class="app__thumb" src="/assets/shots/scenes-app-700.webp" alt="Generated scene images laid out scene by scene in AutoCut" width="700" height="438" loading="lazy" decoding="async">
+      </li>
+      <li class="app__item">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="styles" data-alt="The visual styles library in AutoCut, a grid of saved looks">
+          <span class="app__title">Visual styles</span>
+          <span class="app__text">Save a look once and reuse it across a brand, so the tenth ad still looks like the first.</span>
+        </button>
+        <img class="app__thumb" src="/assets/shots/styles-app-700.webp" alt="The visual styles library in AutoCut, a grid of saved looks" width="700" height="438" loading="lazy" decoding="async">
+      </li>
+      <li class="app__item">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="review" data-alt="An ad in review in AutoCut, with Approve and Request changes on each scene">
+          <span class="app__title">Review per scene</span>
+          <span class="app__text">Comments sit on the exact shot. Request changes and the ad moves to Revisions; approve and everyone is told.</span>
+        </button>
+        <img class="app__thumb" src="/assets/shots/review-app-700.webp" alt="An ad in review in AutoCut, with Approve and Request changes on each scene" width="700" height="438" loading="lazy" decoding="async">
+      </li>
+      <li class="app__item">
+        <button class="app__btn" type="button" aria-pressed="false" data-shot="board" data-alt="The AutoCut task board with columns from To do to Done">
+          <span class="app__title">Board and team</span>
+          <span class="app__text">Owners, admins and editors, each assigned to their brands. One board shows where every ad stands.</span>
+        </button>
+        <img class="app__thumb" src="/assets/shots/board-app-700.webp" alt="The AutoCut task board with columns from To do to Done" width="700" height="438" loading="lazy" decoding="async">
+      </li>
+      </ul>
+      <figure class="app__screen" aria-live="polite">
+        <img data-app-img src="/assets/shots/script-app-1168.webp" srcset="/assets/shots/script-app-700.webp 700w, /assets/shots/script-app-1168.webp 1168w" sizes="(max-width: 900px) 100vw, 62vw" alt="The scripts step of an ad in AutoCut, with generated script variants" width="1168" height="730" loading="lazy" decoding="async">
+      </figure>
+    </div>
+  </div>
 </section>
 
 <!-- Asymmetric pair: how you start (a real sequence) -->

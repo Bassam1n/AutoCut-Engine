@@ -158,7 +158,8 @@
         }
       });
     } else {
-      // Static path: show where it ends, with every job checked off.
+      // Static path (reduced motion): show the real end state, one tab open and every job checked off.
+      setClosed(STEPS, true);
       jobs.forEach(function (j) { j.classList.add('is-done'); });
     }
   }
@@ -185,34 +186,57 @@
       btn.addEventListener('blur', function () { shut('50% 50%'); });
     });
 
-    var peek = $('[data-peek]');
-    var peekImg = peek && $('img', peek);
-    var rows = $$('[data-shot]');
-    if (peek && rows.length) {
-      var px = gsap.quickTo(peek, 'x', { duration: 0.6, ease: EASE.soft });
-      var py = gsap.quickTo(peek, 'y', { duration: 0.6, ease: EASE.soft });
-      var shown = false, mx = 0, my = 0;
-      var place = function () { px(mx + 28); py(my - peek.offsetHeight * 0.5); };
-      var show = function (row) {
-        var src = '/assets/shots/' + row.dataset.shot + '-800.webp';
-        if (peekImg.getAttribute('src') !== src) peekImg.setAttribute('src', src);
-        if (!shown) { gsap.set(peek, { x: mx + 28, y: my - peek.offsetHeight * 0.5 }); }
-        shown = true;
-        gsap.to(peek, { autoAlpha: 1, clipPath: 'inset(0% 0% 0% 0% round 10px)', duration: 0.55, ease: EASE.soft, overwrite: 'auto' });
+  }
+
+  /* The one tab: the sidebar switches the real screen (click, keyboard, or a fine pointer resting on it). */
+  var appImg = $('[data-app-img]');
+  var appBtns = $$('[data-shot]');
+  if (appImg && appBtns.length) {
+    var current = appBtns[0];
+    var select = function (btn) {
+      if (btn === current) return;
+      current = btn;
+      appBtns.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+      var k = btn.dataset.shot;
+      var swap = function () {
+        appImg.setAttribute('srcset', '/assets/shots/' + k + '-app-700.webp 700w, /assets/shots/' + k + '-app-1168.webp 1168w');
+        appImg.setAttribute('src', '/assets/shots/' + k + '-app-1168.webp');
+        appImg.setAttribute('alt', btn.dataset.alt || '');
       };
-      var hide = function () {
-        shown = false;
-        gsap.to(peek, { clipPath: 'inset(50% 50% 50% 50% round 10px)', autoAlpha: 0, duration: 0.4, ease: EASE.soft, overwrite: 'auto' });
-      };
-      rows.forEach(function (row) {
-        row.addEventListener('pointerenter', function () { show(row); });
-        row.addEventListener('pointerleave', hide);
-      });
-      addEventListener('pointermove', function (e) { mx = e.clientX; my = e.clientY; if (shown) place(); }, { passive: true });
-      // A still pointer over a row that scrolls away must not leave the screen behind.
-      var check = function () { if (!shown) return; var el = document.elementFromPoint(mx, my); if (!el || !el.closest('[data-shot]')) hide(); };
-      if (lenis) lenis.on('scroll', check); else addEventListener('scroll', check, { passive: true });
-    }
+      if (hoverFx) {
+        // Snap: the new screen wipes in from the left, like a page loading into the tab.
+        gsap.killTweensOf(appImg);
+        swap();
+        gsap.fromTo(appImg, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.55, ease: EASE.soft, clearProps: 'clipPath' });
+      } else swap();
+    };
+    appBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () { select(btn); });
+      btn.addEventListener('focus', function () { select(btn); });
+      if (!touch) {
+        var timer;
+        btn.addEventListener('pointerenter', function () { clearTimeout(timer); timer = setTimeout(function () { select(btn); }, 90); });
+        btn.addEventListener('pointerleave', function () { clearTimeout(timer); });
+      }
+    });
+    // Warm the cache so the swap never shows an empty frame.
+    var warm = function () { appBtns.forEach(function (b) { var i = new Image(); i.src = '/assets/shots/' + b.dataset.shot + '-app-1168.webp'; }); };
+    if ('requestIdleCallback' in window) requestIdleCallback(warm); else setTimeout(warm, 1500);
+  }
+
+  /* Phone menu: one obvious tap away; Escape and any link close it. */
+  var menuBtn = $('[data-menu-btn]');
+  var menu = $('[data-menu]');
+  if (menuBtn && menu) {
+    var setMenu = function (open) {
+      menu.hidden = !open;
+      menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      menuBtn.textContent = open ? 'Close' : 'Menu';
+      if (open) { var f = $('a', menu); if (f) f.focus(); if (hoverFx) gsap.fromTo($$('a', menu), { yPercent: 40, autoAlpha: 0 }, { yPercent: 0, autoAlpha: 1, duration: 0.5, stagger: 0.04, ease: EASE.soft }); }
+    };
+    menuBtn.addEventListener('click', function () { setMenu(menu.hidden); });
+    $$('a', menu).forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { setMenu(false); menuBtn.focus(); } });
   }
 
   /* 4. Header steps aside ------------------------------------------------ */
