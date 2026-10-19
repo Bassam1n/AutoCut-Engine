@@ -57,16 +57,18 @@
     $$('[data-reveal]').forEach(function (el) {
       var kind = el.dataset.reveal || 'up';
       var isIntro = el.hasAttribute('data-intro');
-      var from = kind === 'fade' ? { autoAlpha: 0 } : kind === 'clip' ? { clipPath: 'inset(100% 0% 0% 0%)', autoAlpha: 1 } : { y: 56, autoAlpha: 0 };
+      var from = kind === 'fade' ? { opacity: 0 } : kind === 'clip' ? { clipPath: 'inset(100% 0% 0% 0%)', opacity: 1 } : { y: 56, opacity: 0 };
       gsap.set(el, { visibility: 'visible' });
       var t = gsap.fromTo(el, from, {
-        y: 0, autoAlpha: 1, clipPath: 'inset(0% 0% 0% 0%)',
+        y: 0, opacity: 1, clipPath: 'inset(0% 0% 0% 0%)',
         duration: kind === 'fade' ? 0.9 : 1.2, ease: EASE.out,
         delay: parseFloat(el.dataset.delay || '0'), paused: isIntro,
         scrollTrigger: isIntro ? undefined : { trigger: el, start: 'top 90%', once: true },
         clearProps: kind === 'clip' ? 'clipPath' : ''
       });
       if (isIntro) intro.add(function () { t.play(); }, 0);
+      // Keyboard users can reach a block before it scrolls in: show it at once.
+      el.addEventListener('focusin', function () { t.progress(1); }, { once: true });
     });
     return intro;
   }
@@ -83,6 +85,7 @@
   var spin = $('[data-spin]');
   var unread = $('[data-unread]');
   var load = $('[data-load]');
+  var title2 = $('.hero__l2');
   var STEPS = 6;
   var closed = 0;
   var unreadN = 3;
@@ -134,6 +137,15 @@
     if (urlEl) urlEl.textContent = URLS[n];
     if (spin) spin.classList.toggle('is-idle', n === STEPS);
     if (load) load.classList.toggle('is-idle', n === STEPS);
+    // The payoff: when the last tool tab shuts, the headline snaps shut too and reopens as one tab.
+    var word = n === STEPS ? 'One tab.' : 'Six tabs.';
+    if (title2 && motion && !instant && title2.textContent !== word) {
+      gsap.killTweensOf(title2);
+      gsap.timeline()
+        .to(title2, { scaleX: 0, opacity: 0, duration: 0.22, ease: 'power2.in' })
+        .add(function () { title2.textContent = word; })
+        .to(title2, { scaleX: 1, opacity: 1, duration: 0.5, ease: EASE.out });
+    }
   }
 
   if (hero && tabs.length) {
@@ -201,7 +213,7 @@
       appBtns.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
       var k = btn.dataset.shot;
       var swap = function () {
-        appImg.setAttribute('src', '/assets/shots/' + k + '-760.webp');
+        appImg.setAttribute('src', '/assets/shots/' + k + '-950.webp');
         appImg.setAttribute('alt', btn.dataset.alt || '');
         // The tab title and address follow the screen, like moving around inside the one tab.
         if (appTab) appTab.textContent = btn.dataset.tabName || '';
@@ -224,7 +236,7 @@
       }
     });
     // Warm the cache so the swap never shows an empty frame.
-    var warm = function () { appBtns.forEach(function (b) { var i = new Image(); i.src = '/assets/shots/' + b.dataset.shot + '-760.webp'; }); };
+    var warm = function () { appBtns.forEach(function (b) { var i = new Image(); i.src = '/assets/shots/' + b.dataset.shot + '-950.webp'; }); };
     if ('requestIdleCallback' in window) requestIdleCallback(warm); else setTimeout(warm, 1500);
   }
 
